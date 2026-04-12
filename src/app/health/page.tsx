@@ -7,6 +7,7 @@ import { desc, eq } from "drizzle-orm";
 import { BloodPressureChart } from "../components/blood-pressure-chart";
 import { WeightChart } from "../components/weight-chart";
 import { WithingsConnect } from "../components/withings-connect";
+import { BpSyncButton } from "../components/bp-sync-button";
 import Link from "next/link";
 
 export default async function HealthPage() {
@@ -124,7 +125,10 @@ export default async function HealthPage() {
 
           {/* Blood Pressure */}
           <div className="rounded-lg border p-6">
-            <h2 className="font-semibold mb-4">Blutdruck</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold">Blutdruck</h2>
+              <BpSyncButton />
+            </div>
             {bpData.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                 <p className="text-sm">Noch keine Blutdruck-Daten.</p>
