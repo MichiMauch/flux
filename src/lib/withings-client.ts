@@ -2,6 +2,7 @@ import crypto from "crypto";
 
 const WITHINGS_AUTH_URL = "https://account.withings.com/oauth2_user/authorize2";
 const WITHINGS_API_URL = "https://wbsapi.withings.net/v2/oauth2";
+const WITHINGS_SIGNATURE_URL = "https://wbsapi.withings.net/v2/signature";
 const WITHINGS_MEASURE_URL = "https://wbsapi.withings.net/measure";
 
 function sign(
@@ -38,7 +39,7 @@ async function getNonce(): Promise<string> {
     signature,
   });
 
-  const res = await fetch(`${WITHINGS_API_URL}`, {
+  const res = await fetch(WITHINGS_SIGNATURE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
