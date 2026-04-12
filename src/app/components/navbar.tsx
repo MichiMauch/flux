@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Heart, LogOut } from "lucide-react";
+import { Activity, Heart, BarChart3, LogOut } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -36,6 +36,15 @@ export async function Navbar() {
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Aktivitäten
+            </Link>
+            <Link
+              href="/stats"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span className="flex items-center gap-1">
+                <BarChart3 className="h-3.5 w-3.5" />
+                Statistiken
+              </span>
             </Link>
             <Link
               href="/health"
@@ -76,7 +85,10 @@ export async function Navbar() {
                 }}
               >
                 <DropdownMenuItem
-                  render={<button type="submit" className="w-full cursor-pointer" />}
+                  render={<span role="button" className="w-full cursor-pointer" />}
+                  onClick={(e) => {
+                    e.currentTarget.closest("form")?.requestSubmit();
+                  }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Abmelden
