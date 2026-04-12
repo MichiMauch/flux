@@ -24,13 +24,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Install drizzle-kit + postgres driver for migrations at startup
+RUN npm install -g drizzle-kit@latest postgres@latest drizzle-orm@latest
+
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Drizzle migrations
+# Drizzle config + migrations
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/src/lib/db/schema.ts ./src/lib/db/schema.ts
+
+# Seed script
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/package.json ./package.json
 
 # FIT files directory
 RUN mkdir -p /data/fit-files && chown nextjs:nodejs /data/fit-files
@@ -41,4 +49,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/start.sh ./start.sh
+
+CMD ["sh", "start.sh"]
