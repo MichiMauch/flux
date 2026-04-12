@@ -242,6 +242,13 @@ export default async function ActivityDetailPage({
               value={`${activity.avgSpeed.toFixed(1)} km/h`}
             />
           )}
+          {activity.avgTemperature != null && (
+            <StatCard
+              icon={<Thermometer className="h-4 w-4" />}
+              label="Temperatur"
+              value={`${activity.avgTemperature.toFixed(0)}°C`}
+            />
+          )}
           {activity.cardioLoad != null && activity.cardioLoad > 0 && (
             <StatCard
               icon={<Activity className="h-4 w-4" />}

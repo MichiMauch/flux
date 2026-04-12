@@ -5,6 +5,9 @@ interface ParsedFitData {
   heartRateData: { time: string; bpm: number }[];
   speedData: { time: string; speed: number }[];
   session: {
+    avgTemperature?: number;
+    minTemperature?: number;
+    maxTemperature?: number;
     avgCadence?: number;
     maxCadence?: number;
     totalSteps?: number;
@@ -70,8 +73,19 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
 
       // Extract session-level data
       const s = data.sessions?.[0];
+      // Calculate temperature stats from records
+      const temps = (data.records ?? [])
+        .map((r: any) => r.temperature)
+        .filter((t: any) => t != null) as number[];
+      const avgTemp = temps.length > 0 ? temps.reduce((a: number, b: number) => a + b, 0) / temps.length : undefined;
+      const minTemp = temps.length > 0 ? Math.min(...temps) : undefined;
+      const maxTemp = temps.length > 0 ? Math.max(...temps) : undefined;
+
       const session = s
         ? {
+            avgTemperature: avgTemp,
+            minTemperature: minTemp,
+            maxTemperature: maxTemp,
             avgCadence: s.avg_cadence ?? undefined,
             maxCadence: s.max_cadence ?? undefined,
             totalSteps: s.total_cycles ?? undefined,
