@@ -77,6 +77,23 @@ function StatCard({ icon, label, value }: StatCardProps) {
   );
 }
 
+function MacroBar({ label, percentage, color }: { label: string; percentage: number; color: string }) {
+  return (
+    <div className="flex-1">
+      <div className="flex justify-between text-sm mb-1">
+        <span>{label}</span>
+        <span className="font-medium">{percentage}%</span>
+      </div>
+      <div className="h-3 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${percentage}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default async function ActivityDetailPage({
   params,
 }: {
@@ -204,7 +221,35 @@ export default async function ActivityDetailPage({
               value={`${activity.calories} kcal`}
             />
           )}
+          {activity.cardioLoad != null && activity.cardioLoad > 0 && (
+            <StatCard
+              icon={<Activity className="h-4 w-4" />}
+              label="Cardio Load"
+              value={`${activity.cardioLoad.toFixed(1)}`}
+            />
+          )}
         </div>
+
+        {/* Macros */}
+        {activity.fatPercentage != null && (
+          <div className="mb-6">
+            <h2 className="font-semibold mb-3">Energieverbrauch</h2>
+            <div className="rounded-lg border p-4">
+              <div className="flex gap-6 items-center">
+                <MacroBar label="Fett" percentage={activity.fatPercentage} color="#f59e0b" />
+                <MacroBar label="Kohlenhydrate" percentage={activity.carbPercentage ?? 0} color="#3b82f6" />
+                <MacroBar label="Eiweiss" percentage={activity.proteinPercentage ?? 0} color="#22c55e" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Device */}
+        {activity.device && (
+          <p className="text-xs text-muted-foreground mb-4">
+            Aufgezeichnet mit {activity.device}
+          </p>
+        )}
 
         {/* Map */}
         {routeData.length > 0 && (

@@ -8,6 +8,13 @@
       "when": 1775996305898,
       "tag": "0000_broad_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776009829559,
+      "tag": "0001_glorious_echo",
+      "breakpoints": true
     }
   ]
 }

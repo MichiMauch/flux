@@ -26,6 +26,15 @@ interface PolarExercise {
   sport: string;
   has_route: boolean;
   detailed_sport_info: string;
+  fat_percentage?: number;
+  carbohydrate_percentage?: number;
+  protein_percentage?: number;
+  training_load_pro?: {
+    "cardio-load"?: number;
+    "cardio-load-interpretation"?: string;
+    "muscle-load"?: number;
+    "muscle-load-interpretation"?: string;
+  };
 }
 
 interface PolarGpxPoint {

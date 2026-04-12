@@ -100,6 +100,12 @@ export const activities = pgTable("activities", {
   routeData: json("route_data"), // [{lat, lng, time}]
   heartRateData: json("heart_rate_data"), // [{time, bpm}]
   speedData: json("speed_data"), // [{time, speed}]
+  fatPercentage: integer("fat_percentage"),
+  carbPercentage: integer("carb_percentage"),
+  proteinPercentage: integer("protein_percentage"),
+  cardioLoad: real("cardio_load"),
+  cardioLoadInterpretation: text("cardio_load_interpretation"),
+  device: text("device"),
   fitFilePath: text("fit_file_path"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

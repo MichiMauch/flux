@@ -82,6 +82,12 @@ export async function POST() {
         routeData,
         heartRateData,
         speedData,
+        fatPercentage: exercise.fat_percentage ?? null,
+        carbPercentage: exercise.carbohydrate_percentage ?? null,
+        proteinPercentage: exercise.protein_percentage ?? null,
+        cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
+        cardioLoadInterpretation: exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
+        device: exercise.device ?? null,
         fitFilePath,
       });
 
