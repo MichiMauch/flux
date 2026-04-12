@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           type: exercise.sport || "OTHER",
           startTime: new Date(exercise.start_time),
           duration: durationSeconds,
-          movingTime: fitSession?.totalTimerTime ? Math.round(fitSession.totalTimerTime) : null,
+          movingTime: fitSession?.movingTime ?? null,
           distance: exercise.distance,
           calories: exercise.calories,
           avgHeartRate: exercise.heart_rate?.average ?? fitSession?.avgHeartRate ?? null,

@@ -23,6 +23,7 @@ interface ParsedFitData {
     totalDistance?: number;
     totalElapsedTime?: number;
     totalTimerTime?: number;
+    movingTime?: number;
     sport?: string;
     subSport?: string;
   } | null;
@@ -111,6 +112,7 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
             totalDistance: s.total_distance ?? undefined,
             totalElapsedTime: s.total_elapsed_time ?? undefined,
             totalTimerTime: s.total_timer_time ?? undefined,
+            movingTime: calcMovingTime(data.records ?? []),
             sport: s.sport ?? undefined,
             subSport: s.sub_sport ?? undefined,
           }
@@ -119,4 +121,19 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
       resolve({ routeData, heartRateData, speedData, session });
     });
   });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function calcMovingTime(records: any[]): number | undefined {
+  const SPEED_THRESHOLD = 0.5; // km/h
+  let movingSeconds = 0;
+  for (let i = 1; i < records.length; i++) {
+    const r = records[i];
+    const prev = records[i - 1];
+    if (r.speed != null && r.speed > SPEED_THRESHOLD && r.timestamp && prev.timestamp) {
+      const dt = (new Date(r.timestamp).getTime() - new Date(prev.timestamp).getTime()) / 1000;
+      if (dt > 0 && dt < 10) movingSeconds += dt;
+    }
+  }
+  return movingSeconds > 0 ? Math.round(movingSeconds) : undefined;
 }
