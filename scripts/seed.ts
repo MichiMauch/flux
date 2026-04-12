@@ -10,18 +10,16 @@ async function seed() {
   const password2 = await bcrypt.hash("changeme", 12);
 
   await sql`
-    INSERT INTO "user" (id, name, email, password, "createdAt")
+    INSERT INTO "user" (id, name, email, password, created_at)
     VALUES
-      (${crypto.randomUUID()}, 'Michael', 'michael@example.com', ${password1}, NOW()),
-      (${crypto.randomUUID()}, 'Partner', 'partner@example.com', ${password2}, NOW())
+      (${crypto.randomUUID()}, 'Michi', 'michi.mauch@gmail.com', ${password1}, NOW()),
+      (${crypto.randomUUID()}, 'Sibylle', 'sibylle.koelliker@gmail.com', ${password2}, NOW())
     ON CONFLICT (email) DO NOTHING
   `;
 
   console.log("Seed complete: 2 users created.");
-  console.log("  michael@example.com / changeme");
-  console.log("  partner@example.com / changeme");
-  console.log("");
-  console.log("Change passwords and emails in this script before first use!");
+  console.log("  michi.mauch@gmail.com / changeme");
+  console.log("  sibylle.koelliker@gmail.com / changeme");
 
   await sql.end();
 }

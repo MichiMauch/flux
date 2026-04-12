@@ -1,65 +1,123 @@
-import Image from "next/image";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { Navbar } from "./components/navbar";
+import { db } from "@/lib/db";
+import { activities, users } from "@/lib/db/schema";
+import { desc, eq } from "drizzle-orm";
+import { Activity, Bike, Footprints, Clock, Ruler, Mountain } from "lucide-react";
 
-export default function Home() {
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}
+
+function formatDistance(meters: number): string {
+  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
+  return `${Math.round(meters)} m`;
+}
+
+function getActivityIcon(type: string) {
+  switch (type.toUpperCase()) {
+    case "CYCLING":
+      return <Bike className="h-5 w-5" />;
+    case "RUNNING":
+      return <Footprints className="h-5 w-5" />;
+    default:
+      return <Activity className="h-5 w-5" />;
+  }
+}
+
+export default async function HomePage() {
+  const session = await auth();
+  if (!session) redirect("/login");
+
+  const allActivities = await db
+    .select({
+      id: activities.id,
+      name: activities.name,
+      type: activities.type,
+      startTime: activities.startTime,
+      duration: activities.duration,
+      distance: activities.distance,
+      ascent: activities.ascent,
+      avgHeartRate: activities.avgHeartRate,
+      userName: users.name,
+    })
+    .from(activities)
+    .innerJoin(users, eq(activities.userId, users.id))
+    .orderBy(desc(activities.startTime))
+    .limit(20);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <Navbar />
+      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Aktivitäten</h1>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {allActivities.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Activity className="h-12 w-12 mb-4" />
+            <p className="text-lg font-medium">Noch keine Aktivitäten</p>
+            <p className="text-sm mt-1">
+              Verbinde deinen Polar-Account, um Aktivitäten zu synchronisieren.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {allActivities.map((a) => (
+              <a
+                key={a.id}
+                href={`/activity/${a.id}`}
+                className="flex items-center gap-4 rounded-lg border p-4 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  {getActivityIcon(a.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{a.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {a.userName}
+                    </span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {a.startTime.toLocaleDateString("de-CH", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  {a.distance != null && (
+                    <span className="flex items-center gap-1">
+                      <Ruler className="h-3.5 w-3.5" />
+                      {formatDistance(a.distance)}
+                    </span>
+                  )}
+                  {a.duration != null && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {formatDuration(a.duration)}
+                    </span>
+                  )}
+                  {a.ascent != null && a.ascent > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Mountain className="h-3.5 w-3.5" />
+                      {Math.round(a.ascent)} m
+                    </span>
+                  )}
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
       </main>
-    </div>
+    </>
   );
 }

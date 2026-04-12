@@ -1,0 +1,5 @@
+node_modules
+.next
+.git
+.env*
+data/fit-files
