@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         let heartRateData = null;
         let speedData = null;
         let fitFilePath: string | null = null;
+        let fitSession: any = null;
 
         try {
           const fitBuffer = await downloadFit(user.polarToken, exercise.id);
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
           routeData = parsed.routeData.length > 0 ? parsed.routeData : null;
           heartRateData = parsed.heartRateData.length > 0 ? parsed.heartRateData : null;
           speedData = parsed.speedData.length > 0 ? parsed.speedData : null;
+          fitSession = parsed.session;
         } catch (e) {
           console.warn(`Could not process FIT for ${exercise.id}:`, e);
         }
@@ -81,11 +83,18 @@ export async function POST(request: NextRequest) {
           duration: durationSeconds,
           distance: exercise.distance,
           calories: exercise.calories,
-          avgHeartRate: exercise.heart_rate?.average,
-          maxHeartRate: exercise.heart_rate?.maximum,
+          avgHeartRate: exercise.heart_rate?.average ?? fitSession?.avgHeartRate ?? null,
+          maxHeartRate: exercise.heart_rate?.maximum ?? fitSession?.maxHeartRate ?? null,
+          ascent: fitSession?.totalAscent ?? null,
+          descent: fitSession?.totalDescent ?? null,
           routeData,
           heartRateData,
           speedData,
+          avgCadence: fitSession?.avgCadence ?? null,
+          maxCadence: fitSession?.maxCadence ?? null,
+          totalSteps: fitSession?.totalSteps ?? null,
+          avgSpeed: fitSession?.avgSpeed ?? null,
+          maxSpeed: fitSession?.maxSpeed ?? null,
           fatPercentage: exercise.fat_percentage ?? null,
           carbPercentage: exercise.carbohydrate_percentage ?? null,
           proteinPercentage: exercise.protein_percentage ?? null,

@@ -221,6 +221,27 @@ export default async function ActivityDetailPage({
               value={`${activity.calories} kcal`}
             />
           )}
+          {activity.totalSteps != null && activity.totalSteps > 0 && (
+            <StatCard
+              icon={<Footprints className="h-4 w-4" />}
+              label="Schritte"
+              value={`${activity.totalSteps.toLocaleString("de-CH")}`}
+            />
+          )}
+          {activity.avgCadence != null && (
+            <StatCard
+              icon={<Activity className="h-4 w-4" />}
+              label="Ø Kadenz"
+              value={`${activity.avgCadence} spm`}
+            />
+          )}
+          {activity.avgSpeed != null && (
+            <StatCard
+              icon={<Ruler className="h-4 w-4" />}
+              label="Ø Speed (FIT)"
+              value={`${activity.avgSpeed.toFixed(1)} km/h`}
+            />
+          )}
           {activity.cardioLoad != null && activity.cardioLoad > 0 && (
             <StatCard
               icon={<Activity className="h-4 w-4" />}

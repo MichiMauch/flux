@@ -15,6 +15,13 @@
       "when": 1776009829559,
       "tag": "0001_glorious_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776010068226,
+      "tag": "0002_neat_kylun",
+      "breakpoints": true
     }
   ]
 }
