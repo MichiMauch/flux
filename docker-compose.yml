@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: polar-self-connect-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: polar
+      POSTGRES_PASSWORD: polar
+      POSTGRES_DB: polar_self_connect
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
