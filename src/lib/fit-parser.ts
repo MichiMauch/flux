@@ -32,7 +32,7 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
     const fitParser = new FitParser({
       force: true,
       speedUnit: "km/h",
-      lengthUnit: "km",
+      lengthUnit: "m",
       elapsedRecordField: true,
     });
 
@@ -79,8 +79,8 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
       const alts = (data.records ?? [])
         .map((r: any) => r.altitude)
         .filter((a: any) => a != null) as number[];
-      const minAlt = alts.length > 0 ? Math.round(Math.min(...alts) * 1000) : undefined; // km → m
-      const maxAlt = alts.length > 0 ? Math.round(Math.max(...alts) * 1000) : undefined;
+      const minAlt = alts.length > 0 ? Math.round(Math.min(...alts)) : undefined;
+      const maxAlt = alts.length > 0 ? Math.round(Math.max(...alts)) : undefined;
 
       // Calculate temperature stats from records
       const temps = (data.records ?? [])
@@ -105,9 +105,9 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
             avgHeartRate: s.avg_heart_rate ?? undefined,
             maxHeartRate: s.max_heart_rate ?? undefined,
             totalCalories: s.total_calories ?? undefined,
-            totalAscent: s.total_ascent != null ? s.total_ascent * 1000 : undefined, // km → m
-            totalDescent: s.total_descent != null ? s.total_descent * 1000 : undefined,
-            totalDistance: s.total_distance != null ? s.total_distance * 1000 : undefined, // km → m
+            totalAscent: s.total_ascent ?? undefined,
+            totalDescent: s.total_descent ?? undefined,
+            totalDistance: s.total_distance ?? undefined,
             totalElapsedTime: s.total_elapsed_time ?? undefined,
             sport: s.sport ?? undefined,
             subSport: s.sub_sport ?? undefined,
