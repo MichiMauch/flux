@@ -5,6 +5,8 @@ interface ParsedFitData {
   heartRateData: { time: string; bpm: number }[];
   speedData: { time: string; speed: number }[];
   session: {
+    minAltitude?: number;
+    maxAltitude?: number;
     avgTemperature?: number;
     minTemperature?: number;
     maxTemperature?: number;
@@ -73,6 +75,13 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
 
       // Extract session-level data
       const s = data.sessions?.[0];
+      // Calculate altitude stats from records (FIT uses km for altitude with lengthUnit: km)
+      const alts = (data.records ?? [])
+        .map((r: any) => r.altitude)
+        .filter((a: any) => a != null) as number[];
+      const minAlt = alts.length > 0 ? Math.round(Math.min(...alts) * 1000) : undefined; // km → m
+      const maxAlt = alts.length > 0 ? Math.round(Math.max(...alts) * 1000) : undefined;
+
       // Calculate temperature stats from records
       const temps = (data.records ?? [])
         .map((r: any) => r.temperature)
@@ -83,6 +92,8 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
 
       const session = s
         ? {
+            minAltitude: minAlt,
+            maxAltitude: maxAlt,
             avgTemperature: avgTemp,
             minTemperature: minTemp,
             maxTemperature: maxTemp,

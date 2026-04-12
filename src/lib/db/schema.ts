@@ -103,6 +103,8 @@ export const activities = pgTable("activities", {
   fatPercentage: integer("fat_percentage"),
   carbPercentage: integer("carb_percentage"),
   proteinPercentage: integer("protein_percentage"),
+  minAltitude: real("min_altitude"),
+  maxAltitude: real("max_altitude"),
   avgTemperature: real("avg_temperature"),
   minTemperature: real("min_temperature"),
   maxTemperature: real("max_temperature"),

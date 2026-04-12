@@ -90,6 +90,8 @@ export async function POST(request: NextRequest) {
           routeData,
           heartRateData,
           speedData,
+          minAltitude: fitSession?.minAltitude ?? null,
+          maxAltitude: fitSession?.maxAltitude ?? null,
           avgTemperature: fitSession?.avgTemperature ?? null,
           minTemperature: fitSession?.minTemperature ?? null,
           maxTemperature: fitSession?.maxTemperature ?? null,

@@ -214,6 +214,13 @@ export default async function ActivityDetailPage({
               value={`${Math.round(activity.descent)} m`}
             />
           )}
+          {activity.minAltitude != null && activity.maxAltitude != null && (
+            <StatCard
+              icon={<Mountain className="h-4 w-4" />}
+              label="Höhe (min/max)"
+              value={`${Math.round(activity.minAltitude)} – ${Math.round(activity.maxAltitude)} m`}
+            />
+          )}
           {activity.calories != null && (
             <StatCard
               icon={<Flame className="h-4 w-4" />}
