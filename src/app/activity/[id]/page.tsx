@@ -172,8 +172,15 @@ export default async function ActivityDetailPage({
           {activity.duration != null && (
             <StatCard
               icon={<Clock className="h-4 w-4" />}
-              label="Dauer"
+              label="Gesamtzeit"
               value={formatDuration(activity.duration)}
+            />
+          )}
+          {activity.movingTime != null && activity.movingTime !== activity.duration && (
+            <StatCard
+              icon={<Clock className="h-4 w-4" />}
+              label="Bewegungszeit"
+              value={formatDuration(activity.movingTime)}
             />
           )}
           {activity.distance != null && activity.duration != null && (

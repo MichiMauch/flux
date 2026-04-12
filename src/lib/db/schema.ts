@@ -90,7 +90,8 @@ export const activities = pgTable("activities", {
   name: text("name").notNull(),
   type: text("type").notNull(), // RUNNING, CYCLING, SWIMMING, etc.
   startTime: timestamp("start_time").notNull(),
-  duration: integer("duration"), // seconds
+  duration: integer("duration"), // seconds (elapsed time, incl. pauses)
+  movingTime: integer("moving_time"), // seconds (timer time, excl. pauses)
   distance: real("distance"), // meters
   calories: integer("calories"),
   avgHeartRate: integer("avg_heart_rate"),

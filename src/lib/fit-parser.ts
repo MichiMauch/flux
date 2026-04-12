@@ -22,6 +22,7 @@ interface ParsedFitData {
     totalDescent?: number;
     totalDistance?: number;
     totalElapsedTime?: number;
+    totalTimerTime?: number;
     sport?: string;
     subSport?: string;
   } | null;
@@ -109,6 +110,7 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
             totalDescent: s.total_descent ?? undefined,
             totalDistance: s.total_distance ?? undefined,
             totalElapsedTime: s.total_elapsed_time ?? undefined,
+            totalTimerTime: s.total_timer_time ?? undefined,
             sport: s.sport ?? undefined,
             subSport: s.sub_sport ?? undefined,
           }
