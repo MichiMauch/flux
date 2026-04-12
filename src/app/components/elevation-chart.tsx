@@ -11,39 +11,23 @@ import {
 
 interface ElevationChartProps {
   data: { lat: number; lng: number; elevation?: number | null }[];
+  totalDistance?: number | null; // meters
 }
 
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-export function ElevationChart({ data }: ElevationChartProps) {
+export function ElevationChart({ data, totalDistance }: ElevationChartProps) {
   const withElevation = data.filter((d) => d.elevation != null);
   if (withElevation.length === 0) return null;
 
-  let cumulativeDistance = 0;
-  const chartData = withElevation.map((d, i) => {
-    if (i > 0) {
-      cumulativeDistance += haversine(
-        withElevation[i - 1].lat,
-        withElevation[i - 1].lng,
-        d.lat,
-        d.lng
-      );
-    }
-    return {
-      distance: Math.round(cumulativeDistance / 10) / 100, // km with 2 decimals
-      elevation: Math.round(d.elevation!),
-    };
-  });
+  // Use total distance from activity (accurate) and distribute proportionally
+  const totalKm = totalDistance
+    ? totalDistance / 1000
+    : estimateDistance(withElevation);
+
+  const chartData = withElevation.map((d, i) => ({
+    distance:
+      Math.round((totalKm * (i / (withElevation.length - 1))) * 100) / 100,
+    elevation: Math.round(d.elevation!),
+  }));
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -87,4 +71,22 @@ export function ElevationChart({ data }: ElevationChartProps) {
       </AreaChart>
     </ResponsiveContainer>
   );
+}
+
+function estimateDistance(
+  points: { lat: number; lng: number }[]
+): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const R = 6371;
+    const dLat = ((points[i].lat - points[i - 1].lat) * Math.PI) / 180;
+    const dLon = ((points[i].lng - points[i - 1].lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((points[i - 1].lat * Math.PI) / 180) *
+        Math.cos((points[i].lat * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  return total;
 }

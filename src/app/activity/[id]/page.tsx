@@ -322,7 +322,7 @@ export default async function ActivityDetailPage({
             <div>
               <h2 className="font-semibold mb-3">Höhenprofil</h2>
               <div className="rounded-lg border p-4" style={{ height: 250 }}>
-                <ElevationChart data={routeData} />
+                <ElevationChart data={routeData} totalDistance={activity.distance} />
               </div>
             </div>
           )}
