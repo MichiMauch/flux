@@ -3,7 +3,7 @@ import { XMLParser } from "fast-xml-parser";
 import postgres from "postgres";
 import { basename } from "path";
 
-const DATABASE_URL = "postgresql://polar:polar@localhost:5432/polar_self_connect";
+const DATABASE_URL = process.env.DATABASE_URL || "postgresql://flux:flux-prod-2026@localhost:5432/flux";
 
 interface TrackPoint {
   "@_lat": string;

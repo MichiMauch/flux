@@ -65,11 +65,11 @@ export async function POST(request: NextRequest) {
           console.warn(`Could not process FIT for ${exercise.id}:`, e);
         }
 
-        const durationMatch = exercise.duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+        const durationMatch = exercise.duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?/);
         const durationSeconds = durationMatch
           ? (parseInt(durationMatch[1] || "0") * 3600 +
              parseInt(durationMatch[2] || "0") * 60 +
-             parseInt(durationMatch[3] || "0"))
+             Math.round(parseFloat(durationMatch[3] || "0")))
           : 0;
 
         await db.insert(activities).values({
