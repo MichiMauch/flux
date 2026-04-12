@@ -6,20 +6,20 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.url;
+
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", baseUrl));
   }
 
   const code = request.nextUrl.searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(
-      new URL("/?error=no_code", request.url)
-    );
+    return NextResponse.redirect(new URL("/?error=no_code", baseUrl));
   }
 
   try {
-    const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/polar/callback`;
+    const callbackUrl = `${baseUrl}/api/polar/callback`;
     const tokenData = await exchangeToken(code, callbackUrl);
 
     // Register user with Polar (idempotent, non-blocking)
@@ -38,13 +38,11 @@ export async function GET(request: NextRequest) {
       })
       .where(eq(users.id, session.user.id));
 
-    return NextResponse.redirect(
-      new URL("/?polar=connected", request.url)
-    );
+    return NextResponse.redirect(new URL("/?polar=connected", baseUrl));
   } catch (error) {
     console.error("Polar OAuth error:", error);
     return NextResponse.redirect(
-      new URL("/?error=polar_oauth_failed", request.url)
+      new URL("/?error=polar_oauth_failed", baseUrl)
     );
   }
 }
