@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "../components/navbar";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, and, gte } from "drizzle-orm";
 import { WeeklyChart } from "../components/weekly-chart";
 import { MonthlyChart } from "../components/monthly-chart";
 import { Ruler, Clock, Mountain, Flame, Activity } from "lucide-react";
@@ -26,6 +26,10 @@ export default async function StatsPage() {
 
   // Year totals
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
+  const yearFilter = and(
+    eq(activities.userId, userId),
+    gte(activities.startTime, yearStart)
+  );
   const yearTotals = await db
     .select({
       count: sql<number>`count(*)`,
@@ -35,9 +39,7 @@ export default async function StatsPage() {
       totalCalories: sql<number>`coalesce(sum(${activities.calories}), 0)`,
     })
     .from(activities)
-    .where(
-      sql`${activities.userId} = ${userId} AND ${activities.startTime} >= ${yearStart}`
-    );
+    .where(yearFilter);
 
   const year = yearTotals[0];
 
@@ -50,9 +52,7 @@ export default async function StatsPage() {
       totalDuration: sql<number>`coalesce(sum(${activities.duration}), 0)`,
     })
     .from(activities)
-    .where(
-      sql`${activities.userId} = ${userId} AND ${activities.startTime} >= ${yearStart}`
-    )
+    .where(yearFilter)
     .groupBy(activities.type)
     .orderBy(desc(sql`sum(${activities.distance})`));
 
@@ -65,9 +65,10 @@ export default async function StatsPage() {
       count: sql<number>`count(*)`,
     })
     .from(activities)
-    .where(
-      sql`${activities.userId} = ${userId} AND ${activities.startTime} >= now() - interval '12 weeks'`
-    )
+    .where(and(
+      eq(activities.userId, userId),
+      gte(activities.startTime, new Date(Date.now() - 12 * 7 * 24 * 60 * 60 * 1000))
+    ))
     .groupBy(sql`to_char(${activities.startTime}, 'IYYY-IW')`)
     .orderBy(sql`to_char(${activities.startTime}, 'IYYY-IW')`);
 
@@ -81,9 +82,10 @@ export default async function StatsPage() {
       count: sql<number>`count(*)`,
     })
     .from(activities)
-    .where(
-      sql`${activities.userId} = ${userId} AND ${activities.startTime} >= now() - interval '12 months'`
-    )
+    .where(and(
+      eq(activities.userId, userId),
+      gte(activities.startTime, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
+    ))
     .groupBy(sql`to_char(${activities.startTime}, 'YYYY-MM')`)
     .orderBy(sql`to_char(${activities.startTime}, 'YYYY-MM')`);
 
