@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "../components/navbar";
 import { db } from "@/lib/db";
 import { bloodPressureSessions, weightMeasurements, users } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { BloodPressureChart } from "../components/blood-pressure-chart";
 import { WeightChart } from "../components/weight-chart";
 import { WithingsConnect } from "../components/withings-connect";
@@ -35,7 +35,11 @@ export default async function HealthPage() {
     .select()
     .from(bloodPressureSessions)
     .where(eq(bloodPressureSessions.userId, session.user.id))
-    .orderBy(desc(bloodPressureSessions.date))
+    .orderBy(
+      desc(
+        sql`coalesce(${bloodPressureSessions.measuredAt}, ${bloodPressureSessions.createdAt})`
+      )
+    )
     .limit(100);
 
   const latestBp = bpData[0];

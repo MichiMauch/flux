@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
   await db.insert(bloodPressureSessions).values({
     userId: user.id,
     sourceId: body.id,
+    measuredAt: body.timestamp ? new Date(body.timestamp) : null,
     date: body.date,
     time: body.time,
     systolicAvg: body.systolicAvg,

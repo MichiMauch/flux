@@ -1,0 +1,1 @@
+ALTER TABLE "blood_pressure_sessions" ADD COLUMN "measured_at" timestamp;

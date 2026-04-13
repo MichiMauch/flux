@@ -8,6 +8,7 @@ interface BpSession {
   id: number;
   date: string;
   time: string;
+  timestamp: number;
   systolicAvg: number;
   diastolicAvg: number;
   pulseAvg: number;
@@ -53,6 +54,7 @@ export async function POST() {
       await db.insert(bloodPressureSessions).values({
         userId: session.user.id,
         sourceId: s.id,
+        measuredAt: s.timestamp ? new Date(s.timestamp) : null,
         date: s.date,
         time: s.time,
         systolicAvg: s.systolicAvg,

@@ -149,6 +149,7 @@ export const bloodPressureSessions = pgTable("blood_pressure_sessions", {
     .notNull()
     .references(() => users.id),
   sourceId: integer("source_id").unique(), // ID from blood-pressure-tracker
+  measuredAt: timestamp("measured_at"), // real timestamp for sorting
   date: text("date").notNull(),
   time: text("time"),
   systolicAvg: real("systolic_avg").notNull(),
