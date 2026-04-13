@@ -10,6 +10,7 @@ import { SpeedChart } from "@/app/components/speed-chart";
 import { ElevationChart } from "@/app/components/elevation-chart";
 import { ActivityTitle } from "@/app/components/activity-title";
 import { PhotoSection } from "@/app/components/photo-section";
+import { PhotoLightbox } from "@/app/components/photo-lightbox";
 import {
   ArrowLeft,
   Clock,
@@ -124,9 +125,12 @@ export default async function ActivityDetailPage({
       id: activityPhotos.id,
       lat: activityPhotos.lat,
       lng: activityPhotos.lng,
+      location: activityPhotos.location,
+      takenAt: activityPhotos.takenAt,
     })
     .from(activityPhotos)
-    .where(eq(activityPhotos.activityId, activity.id));
+    .where(eq(activityPhotos.activityId, activity.id))
+    .orderBy(activityPhotos.takenAt);
 
   const isOwner = activity.userId === session.user.id;
   const photoMarkers = photosRaw
@@ -370,6 +374,7 @@ export default async function ActivityDetailPage({
           )}
         </div>
       </main>
+      {photosRaw.length > 0 && <PhotoLightbox photos={photosRaw} />}
     </>
   );
 }

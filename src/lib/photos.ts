@@ -11,5 +11,5 @@ export function getPhotoFilename(photoId: string, ext: string): string {
 }
 
 export function getThumbnailFilename(photoId: string): string {
-  return `${photoId}-thumb.jpg`;
+  return `${photoId}-thumb.webp`;
 }

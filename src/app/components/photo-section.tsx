@@ -91,11 +91,7 @@ export function PhotoSection({ activityId, initialPhotos }: PhotoSectionProps) {
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
           {photos.map((photo) => (
             <div key={photo.id} className="relative group aspect-square">
-              <a
-                href={`/api/photos/${photo.id}`}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a href={`#photo=${photo.id}`}>
                 <img
                   src={`/api/photos/${photo.id}?thumb=1`}
                   alt=""

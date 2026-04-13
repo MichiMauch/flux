@@ -12,6 +12,7 @@ import {
   getPhotoFilename,
   getThumbnailFilename,
 } from "@/lib/photos";
+import { reverseGeocode } from "@/lib/geocode";
 
 export async function POST(
   request: NextRequest,
@@ -67,23 +68,32 @@ export async function POST(
       console.warn("EXIF parse failed:", e);
     }
 
-    // Get image metadata + create thumbnail
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const filename = getPhotoFilename(photoId, ext);
+    // Web-optimized: max 2048px longest side, WebP quality 82
+    const filename = getPhotoFilename(photoId, "webp");
     const thumbFilename = getThumbnailFilename(photoId);
 
-    const meta = await sharp(buffer).metadata();
+    const optimized = await sharp(buffer)
+      .rotate() // EXIF auto-rotate
+      .resize(2048, 2048, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82, effort: 4 })
+      .toBuffer({ resolveWithObject: true });
 
-    // Auto-rotate based on EXIF, save original
-    const rotated = await sharp(buffer).rotate().toBuffer();
-    await writeFile(join(dir, filename), rotated);
+    await writeFile(join(dir, filename), optimized.data);
 
-    // 200x200 thumbnail
+    // 400x400 thumbnail
     await sharp(buffer)
       .rotate()
-      .resize(200, 200, { fit: "cover" })
-      .jpeg({ quality: 80 })
+      .resize(400, 400, { fit: "cover" })
+      .webp({ quality: 75, effort: 4 })
       .toFile(join(dir, thumbFilename));
+
+    const meta = optimized.info;
+
+    // Reverse geocode location name
+    let location: string | null = null;
+    if (lat != null && lng != null) {
+      location = await reverseGeocode(lat, lng);
+    }
 
     const filePath = join(dir, filename);
     const thumbnailPath = join(dir, thumbFilename);
@@ -96,11 +106,12 @@ export async function POST(
       lat,
       lng,
       takenAt,
+      location,
       width: meta.width ?? null,
       height: meta.height ?? null,
     });
 
-    uploaded.push({ id: photoId, lat, lng });
+    uploaded.push({ id: photoId, lat, lng, location });
   }
 
   return NextResponse.json({ uploaded });

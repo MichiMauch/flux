@@ -94,15 +94,15 @@ export default function MapClient({ routeData, photos = [] }: MapClientProps) {
     // Photo markers
     for (const photo of photos) {
       const icon = L.divIcon({
-        html: `<div style="background-image:url(/api/photos/${photo.id}?thumb=1);" class="photo-marker"></div>`,
-        className: "",
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+        html: `<img src="/api/photos/${photo.id}?thumb=1" alt="" class="photo-marker-img" />`,
+        className: "photo-marker-wrapper",
+        iconSize: [50, 50],
+        iconAnchor: [25, 25],
       });
-      L.marker([photo.lat, photo.lng], { icon })
+      L.marker([photo.lat, photo.lng], { icon, zIndexOffset: 1000 })
         .addTo(map)
         .on("click", () => {
-          window.open(`/api/photos/${photo.id}`, "_blank");
+          window.location.hash = `photo=${photo.id}`;
         });
     }
 

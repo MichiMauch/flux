@@ -39,10 +39,15 @@ export async function GET(
 
   try {
     const buffer = await readFile(path);
-    const isJpg = path.toLowerCase().endsWith(".jpg") || path.toLowerCase().endsWith(".jpeg");
+    const lower = path.toLowerCase();
+    const contentType = lower.endsWith(".webp")
+      ? "image/webp"
+      : lower.endsWith(".png")
+      ? "image/png"
+      : "image/jpeg";
     return new Response(new Uint8Array(buffer), {
       headers: {
-        "Content-Type": isJpg ? "image/jpeg" : "image/png",
+        "Content-Type": contentType,
         "Cache-Control": "private, max-age=3600",
       },
     });

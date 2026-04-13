@@ -135,6 +135,7 @@ export const activityPhotos = pgTable("activity_photos", {
   lat: real("lat"),
   lng: real("lng"),
   takenAt: timestamp("taken_at"),
+  location: text("location"),
   width: integer("width"),
   height: integer("height"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
