@@ -128,3 +128,17 @@
     @apply font-sans;
   }
 }
+.photo-marker {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid white;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.photo-marker:hover {
+  transform: scale(1.1);
+}

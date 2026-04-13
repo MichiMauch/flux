@@ -40,5 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# fit files archive
-/data/fit-files/
+# data archives
+/data/

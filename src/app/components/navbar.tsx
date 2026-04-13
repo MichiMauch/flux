@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Activity, Heart, BarChart3, LogOut } from "lucide-react";
+import { Activity, Heart, BarChart3 } from "lucide-react";
+import { LogoutMenuItem } from "./logout-menu-item";
 import { auth, signOut } from "@/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -84,15 +84,7 @@ export async function Navbar() {
                   await signOut({ redirectTo: "/login" });
                 }}
               >
-                <DropdownMenuItem
-                  render={<span role="button" className="w-full cursor-pointer" />}
-                  onClick={(e) => {
-                    e.currentTarget.closest("form")?.requestSubmit();
-                  }}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Abmelden
-                </DropdownMenuItem>
+                <LogoutMenuItem />
               </form>
             </DropdownMenuContent>
           </DropdownMenu>

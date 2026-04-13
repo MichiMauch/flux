@@ -121,6 +121,25 @@ export const activities = pgTable("activities", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ── Activity Photos ────────────────────────────────────────────────────────
+
+export const activityPhotos = pgTable("activity_photos", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  activityId: text("activity_id")
+    .notNull()
+    .references(() => activities.id, { onDelete: "cascade" }),
+  filePath: text("file_path").notNull(),
+  thumbnailPath: text("thumbnail_path").notNull(),
+  lat: real("lat"),
+  lng: real("lng"),
+  takenAt: timestamp("taken_at"),
+  width: integer("width"),
+  height: integer("height"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ── Weight (Withings) ──────────────────────────────────────────────────────
 
 export const weightMeasurements = pgTable("weight_measurements", {

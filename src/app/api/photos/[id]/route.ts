@@ -1,0 +1,89 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { db } from "@/lib/db";
+import { activities, activityPhotos } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { readFile } from "fs/promises";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const isThumb = request.nextUrl.searchParams.get("thumb") === "1";
+
+  const photo = await db
+    .select()
+    .from(activityPhotos)
+    .innerJoin(activities, eq(activityPhotos.activityId, activities.id))
+    .where(eq(activityPhotos.id, id))
+    .limit(1);
+
+  if (photo.length === 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Verify ownership
+  if (photo[0].activities.userId !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const path = isThumb
+    ? photo[0].activity_photos.thumbnailPath
+    : photo[0].activity_photos.filePath;
+
+  try {
+    const buffer = await readFile(path);
+    const isJpg = path.toLowerCase().endsWith(".jpg") || path.toLowerCase().endsWith(".jpeg");
+    return new Response(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": isJpg ? "image/jpeg" : "image/png",
+        "Cache-Control": "private, max-age=3600",
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const photo = await db
+    .select()
+    .from(activityPhotos)
+    .innerJoin(activities, eq(activityPhotos.activityId, activities.id))
+    .where(eq(activityPhotos.id, id))
+    .limit(1);
+
+  if (photo.length === 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (photo[0].activities.userId !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  await db.delete(activityPhotos).where(eq(activityPhotos.id, id));
+
+  // Try to delete files (best effort)
+  try {
+    const { unlink } = await import("fs/promises");
+    await unlink(photo[0].activity_photos.filePath).catch(() => {});
+    await unlink(photo[0].activity_photos.thumbnailPath).catch(() => {});
+  } catch {}
+
+  return NextResponse.json({ deleted: true });
+}

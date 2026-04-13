@@ -40,8 +40,8 @@ COPY --from=builder /app/src/lib/db/schema.ts ./src/lib/db/schema.ts
 # Scripts
 COPY --from=builder /app/scripts ./scripts
 
-# FIT files directory
-RUN mkdir -p /data/fit-files && chown nextjs:nodejs /data/fit-files
+# Data directories (FIT files + photos)
+RUN mkdir -p /data/fit-files /data/photos && chown -R nextjs:nodejs /data
 
 USER nextjs
 

@@ -50,6 +50,13 @@
       "when": 1776058142958,
       "tag": "0006_mysterious_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776060602457,
+      "tag": "0007_yielding_tarot",
+      "breakpoints": true
     }
   ]
 }

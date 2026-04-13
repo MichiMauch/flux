@@ -1,13 +1,15 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { activities, users } from "@/lib/db/schema";
+import { activities, users, activityPhotos } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Navbar } from "@/app/components/navbar";
 import { MapSection } from "@/app/components/map-section";
 import { HeartRateChart } from "@/app/components/heart-rate-chart";
 import { SpeedChart } from "@/app/components/speed-chart";
 import { ElevationChart } from "@/app/components/elevation-chart";
+import { ActivityTitle } from "@/app/components/activity-title";
+import { PhotoSection } from "@/app/components/photo-section";
 import {
   ArrowLeft,
   Clock,
@@ -116,6 +118,21 @@ export default async function ActivityDetailPage({
   const activity = result[0].activities;
   const user = result[0].user;
 
+  // Load photos
+  const photosRaw = await db
+    .select({
+      id: activityPhotos.id,
+      lat: activityPhotos.lat,
+      lng: activityPhotos.lng,
+    })
+    .from(activityPhotos)
+    .where(eq(activityPhotos.activityId, activity.id));
+
+  const isOwner = activity.userId === session.user.id;
+  const photoMarkers = photosRaw
+    .filter((p) => p.lat != null && p.lng != null)
+    .map((p) => ({ id: p.id, lat: p.lat as number, lng: p.lng as number }));
+
   const routeData = (activity.routeData as any[]) || [];
   const heartRateData = (activity.heartRateData as any[]) || [];
   const speedData = (activity.speedData as any[]) || [];
@@ -141,7 +158,11 @@ export default async function ActivityDetailPage({
               {getActivityIcon(activity.type)}
             </div>
             <div>
-              <h1 className="text-2xl font-bold">{activity.name}</h1>
+              {isOwner ? (
+                <ActivityTitle activityId={activity.id} initialName={activity.name} />
+              ) : (
+                <h1 className="text-2xl font-bold">{activity.name}</h1>
+              )}
               <p className="text-sm text-muted-foreground">
                 {user.name} ·{" "}
                 {activity.startTime.toLocaleDateString("de-CH", {
@@ -298,8 +319,22 @@ export default async function ActivityDetailPage({
           <div className="mb-6">
             <h2 className="font-semibold mb-3">Strecke</h2>
             <div className="rounded-lg border overflow-hidden" style={{ height: 400 }}>
-              <MapSection routeData={routeData} />
+              <MapSection routeData={routeData} photos={photoMarkers} />
             </div>
+          </div>
+        )}
+
+        {/* Photos */}
+        {isOwner && (
+          <div className="mb-6">
+            <PhotoSection
+              activityId={activity.id}
+              initialPhotos={photosRaw.map((p) => ({
+                id: p.id,
+                lat: p.lat,
+                lng: p.lng,
+              }))}
+            />
           </div>
         )}
 
