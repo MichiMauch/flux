@@ -26,6 +26,13 @@ export const users = pgTable("user", {
   withingsTokenExpiry: timestamp("withings_token_expiry"),
   withingsUserId: text("withings_user_id"),
   image: text("image"),
+  birthday: timestamp("birthday", { mode: "date" }),
+  sex: text("sex"), // 'male' | 'female'
+  heightCm: integer("height_cm"),
+  maxHeartRate: integer("max_heart_rate"),
+  restHeartRate: integer("rest_heart_rate"),
+  aerobicThreshold: integer("aerobic_threshold"),
+  anaerobicThreshold: integer("anaerobic_threshold"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -106,9 +113,6 @@ export const activities = pgTable("activities", {
   proteinPercentage: integer("protein_percentage"),
   minAltitude: real("min_altitude"),
   maxAltitude: real("max_altitude"),
-  avgTemperature: real("avg_temperature"),
-  minTemperature: real("min_temperature"),
-  maxTemperature: real("max_temperature"),
   avgCadence: integer("avg_cadence"),
   maxCadence: integer("max_cadence"),
   totalSteps: integer("total_steps"),
@@ -116,8 +120,11 @@ export const activities = pgTable("activities", {
   maxSpeed: real("max_speed"),
   cardioLoad: real("cardio_load"),
   cardioLoadInterpretation: text("cardio_load_interpretation"),
+  trimp: real("trimp"),
   device: text("device"),
   fitFilePath: text("fit_file_path"),
+  weather: json("weather"), // {temp, feelsLike, windSpeed, windDeg, clouds, description, icon, humidity}
+  weatherFetchedAt: timestamp("weather_fetched_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

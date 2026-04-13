@@ -7,9 +7,6 @@ interface ParsedFitData {
   session: {
     minAltitude?: number;
     maxAltitude?: number;
-    avgTemperature?: number;
-    minTemperature?: number;
-    maxTemperature?: number;
     avgCadence?: number;
     maxCadence?: number;
     totalSteps?: number;
@@ -84,21 +81,10 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
       const minAlt = alts.length > 0 ? Math.round(Math.min(...alts)) : undefined;
       const maxAlt = alts.length > 0 ? Math.round(Math.max(...alts)) : undefined;
 
-      // Calculate temperature stats from records
-      const temps = (data.records ?? [])
-        .map((r: any) => r.temperature)
-        .filter((t: any) => t != null) as number[];
-      const avgTemp = temps.length > 0 ? temps.reduce((a: number, b: number) => a + b, 0) / temps.length : undefined;
-      const minTemp = temps.length > 0 ? Math.min(...temps) : undefined;
-      const maxTemp = temps.length > 0 ? Math.max(...temps) : undefined;
-
       const session = s
         ? {
             minAltitude: minAlt,
             maxAltitude: maxAlt,
-            avgTemperature: avgTemp,
-            minTemperature: minTemp,
-            maxTemperature: maxTemp,
             avgCadence: s.avg_cadence ?? undefined,
             maxCadence: s.max_cadence ?? undefined,
             totalSteps: s.total_cycles ?? undefined,

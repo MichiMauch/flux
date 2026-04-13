@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateWebhookSignature, listExercises, downloadFit } from "@/lib/polar-client";
 import { parseFitFile } from "@/lib/fit-parser";
+import { computeTrimp, type Sex } from "@/lib/trimp";
 import { db } from "@/lib/db";
 import { users, activities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -74,6 +75,19 @@ export async function POST(request: NextRequest) {
              Math.round(parseFloat(durationMatch[3] || "0")))
           : 0;
 
+        const avgHr = exercise.heart_rate?.average ?? fitSession?.avgHeartRate ?? null;
+        const maxHr = exercise.heart_rate?.maximum ?? fitSession?.maxHeartRate ?? null;
+        const trimp = computeTrimp(
+          {
+            sex: user.sex as Sex,
+            birthday: user.birthday,
+            maxHeartRate: user.maxHeartRate,
+            restHeartRate: user.restHeartRate,
+          },
+          { avgHeartRate: avgHr, maxHeartRate: maxHr, duration: durationSeconds },
+          heartRateData as { time: string; bpm: number }[] | null
+        );
+
         await db.insert(activities).values({
           polarId: exercise.id,
           userId: user.id,
@@ -84,8 +98,8 @@ export async function POST(request: NextRequest) {
           movingTime: fitSession?.movingTime ?? null,
           distance: exercise.distance,
           calories: exercise.calories,
-          avgHeartRate: exercise.heart_rate?.average ?? fitSession?.avgHeartRate ?? null,
-          maxHeartRate: exercise.heart_rate?.maximum ?? fitSession?.maxHeartRate ?? null,
+          avgHeartRate: avgHr,
+          maxHeartRate: maxHr,
           ascent: fitSession?.totalAscent ?? null,
           descent: fitSession?.totalDescent ?? null,
           routeData,
@@ -93,9 +107,6 @@ export async function POST(request: NextRequest) {
           speedData,
           minAltitude: fitSession?.minAltitude ?? null,
           maxAltitude: fitSession?.maxAltitude ?? null,
-          avgTemperature: fitSession?.avgTemperature ?? null,
-          minTemperature: fitSession?.minTemperature ?? null,
-          maxTemperature: fitSession?.maxTemperature ?? null,
           avgCadence: fitSession?.avgCadence ?? null,
           maxCadence: fitSession?.maxCadence ?? null,
           totalSteps: fitSession?.totalSteps ?? null,
@@ -106,6 +117,7 @@ export async function POST(request: NextRequest) {
           proteinPercentage: exercise.protein_percentage ?? null,
           cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
           cardioLoadInterpretation: exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
+          trimp,
           device: exercise.device ?? null,
           fitFilePath,
         });

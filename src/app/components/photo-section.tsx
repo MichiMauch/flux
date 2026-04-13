@@ -26,20 +26,24 @@ export function PhotoSection({ activityId, initialPhotos }: PhotoSectionProps) {
     setUploading(true);
     setError(null);
 
-    const formData = new FormData();
-    for (const file of Array.from(files)) {
-      formData.append("files", file);
-    }
-
     try {
-      const res = await fetch(`/api/activities/${activityId}/photos`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload fehlgeschlagen");
-      const data = await res.json();
-      setPhotos((prev) => [...prev, ...data.uploaded]);
-      window.location.reload(); // refresh to show photos on map
+      const uploaded: Photo[] = [];
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("files", file);
+        const res = await fetch(`/api/activities/${activityId}/photos`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const msg = await res.text().catch(() => "");
+          throw new Error(`Upload fehlgeschlagen: ${file.name} (${res.status}) ${msg}`);
+        }
+        const data = await res.json();
+        uploaded.push(...data.uploaded);
+      }
+      setPhotos((prev) => [...prev, ...uploaded]);
+      window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fehler");
     } finally {

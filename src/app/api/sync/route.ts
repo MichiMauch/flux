@@ -5,6 +5,7 @@ import { users, activities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { listExercises, downloadFit } from "@/lib/polar-client";
 import { parseFitFile } from "@/lib/fit-parser";
+import { computeTrimp, type Sex } from "@/lib/trimp";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
@@ -67,6 +68,21 @@ export async function POST() {
       // Parse duration (ISO 8601 duration: PT1H30M45S)
       const durationSeconds = parseDuration(exercise.duration);
 
+      const trimp = computeTrimp(
+        {
+          sex: user.sex as Sex,
+          birthday: user.birthday,
+          maxHeartRate: user.maxHeartRate,
+          restHeartRate: user.restHeartRate,
+        },
+        {
+          avgHeartRate: exercise.heart_rate?.average ?? null,
+          maxHeartRate: exercise.heart_rate?.maximum ?? null,
+          duration: durationSeconds,
+        },
+        heartRateData as { time: string; bpm: number }[] | null
+      );
+
       // Insert activity
       await db.insert(activities).values({
         polarId: exercise.id,
@@ -87,6 +103,7 @@ export async function POST() {
         proteinPercentage: exercise.protein_percentage ?? null,
         cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
         cardioLoadInterpretation: exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
+        trimp,
         device: exercise.device ?? null,
         fitFilePath,
       });

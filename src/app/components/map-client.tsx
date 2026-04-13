@@ -12,8 +12,10 @@ interface PhotoMarker {
 }
 
 interface MapClientProps {
-  routeData: { lat: number; lng: number; elevation?: number }[];
+  routeData: { lat: number; lng: number; elevation?: number | null }[];
   photos?: PhotoMarker[];
+  hoverIdx?: number | null;
+  highlightRange?: [number, number] | null;
 }
 
 type LayerType = "outdoors" | "cycle" | "satellite";
@@ -42,9 +44,16 @@ const LAYERS: Record<
   },
 };
 
-export default function MapClient({ routeData, photos = [] }: MapClientProps) {
+export default function MapClient({
+  routeData,
+  photos = [],
+  hoverIdx = null,
+  highlightRange = null,
+}: MapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const hoverMarkerRef = useRef<L.CircleMarker | null>(null);
+  const highlightLineRef = useRef<L.Polyline | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [layer, setLayer] = useState<LayerType>("outdoors");
 
@@ -114,6 +123,58 @@ export default function MapClient({ routeData, photos = [] }: MapClientProps) {
       tileLayerRef.current = null;
     };
   }, [routeData, photos]);
+
+  // Highlight range polyline
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (highlightLineRef.current) {
+      highlightLineRef.current.remove();
+      highlightLineRef.current = null;
+    }
+    if (!highlightRange) return;
+    const [from, to] = highlightRange;
+    if (from < 0 || to <= from || to >= routeData.length) return;
+    const pts: L.LatLngExpression[] = [];
+    for (let i = from; i <= to; i++) {
+      pts.push([routeData[i].lat, routeData[i].lng]);
+    }
+    highlightLineRef.current = L.polyline(pts, {
+      color: "#2563eb",
+      weight: 7,
+      opacity: 0.95,
+    }).addTo(mapRef.current);
+    try {
+      mapRef.current.fitBounds(highlightLineRef.current.getBounds(), {
+        padding: [40, 40],
+        maxZoom: 16,
+      });
+    } catch {}
+  }, [highlightRange, routeData]);
+
+  // Hover marker follows hoverIdx
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (hoverIdx == null || hoverIdx < 0 || hoverIdx >= routeData.length) {
+      if (hoverMarkerRef.current) {
+        hoverMarkerRef.current.remove();
+        hoverMarkerRef.current = null;
+      }
+      return;
+    }
+    const p = routeData[hoverIdx];
+    const pos: L.LatLngExpression = [p.lat, p.lng];
+    if (!hoverMarkerRef.current) {
+      hoverMarkerRef.current = L.circleMarker(pos, {
+        radius: 8,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: "#2563eb",
+        fillOpacity: 1,
+      }).addTo(mapRef.current);
+    } else {
+      hoverMarkerRef.current.setLatLng(pos);
+    }
+  }, [hoverIdx, routeData]);
 
   // Switch tile layer when toggle changes
   useEffect(() => {

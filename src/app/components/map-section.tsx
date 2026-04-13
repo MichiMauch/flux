@@ -11,10 +11,19 @@ interface PhotoMarker {
 }
 
 interface MapSectionProps {
-  routeData: { lat: number; lng: number; elevation?: number }[];
+  routeData: { lat: number; lng: number; elevation?: number | null }[];
   photos?: PhotoMarker[];
+  hoverIdx?: number | null;
+  highlightRange?: [number, number] | null;
 }
 
-export function MapSection({ routeData, photos }: MapSectionProps) {
-  return <MapClient routeData={routeData} photos={photos} />;
+export function MapSection({ routeData, photos, hoverIdx, highlightRange }: MapSectionProps) {
+  return (
+    <MapClient
+      routeData={routeData}
+      photos={photos}
+      hoverIdx={hoverIdx}
+      highlightRange={highlightRange}
+    />
+  );
 }

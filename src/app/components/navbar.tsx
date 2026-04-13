@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Activity, Heart, BarChart3 } from "lucide-react";
+import { Activity, Heart, BarChart3, User } from "lucide-react";
 import { LogoutMenuItem } from "./logout-menu-item";
 import { auth, signOut } from "@/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -77,6 +78,14 @@ export async function Navbar() {
                   {session.user.email}
                 </div>
               </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                render={<Link href="/profile" />}
+                className="flex items-center gap-2"
+              >
+                <User className="h-3.5 w-3.5" />
+                Profil
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <form
                 action={async () => {
