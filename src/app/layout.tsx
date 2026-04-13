@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Polar Self-Connect",
+  title: "Flux",
   description: "Deine private Fitness-App",
 };
 

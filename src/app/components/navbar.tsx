@@ -28,7 +28,7 @@ export async function Navbar() {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <Activity className="h-5 w-5" />
-            Polar Self-Connect
+            Flux
           </Link>
           <div className="flex items-center gap-4 text-sm">
             <Link

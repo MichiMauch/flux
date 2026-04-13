@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17
-    container_name: polar-self-connect-db
+    container_name: flux-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: polar
