@@ -48,7 +48,7 @@ export function ActivityFeedCard(a: ActivityFeedCardProps) {
     >
       <div className="flex items-center gap-3 p-3">
         <div className="flex-shrink-0">
-          <ActivityLottie activityType={a.type} size={64} />
+          <ActivityLottie activityType={a.type} activityName={a.name} size={64} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground mb-0.5">

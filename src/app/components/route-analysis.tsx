@@ -25,6 +25,8 @@ interface RouteAnalysisProps {
   heartRateData: { time: string; bpm: number }[];
   speedData: { time: string; speed: number }[];
   totalDistance?: number | null;
+  totalAscent?: number | null;
+  totalDescent?: number | null;
   isRunning?: boolean;
   photos?: PhotoMarker[];
   startTime?: Date | string | null;
@@ -36,6 +38,8 @@ export function RouteAnalysis({
   heartRateData,
   speedData,
   totalDistance,
+  totalAscent,
+  totalDescent,
   isRunning = false,
   photos = [],
   startTime,
@@ -47,8 +51,8 @@ export function RouteAnalysis({
   const [showSpeed, setShowSpeed] = useState(false);
 
   const splits = useMemo(
-    () => computeSplits(routeData, heartRateData, totalDistance),
-    [routeData, heartRateData, totalDistance]
+    () => computeSplits(routeData, heartRateData, totalDistance, totalAscent, totalDescent),
+    [routeData, heartRateData, totalDistance, totalAscent, totalDescent]
   );
 
   const sunTimes = useMemo(() => {

@@ -53,6 +53,7 @@ export default async function CalendarPage({
     .select({
       id: activities.id,
       type: activities.type,
+      name: activities.name,
       startTime: activities.startTime,
       distance: activities.distance,
     })
@@ -68,7 +69,7 @@ export default async function CalendarPage({
   // Group by day key
   const byDay: Record<
     string,
-    { id: string; type: string; distanceKm: number | null }[]
+    { id: string; type: string; name: string; distanceKm: number | null }[]
   > = {};
   for (const r of rows) {
     const key = dayKey(r.startTime);
@@ -76,6 +77,7 @@ export default async function CalendarPage({
     byDay[key].push({
       id: r.id,
       type: r.type,
+      name: r.name,
       distanceKm: r.distance != null ? r.distance / 1000 : null,
     });
   }

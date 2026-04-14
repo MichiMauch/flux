@@ -8,6 +8,7 @@ import { dayKey } from "@/lib/activity-week";
 interface CalendarEntry {
   id: string;
   type: string;
+  name: string;
   distanceKm: number | null;
 }
 
@@ -97,7 +98,7 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                       style={{ background: activityTypeColor(e.type) }}
                     />
                     <span className="flex-shrink-0 w-6 h-6 -ml-0.5">
-                      <ActivityLottie activityType={e.type} size={24} />
+                      <ActivityLottie activityType={e.type} activityName={e.name} size={24} />
                     </span>
                     {e.distanceKm != null && e.distanceKm > 0 && (
                       <span className="text-[10px] font-semibold tabular-nums truncate">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateWebhookSignature, listExercises, downloadFit } from "@/lib/polar-client";
 import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
+import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
 import { db } from "@/lib/db";
 import { users, activities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -88,11 +89,24 @@ export async function POST(request: NextRequest) {
           heartRateData as { time: string; bpm: number }[] | null
         );
 
+        const normalizedType = normalizePolarType(exercise.sport, exercise.detailed_sport_info);
+        const fallbackName = exercise.detailed_sport_info || exercise.sport || "Training";
+        const aiName = await generateActivityTitle({
+          type: normalizedType,
+          subType: exercise.detailed_sport_info ?? null,
+          startTime: new Date(exercise.start_time),
+          distanceMeters: exercise.distance ?? null,
+          durationSeconds,
+          ascentMeters: fitSession?.totalAscent ?? null,
+          routeData: routeData as { lat: number; lng: number; time?: string }[] | null,
+          fallbackTitle: fallbackName,
+        });
+
         await db.insert(activities).values({
           polarId: exercise.id,
           userId: user.id,
-          name: exercise.detailed_sport_info || exercise.sport || "Training",
-          type: exercise.sport || "OTHER",
+          name: aiName,
+          type: normalizedType,
           startTime: new Date(exercise.start_time),
           duration: durationSeconds,
           movingTime: fitSession?.movingTime ?? null,

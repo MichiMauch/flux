@@ -5,6 +5,8 @@ interface SplitsTableProps {
   heartRateData: HrSample[];
   isRunning?: boolean;
   totalDistanceMeters?: number | null;
+  totalAscent?: number | null;
+  totalDescent?: number | null;
 }
 
 function formatDuration(sec: number): string {
@@ -35,8 +37,16 @@ export function SplitsTable({
   heartRateData,
   isRunning = false,
   totalDistanceMeters,
+  totalAscent,
+  totalDescent,
 }: SplitsTableProps) {
-  const splits = computeSplits(routeData, heartRateData, totalDistanceMeters);
+  const splits = computeSplits(
+    routeData,
+    heartRateData,
+    totalDistanceMeters,
+    totalAscent,
+    totalDescent
+  );
   if (splits.length === 0) return null;
 
   const paceLabel = isRunning ? "Tempo" : "Geschwindigkeit";

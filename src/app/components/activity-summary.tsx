@@ -125,7 +125,7 @@ export function ActivitySummary({
       {/* Title bar */}
       <div className="rounded-t-lg border border-border bg-surface/60 px-4 py-3 flex items-center gap-3">
         <div className="flex-shrink-0">
-          <ActivityLottie activityType={activity.type} size={56} />
+          <ActivityLottie activityType={activity.type} activityName={activity.name} size={56} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1 flex-wrap">

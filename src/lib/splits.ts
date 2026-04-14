@@ -26,6 +26,25 @@ export interface Split {
   descent: number;
 }
 
+function smoothElevation(data: RoutePoint[], window: number): (number | null)[] {
+  const n = data.length;
+  const out: (number | null)[] = new Array(n).fill(null);
+  const half = Math.floor(window / 2);
+  for (let i = 0; i < n; i++) {
+    let sum = 0;
+    let count = 0;
+    for (let j = Math.max(0, i - half); j <= Math.min(n - 1, i + half); j++) {
+      const e = data[j].elevation;
+      if (e != null) {
+        sum += e;
+        count += 1;
+      }
+    }
+    out[i] = count > 0 ? sum / count : null;
+  }
+  return out;
+}
+
 function haversine(a: RoutePoint, b: RoutePoint): number {
   const R = 6371000;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
@@ -41,7 +60,9 @@ function haversine(a: RoutePoint, b: RoutePoint): number {
 export function computeSplits(
   routeData: RoutePoint[],
   heartRateData: HrSample[],
-  totalDistanceMeters?: number | null
+  totalDistanceMeters?: number | null,
+  totalAscent?: number | null,
+  totalDescent?: number | null
 ): Split[] {
   if (routeData.length < 2) return [];
   const hrTimes = heartRateData.map((h) => new Date(h.time).getTime());
@@ -56,15 +77,36 @@ export function computeSplits(
       ? totalDistanceMeters / haversineTotal
       : 1;
 
+  // Smooth elevation with moving average to filter GPS noise (~±2–3 m)
+  const smoothed = smoothElevation(routeData, 15);
   const segAscent: number[] = new Array(routeData.length).fill(0);
   const segDescent: number[] = new Array(routeData.length).fill(0);
+  let rawAscentSum = 0;
+  let rawDescentSum = 0;
   for (let i = 1; i < routeData.length; i++) {
-    const a = routeData[i - 1].elevation;
-    const b = routeData[i].elevation;
+    const a = smoothed[i - 1];
+    const b = smoothed[i];
     if (a == null || b == null) continue;
     const d = b - a;
-    if (d > 0) segAscent[i] = d;
-    else if (d < 0) segDescent[i] = -d;
+    if (d > 0) {
+      segAscent[i] = d;
+      rawAscentSum += d;
+    } else if (d < 0) {
+      segDescent[i] = -d;
+      rawDescentSum += -d;
+    }
+  }
+  // Scale per-segment values so that totals match the device-reported numbers.
+  // Polar/FIT applies its own (better) elevation smoothing — we trust its totals
+  // and just distribute them proportionally to where our smoothed series said
+  // the changes happened.
+  if (totalAscent != null && totalAscent > 0 && rawAscentSum > 0) {
+    const k = totalAscent / rawAscentSum;
+    for (let i = 0; i < segAscent.length; i++) segAscent[i] *= k;
+  }
+  if (totalDescent != null && totalDescent > 0 && rawDescentSum > 0) {
+    const k = totalDescent / rawDescentSum;
+    for (let i = 0; i < segDescent.length; i++) segDescent[i] *= k;
   }
 
   const splits: Split[] = [];

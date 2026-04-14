@@ -113,6 +113,8 @@ export default async function ActivityDetailPage({
                 heartRateData={heartRateData}
                 speedData={speedData}
                 totalDistance={activity.distance}
+                totalAscent={activity.ascent}
+                totalDescent={activity.descent}
                 isRunning={isRunning}
                 photos={photoMarkers}
                 startTime={activity.startTime}
@@ -128,6 +130,8 @@ export default async function ActivityDetailPage({
             heartRateData={heartRateData}
             isRunning={isRunning}
             totalDistanceMeters={activity.distance}
+            totalAscent={activity.ascent}
+            totalDescent={activity.descent}
           />
         )}
       </main>

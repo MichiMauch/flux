@@ -133,6 +133,21 @@ export function ActivityChart({
       ? totalDistance / 1000
       : estimateDistance(route);
     const n = route.length;
+    // Smooth elevation with moving average to remove GPS noise / 1m steps
+    const smoothEle: number[] = new Array(n);
+    const half = 7; // window 15
+    for (let i = 0; i < n; i++) {
+      let sum = 0;
+      let count = 0;
+      for (let j = Math.max(0, i - half); j <= Math.min(n - 1, i + half); j++) {
+        const e = route[j].elevation;
+        if (e != null) {
+          sum += e;
+          count += 1;
+        }
+      }
+      smoothEle[i] = count > 0 ? sum / count : 0;
+    }
     const hrLen = heartRateData.length;
     const spLen = speedData.length;
     const startMs = startTime ? new Date(startTime).getTime() : null;
@@ -175,7 +190,7 @@ export function ActivityChart({
       return {
         routeIdx: i,
         distance: Math.round(totalKm * ratio * 100) / 100,
-        elevation: Math.round(d.elevation!),
+        elevation: Math.round(smoothEle[i] * 10) / 10,
         bpm: hr,
         speed: isRunning ? pace : sp,
         time: timeLabel,
