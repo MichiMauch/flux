@@ -2,95 +2,103 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "./components/navbar";
 import { SyncButton } from "./components/sync-button";
+import { WeeklySummary } from "./components/weekly-summary";
+import { ActivityFeedCard } from "./components/activity-feed-card";
 import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { desc, eq, and } from "drizzle-orm";
-import {
-  Activity,
-  Bike,
-  Footprints,
-  Clock,
-  Ruler,
-  Mountain,
-  Heart,
-  MountainSnow,
-} from "lucide-react";
+import { activities, activityPhotos } from "@/lib/db/schema";
+import { desc, eq, and, sql } from "drizzle-orm";
+import { Activity } from "lucide-react";
+import { activityTypeLabel } from "@/lib/activity-types";
 import Link from "next/link";
 
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}min`;
-  return `${m}min`;
-}
-
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${Math.round(meters)} m`;
-}
-
-function getActivityIcon(type: string) {
-  switch (type.toUpperCase()) {
-    case "CYCLING":
-      return <Bike className="h-5 w-5" />;
-    case "RUNNING":
-      return <Footprints className="h-5 w-5" />;
-    case "HIKING":
-      return <MountainSnow className="h-5 w-5" />;
-    default:
-      return <Activity className="h-5 w-5" />;
-  }
-}
+const PAGE_SIZE = 20;
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; take?: string }>;
 }) {
   const session = await auth();
   if (!session) redirect("/login");
 
   const params = await searchParams;
   const typeFilter = params.type;
+  const take = Math.max(
+    PAGE_SIZE,
+    Math.min(500, Number(params.take) || PAGE_SIZE)
+  );
 
   const conditions = [eq(activities.userId, session.user.id)];
-  if (typeFilter) {
-    conditions.push(eq(activities.type, typeFilter));
-  }
+  if (typeFilter) conditions.push(eq(activities.type, typeFilter));
+
+  // Photo count subquery
+  const photoCountSql = sql<number>`(
+    SELECT COUNT(*)::int
+    FROM ${activityPhotos}
+    WHERE ${activityPhotos.activityId} = ${activities.id}
+  )`;
 
   const myActivities = await db
-    .select()
+    .select({
+      id: activities.id,
+      name: activities.name,
+      type: activities.type,
+      startTime: activities.startTime,
+      distance: activities.distance,
+      duration: activities.duration,
+      movingTime: activities.movingTime,
+      avgHeartRate: activities.avgHeartRate,
+      ascent: activities.ascent,
+      photoCount: photoCountSql,
+    })
     .from(activities)
     .where(and(...conditions))
     .orderBy(desc(activities.startTime))
-    .limit(50);
+    .limit(take + 1);
 
-  // Get unique types for filter
+  const hasMore = myActivities.length > take;
+  const items = hasMore ? myActivities.slice(0, take) : myActivities;
+
   const allTypes = await db
     .selectDistinct({ type: activities.type })
     .from(activities)
     .where(eq(activities.userId, session.user.id));
-
   const types = allTypes.map((t) => t.type);
+
+  const nextTakeHref = (() => {
+    const qp = new URLSearchParams();
+    if (typeFilter) qp.set("type", typeFilter);
+    qp.set("take", String(take + PAGE_SIZE));
+    return `/?${qp.toString()}`;
+  })();
+
+  const filterHref = (t: string | null) => {
+    const qp = new URLSearchParams();
+    if (t) qp.set("type", t);
+    const q = qp.toString();
+    return q ? `/?${q}` : "/";
+  };
 
   return (
     <>
       <Navbar />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Meine Aktivitäten</h1>
+      <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-[-0.025em]">Aktivitäten</h1>
           <SyncButton />
         </div>
 
+        <WeeklySummary userId={session.user.id} />
+
         {/* Type Filter */}
         {types.length > 1 && (
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 flex-wrap">
             <Link
-              href="/"
-              className={`rounded-full px-3 py-1 text-sm border transition-colors ${
+              href={filterHref(null)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium border transition-colors ${
                 !typeFilter
-                  ? "bg-foreground text-background"
-                  : "hover:bg-muted"
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-foreground"
               }`}
             >
               Alle
@@ -98,20 +106,20 @@ export default async function HomePage({
             {types.map((t) => (
               <Link
                 key={t}
-                href={`/?type=${t}`}
-                className={`rounded-full px-3 py-1 text-sm border transition-colors ${
+                href={filterHref(t)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium border transition-colors ${
                   typeFilter === t
-                    ? "bg-foreground text-background"
-                    : "hover:bg-muted"
+                    ? "bg-foreground text-background border-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground"
                 }`}
               >
-                {t}
+                {activityTypeLabel(t)}
               </Link>
             ))}
           </div>
         )}
 
-        {myActivities.length === 0 ? (
+        {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Activity className="h-12 w-12 mb-4" />
             <p className="text-lg font-medium">Noch keine Aktivitäten</p>
@@ -120,56 +128,25 @@ export default async function HomePage({
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {myActivities.map((a) => (
-              <Link
-                key={a.id}
-                href={`/activity/${a.id}`}
-                className="flex items-center gap-4 rounded-lg border p-4 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  {getActivityIcon(a.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{a.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {a.startTime.toLocaleDateString("de-CH", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  {a.distance != null && (
-                    <span className="flex items-center gap-1">
-                      <Ruler className="h-3.5 w-3.5" />
-                      {formatDistance(a.distance)}
-                    </span>
-                  )}
-                  {a.duration != null && a.duration > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      {formatDuration(a.duration)}
-                    </span>
-                  )}
-                  {a.avgHeartRate != null && (
-                    <span className="flex items-center gap-1">
-                      <Heart className="h-3.5 w-3.5" />
-                      {a.avgHeartRate}
-                    </span>
-                  )}
-                  {a.ascent != null && a.ascent > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Mountain className="h-3.5 w-3.5" />
-                      {Math.round(a.ascent)} m
-                    </span>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+          <>
+            <div className="space-y-2">
+              {items.map((a) => (
+                <ActivityFeedCard key={a.id} {...a} />
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="flex justify-center pt-4">
+                <Link
+                  href={nextTakeHref}
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold border border-border hover:bg-surface transition-colors"
+                  scroll={false}
+                >
+                  Mehr laden
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </main>
     </>

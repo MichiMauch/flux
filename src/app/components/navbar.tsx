@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Heart, BarChart3, User } from "lucide-react";
+import { Activity, Heart, BarChart3, User, Calendar } from "lucide-react";
 import { LogoutMenuItem } from "./logout-menu-item";
 import { auth, signOut } from "@/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,6 +37,15 @@ export async function Navbar() {
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Aktivitäten
+            </Link>
+            <Link
+              href="/calendar"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                Kalender
+              </span>
             </Link>
             <Link
               href="/stats"
