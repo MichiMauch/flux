@@ -1,4 +1,3 @@
-import { Heart } from "lucide-react";
 import {
   computeHrZones,
   formatZoneDuration,
@@ -21,12 +20,8 @@ export function HrZonesChart({ samples, user }: HrZonesChartProps) {
   const { zones, source } = result;
 
   return (
-    <div className="px-4 py-3 border-t border-border space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-          <Heart className="h-3 w-3" />
-          Herzfrequenz-Zonen
-        </div>
+    <div className="px-4 py-3 space-y-3">
+      <div className="flex items-center justify-end">
         <div className="text-[10px] text-muted-foreground">
           {source === "thresholds" ? "Schwellen-basiert" : "%HRmax (Fallback)"}
         </div>

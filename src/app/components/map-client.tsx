@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Mountain, Bike, Satellite } from "lucide-react";
+import { Mountain, Bike, Satellite, Camera, CameraOff } from "lucide-react";
 
 interface PhotoMarker {
   id: string;
@@ -54,8 +54,10 @@ export default function MapClient({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const hoverMarkerRef = useRef<L.CircleMarker | null>(null);
   const highlightLineRef = useRef<L.Polyline | null>(null);
+  const photoMarkersRef = useRef<L.Marker[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [layer, setLayer] = useState<LayerType>("outdoors");
+  const [showPhotos, setShowPhotos] = useState(true);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -100,21 +102,6 @@ export default function MapClient({
       .addTo(map)
       .bindPopup("Ziel");
 
-    // Photo markers
-    for (const photo of photos) {
-      const icon = L.divIcon({
-        html: `<img src="/api/photos/${photo.id}?thumb=1" alt="" class="photo-marker-img" />`,
-        className: "photo-marker-wrapper",
-        iconSize: [50, 50],
-        iconAnchor: [25, 25],
-      });
-      L.marker([photo.lat, photo.lng], { icon, zIndexOffset: 1000 })
-        .addTo(map)
-        .on("click", () => {
-          window.location.hash = `photo=${photo.id}`;
-        });
-    }
-
     map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
 
     return () => {
@@ -123,6 +110,29 @@ export default function MapClient({
       tileLayerRef.current = null;
     };
   }, [routeData, photos]);
+
+  // Photo markers (toggleable)
+  useEffect(() => {
+    if (!mapRef.current) return;
+    // Clear existing
+    for (const m of photoMarkersRef.current) m.remove();
+    photoMarkersRef.current = [];
+    if (!showPhotos) return;
+    for (const photo of photos) {
+      const icon = L.divIcon({
+        html: `<img src="/api/photos/${photo.id}?thumb=1" alt="" class="photo-marker-img" />`,
+        className: "photo-marker-wrapper",
+        iconSize: [50, 50],
+        iconAnchor: [25, 25],
+      });
+      const m = L.marker([photo.lat, photo.lng], { icon, zIndexOffset: 1000 })
+        .addTo(mapRef.current)
+        .on("click", () => {
+          window.location.hash = `photo=${photo.id}`;
+        });
+      photoMarkersRef.current.push(m);
+    }
+  }, [photos, showPhotos]);
 
   // Highlight range polyline
   useEffect(() => {
@@ -192,6 +202,21 @@ export default function MapClient({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
+
+      {/* Photo toggle */}
+      {photos.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowPhotos((v) => !v)}
+          className={`absolute top-12 right-2 z-[1000] inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-md border bg-background shadow-sm transition-colors ${
+            showPhotos ? "bg-foreground text-background" : "hover:bg-muted"
+          }`}
+          title={showPhotos ? "Fotos ausblenden" : "Fotos einblenden"}
+        >
+          {showPhotos ? <Camera className="h-3.5 w-3.5" /> : <CameraOff className="h-3.5 w-3.5" />}
+          Fotos
+        </button>
+      )}
 
       {/* Layer toggle */}
       <div className="absolute top-2 right-2 z-[1000] flex rounded-md border bg-background shadow-sm overflow-hidden">

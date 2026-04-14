@@ -1,7 +1,6 @@
 import Image from "next/image";
 import {
   Activity,
-  Bike,
   Clock,
   Droplets,
   Flame,
@@ -11,9 +10,11 @@ import {
   Mountain,
   Thermometer,
   Wind,
+  ChevronDown,
 } from "lucide-react";
-import { ActivityTitle } from "./activity-title";
+import { EditButton } from "./edit-button";
 import { HrZonesChart } from "./hr-zones-chart";
+import { ActivityLottie } from "./activity-lottie";
 import { windDirection, wmoEmoji, type WeatherData } from "@/lib/weather";
 import { interpretTrimp } from "@/lib/trimp";
 import type { HrSample } from "@/lib/hr-zones";
@@ -46,6 +47,7 @@ interface ActivitySummaryProps {
     carbPercentage: number | null;
     proteinPercentage: number | null;
     device: string | null;
+    notes: string | null;
   };
   userName: string | null;
   photos: Photo[];
@@ -94,13 +96,6 @@ function activityTypeLabel(type: string): string {
   return type;
 }
 
-function typeIcon(type: string) {
-  const t = type.toUpperCase();
-  if (t === "CYCLING") return <Bike className="h-3 w-3" />;
-  if (t === "RUNNING") return <Footprints className="h-3 w-3" />;
-  return <Activity className="h-3 w-3" />;
-}
-
 export function ActivitySummary({
   activity,
   userName,
@@ -126,29 +121,45 @@ export function ActivitySummary({
   });
 
   return (
-    <div className="rounded-lg border border-border bg-background overflow-hidden">
-      <div className="grid md:grid-cols-[minmax(280px,0.8fr)_1px_1.2fr]">
-        {/* LEFT */}
-        <div className="p-4 border-b md:border-b-0 border-border flex flex-col">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-brand-soft text-brand-dark">
-              {typeIcon(activity.type)}
-              {activityTypeLabel(activity.type)}
-            </span>
+    <div>
+      {/* Title bar */}
+      <div className="rounded-t-lg border border-border bg-surface/60 px-4 py-3 flex items-center gap-3">
+        <div className="flex-shrink-0">
+          <ActivityLottie activityType={activity.type} size={56} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1 flex-wrap">
             <span>
-              {dateLabel} · {timeLabel}
+              {activityTypeLabel(activity.type)} · {dateLabel} · {timeLabel}
               {locationLabel ? ` · ${locationLabel}` : ""}
             </span>
           </div>
-          {isOwner ? (
-            <ActivityTitle activityId={activity.id} initialName={activity.name} />
-          ) : (
-            <h1 className="text-xl font-bold tracking-[-0.025em] leading-tight">
-              {activity.name}
-            </h1>
-          )}
-          {userName && (
-            <p className="text-xs text-muted-foreground mt-1">{userName}</p>
+          <h1 className="text-xl md:text-2xl font-bold tracking-[-0.03em] leading-tight truncate">
+            {activity.name}
+          </h1>
+        </div>
+        {isOwner && (
+          <EditButton
+            activity={{
+              id: activity.id,
+              name: activity.name,
+              notes: activity.notes,
+              ascent: activity.ascent,
+              descent: activity.descent,
+            }}
+            initialPhotos={photos.map((p) => ({ id: p.id }))}
+          />
+        )}
+      </div>
+
+    <div className="rounded-b-lg border-x border-b border-border bg-background overflow-hidden -mt-px">
+      <div className="grid md:grid-cols-[minmax(280px,0.8fr)_1px_1.2fr]">
+        {/* LEFT */}
+        <div className="p-4 border-b md:border-b-0 border-border flex flex-col">
+          {activity.notes && (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {activity.notes}
+            </p>
           )}
 
           {photos.length > 0 && (
@@ -181,39 +192,29 @@ export function ActivitySummary({
             </div>
           )}
 
-          <div className="mt-auto">
-            {weather && (
-              <div className="pt-3 border-t border-border">
-                <div className="grid grid-cols-4 gap-2 tabular-nums">
-                  <WeatherItem
-                    icon={<span className="text-base leading-none">{wmoEmoji(weather.icon)}</span>}
-                    value={weather.description}
-                    isLabel
-                  />
-                  <WeatherItem
-                    icon={<Thermometer className="h-3.5 w-3.5 text-muted-foreground" />}
-                    value={`${weather.temp.toFixed(0)}°C`}
-                  />
-                  <WeatherItem
-                    icon={<Wind className="h-3.5 w-3.5 text-muted-foreground" />}
-                    value={`${Math.round(weather.windSpeed)} km/h ${windDirection(weather.windDeg)}`}
-                  />
-                  <WeatherItem
-                    icon={<Droplets className="h-3.5 w-3.5 text-muted-foreground" />}
-                    value={`${weather.humidity}%`}
-                  />
-                </div>
+          {weather && (
+            <div className="mt-auto pt-3 border-t border-border">
+              <div className="grid grid-cols-4 gap-2 tabular-nums">
+                <WeatherItem
+                  icon={<span className="text-base leading-none">{wmoEmoji(weather.icon)}</span>}
+                  value={weather.description}
+                  isLabel
+                />
+                <WeatherItem
+                  icon={<Thermometer className="h-3.5 w-3.5 text-muted-foreground" />}
+                  value={`${weather.temp.toFixed(0)}°C`}
+                />
+                <WeatherItem
+                  icon={<Wind className="h-3.5 w-3.5 text-muted-foreground" />}
+                  value={`${Math.round(weather.windSpeed)} km/h ${windDirection(weather.windDeg)}`}
+                />
+                <WeatherItem
+                  icon={<Droplets className="h-3.5 w-3.5 text-muted-foreground" />}
+                  value={`${weather.humidity}%`}
+                />
               </div>
-            )}
-
-            {activity.trimp != null && activity.trimp > 0 && (
-              <TrimpInline
-                trimp={activity.trimp}
-                durationSec={activity.duration}
-                className="border-t border-border"
-              />
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* divider */}
@@ -299,9 +300,20 @@ export function ActivitySummary({
             )}
           </div>
 
-          {/* HR zones */}
+          {/* TRIMP compact values */}
+          {activity.trimp != null && activity.trimp > 0 && (
+            <TrimpValues trimp={activity.trimp} durationSec={activity.duration} />
+          )}
+
+          {/* HR Zones accordion */}
           {heartRateData && heartRateData.length > 1 && userProfile && (
-            <HrZonesChart samples={heartRateData} user={userProfile} />
+            <AccordionSection
+              title="Herzfrequenz-Zonen"
+              icon={<Heart className="h-3 w-3" />}
+              defaultOpen
+            >
+              <HrZonesChart samples={heartRateData} user={userProfile} />
+            </AccordionSection>
           )}
 
           {/* Footer meta */}
@@ -312,6 +324,7 @@ export function ActivitySummary({
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
@@ -417,12 +430,7 @@ function TrimpInline({
     perHour != null ? zoneFor(perHour, INTENSITY_ZONES, INTENSITY_MAX) : null;
 
   return (
-    <div className={`px-4 py-3 space-y-3 ${className ?? "border-t border-border"}`}>
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-        <Activity className="h-3 w-3" />
-        TRIMP · Cardio Load
-      </div>
-
+    <div className={`px-4 py-3 space-y-3 ${className ?? ""}`}>
       {/* Gesamtlast */}
       <div>
         <div className="flex items-end justify-between mb-1.5">
@@ -516,6 +524,116 @@ function zoneFor(
     if (value >= from && value < zones[i].to) return zones[i];
   }
   return zones[zones.length - 1];
+}
+
+function TrimpValues({
+  trimp,
+  durationSec,
+}: {
+  trimp: number;
+  durationSec: number | null;
+}) {
+  const label = interpretTrimp(trimp);
+  const activeZone = zoneFor(trimp, TRIMP_ZONES, TRIMP_MAX);
+  const trimpDots = dotsForTrimp(trimp);
+  const hours = durationSec ? durationSec / 3600 : null;
+  const perHour = hours && hours > 0 ? trimp / hours : null;
+  const activeIntensity =
+    perHour != null ? zoneFor(perHour, INTENSITY_ZONES, INTENSITY_MAX) : null;
+  const intensityDots = perHour != null ? dotsForIntensity(perHour) : 0;
+
+  return (
+    <div className="border-t border-border grid grid-cols-2 divide-x divide-border">
+      <div className="px-4 py-3 flex items-center gap-3">
+        <Activity className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+        <div className="min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground mb-1">
+            Cardio Load
+          </div>
+          <div className="flex items-center gap-2">
+            <Dots count={trimpDots} color={activeZone.color} />
+            <span className="text-[11px] font-medium" style={{ color: activeZone.color }}>
+              {label}
+            </span>
+          </div>
+        </div>
+      </div>
+      {perHour != null && activeIntensity && (
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Activity className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground mb-1">
+              Intensität /h
+            </div>
+            <div className="flex items-center gap-2">
+              <Dots count={intensityDots} color={activeIntensity.color} />
+              <span className="text-[11px] font-medium" style={{ color: activeIntensity.color }}>
+                {interpretTrimp(perHour)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Dots({ count, color }: { count: number; color: string }) {
+  return (
+    <div className="flex gap-0.5">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className="w-2 h-2 rounded-full"
+          style={{
+            background: i < count ? color : "transparent",
+            border: i < count ? "none" : "1px solid var(--border)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function dotsForTrimp(v: number): number {
+  if (v < 50) return 1;
+  if (v < 100) return 2;
+  if (v < 200) return 3;
+  if (v < 400) return 4;
+  return 5;
+}
+
+function dotsForIntensity(v: number): number {
+  if (v < 30) return 1;
+  if (v < 60) return 2;
+  if (v < 120) return 3;
+  if (v < 180) return 4;
+  return 5;
+}
+
+function AccordionSection({
+  title,
+  icon,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="border-t border-border group" open={defaultOpen}>
+      <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none hover:bg-surface/60 list-none [&::-webkit-details-marker]:hidden">
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground flex-1">
+          {title}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div>{children}</div>
+    </details>
+  );
 }
 
 function WeatherItem({

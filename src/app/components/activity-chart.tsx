@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
   ReferenceLine,
+  CartesianGrid,
 } from "recharts";
 
 interface RoutePoint {
@@ -32,6 +33,67 @@ interface ActivityChartProps {
   onHoverIdx: (idx: number | null) => void;
   sunrise?: Date | null;
   sunset?: Date | null;
+}
+
+function HoverTooltipContent({
+  active,
+  payload,
+  label,
+  isRunning,
+}: {
+  active?: boolean;
+  payload?: Array<{
+    name?: string;
+    value?: number;
+    color?: string;
+    payload?: { time?: string | null; elapsedSec?: number | null };
+  }>;
+  label?: number | string;
+  isRunning?: boolean;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const meta = payload[0]?.payload;
+  const fmtSpeed = (v: number) => {
+    if (isRunning) {
+      const m = Math.floor(v);
+      const s = Math.round((v - m) * 60);
+      return `${m}:${s.toString().padStart(2, "0")}`;
+    }
+    return v.toFixed(1);
+  };
+  return (
+    <div
+      className="rounded-lg border bg-background text-foreground shadow-md"
+      style={{ padding: "6px 10px", fontSize: 12 }}
+    >
+      <div style={{ marginBottom: 4, fontWeight: 500 }}>
+        {label} km
+        {meta?.time ? ` · ${meta.time}` : ""}
+        {meta?.elapsedSec != null ? ` · +${formatElapsed(meta.elapsedSec)}` : ""}
+      </div>
+      {payload.map((item) => {
+        if (item.value == null) return null;
+        let txt = String(item.value);
+        if (item.name === "Höhe") txt = `${item.value} m`;
+        else if (item.name === "Puls") txt = `${item.value} bpm`;
+        else if (item.name === "Pace") txt = `${fmtSpeed(item.value)} min/km`;
+        else if (item.name === "Speed") txt = `${fmtSpeed(item.value)} km/h`;
+        return (
+          <div key={item.name} style={{ color: item.color }}>
+            {item.name}: {txt}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatElapsed(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function estimateDistance(points: { lat: number; lng: number }[]): number {
@@ -74,6 +136,12 @@ export function ActivityChart({
     const hrLen = heartRateData.length;
     const spLen = speedData.length;
     const startMs = startTime ? new Date(startTime).getTime() : null;
+    // First-sample base time for elapsed calculation
+    const firstSourceTime =
+      (hrLen > 0 && heartRateData[0]?.time) ||
+      (spLen > 0 && speedData[0]?.time) ||
+      null;
+    const baseMs = firstSourceTime ? new Date(firstSourceTime).getTime() : startMs;
     return route.map((d, i) => {
       const ratio = i / Math.max(1, n - 1);
       const hrIdx = hrLen > 0 ? Math.min(hrLen - 1, Math.round(ratio * (hrLen - 1))) : -1;
@@ -102,6 +170,8 @@ export function ActivityChart({
         : startMs != null && duration
           ? startMs + ratio * duration * 1000
           : null;
+      const elapsedSec =
+        tsMs != null && baseMs != null ? Math.max(0, (tsMs - baseMs) / 1000) : null;
       return {
         routeIdx: i,
         distance: Math.round(totalKm * ratio * 100) / 100,
@@ -110,6 +180,7 @@ export function ActivityChart({
         speed: isRunning ? pace : sp,
         time: timeLabel,
         tsMs,
+        elapsedSec,
       };
     });
   }, [routeData, heartRateData, speedData, totalDistance, isRunning, startTime, duration]);
@@ -138,6 +209,32 @@ export function ActivityChart({
   const formatTime = (d: Date) =>
     d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
 
+  // X-axis: fixed 2 km steps
+  const totalKm = chartData[chartData.length - 1]?.distance ?? 0;
+  const X_STEP = 2;
+  const xTicks: number[] = [];
+  for (let v = 0; v <= totalKm + 0.0001; v += X_STEP) {
+    xTicks.push(Math.round(v * 10) / 10);
+  }
+
+  // Y-axis: evenly spaced elevation ticks with rounded step
+  const elevations = chartData.map((d) => d.elevation);
+  const minEle = Math.min(...elevations);
+  const maxEle = Math.max(...elevations);
+  const range = maxEle - minEle;
+  const yStep = (() => {
+    if (range <= 50) return 10;
+    if (range <= 150) return 25;
+    if (range <= 400) return 50;
+    if (range <= 800) return 100;
+    if (range <= 2000) return 250;
+    return 500;
+  })();
+  const yMin = Math.floor(minEle / yStep) * yStep;
+  const yMax = Math.ceil(maxEle / yStep) * yStep;
+  const yTicks: number[] = [];
+  for (let v = yMin; v <= yMax + 0.0001; v += yStep) yTicks.push(v);
+
   const formatSpeed = (v: number) => {
     if (isRunning) {
       const m = Math.floor(v);
@@ -147,60 +244,33 @@ export function ActivityChart({
     return v.toFixed(1);
   };
 
-  const HoverTooltip = (props: {
-    active?: boolean;
-    payload?: Array<{ payload?: { routeIdx?: number; time?: string | null } }>;
-    label?: number | string;
-  }) => {
-    const { active, payload, label } = props;
-    const idx = active && payload && payload[0]?.payload?.routeIdx;
-    const lastIdxRef = useRef<number | null>(null);
-    useEffect(() => {
-      const next = typeof idx === "number" ? idx : null;
-      if (next !== lastIdxRef.current) {
-        lastIdxRef.current = next;
-        onHoverIdx(next);
-      }
-    });
-    if (!active || !payload || payload.length === 0) return null;
-    return (
-      <div
-        className="rounded-lg border bg-background text-foreground shadow-md"
-        style={{ padding: "6px 10px", fontSize: 12 }}
-      >
-        <div style={{ marginBottom: 4, fontWeight: 500 }}>
-          {label} km
-          {payload[0]?.payload?.time ? ` · ${payload[0].payload.time}` : ""}
-        </div>
-        {payload.map((p) => {
-          const item = p as unknown as {
-            name?: string;
-            value?: number;
-            color?: string;
-          };
-          if (item.value == null) return null;
-          let txt = String(item.value);
-          if (item.name === "Höhe") txt = `${item.value} m`;
-          else if (item.name === "Puls") txt = `${item.value} bpm`;
-          else if (item.name === "Pace")
-            txt = `${formatSpeed(item.value)} min/km`;
-          else if (item.name === "Speed")
-            txt = `${formatSpeed(item.value)} km/h`;
-          return (
-            <div key={item.name} style={{ color: item.color }}>
-              {item.name}: {txt}
-            </div>
-          );
-        })}
-      </div>
-    );
+  const lastHoverIdxRef = useRef<number | null>(null);
+  const handleMouseMove = (state: unknown) => {
+    const raw = (state as { activeTooltipIndex?: number | string | null } | null | undefined)
+      ?.activeTooltipIndex;
+    const i = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : null;
+    const idx =
+      i != null && Number.isFinite(i) && i >= 0 && i < chartData.length
+        ? chartData[i].routeIdx
+        : null;
+    if (idx !== lastHoverIdxRef.current) {
+      lastHoverIdxRef.current = idx;
+      onHoverIdx(idx);
+    }
+  };
+  const handleMouseLeave = () => {
+    if (lastHoverIdxRef.current !== null) {
+      lastHoverIdxRef.current = null;
+      onHoverIdx(null);
+    }
   };
 
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart
         data={chartData}
-        onMouseLeave={() => onHoverIdx(null)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
         <defs>
           <linearGradient id="eleGradient" x1="0" y1="0" x2="0" y2="1">
@@ -208,17 +278,28 @@ export function ActivityChart({
             <stop offset="95%" stopColor="#22c55e" stopOpacity={0.05} />
           </linearGradient>
         </defs>
+        <CartesianGrid
+          yAxisId="ele"
+          stroke="var(--muted-foreground)"
+          strokeDasharray="2 3"
+          strokeOpacity={0.35}
+          vertical
+          horizontal
+        />
         <XAxis
           dataKey="distance"
+          type="number"
+          domain={[0, totalKm]}
+          ticks={xTicks}
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           tickFormatter={(v) => `${v} km`}
-          interval="preserveStartEnd"
         />
         <YAxis
           yAxisId="ele"
-          domain={["dataMin - 20", "dataMax + 20"]}
+          domain={[yMin, yMax]}
+          ticks={yTicks}
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
@@ -250,7 +331,7 @@ export function ActivityChart({
             tickFormatter={(v) => formatSpeed(v)}
           />
         )}
-        <Tooltip content={<HoverTooltip />} />
+        <Tooltip content={<HoverTooltipContent isRunning={isRunning} />} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         {sunriseX != null && sunrise && (
           <ReferenceLine

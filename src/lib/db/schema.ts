@@ -121,6 +121,7 @@ export const activities = pgTable("activities", {
   cardioLoad: real("cardio_load"),
   cardioLoadInterpretation: text("cardio_load_interpretation"),
   trimp: real("trimp"),
+  notes: text("notes"),
   device: text("device"),
   fitFilePath: text("fit_file_path"),
   weather: json("weather"), // {temp, feelsLike, windSpeed, windDeg, clouds, description, icon, humidity}
