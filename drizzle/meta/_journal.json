@@ -78,6 +78,13 @@
       "when": 1776110356993,
       "tag": "0010_green_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776184875657,
+      "tag": "0011_sour_doctor_spectrum",
+      "breakpoints": true
     }
   ]
 }

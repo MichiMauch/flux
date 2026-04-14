@@ -129,6 +129,19 @@ export const activities = pgTable("activities", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ── Deleted Polar Activities (Blacklist for Re-Sync) ───────────────────────
+
+export const deletedPolarActivities = pgTable("deleted_polar_activities", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  polarId: text("polar_id").notNull().unique(),
+  deletedAt: timestamp("deleted_at").defaultNow().notNull(),
+});
+
 // ── Activity Photos ────────────────────────────────────────────────────────
 
 export const activityPhotos = pgTable("activity_photos", {

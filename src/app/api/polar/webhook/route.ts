@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateWebhookSignature, listExercises, downloadFit } from "@/lib/polar-client";
+import { validateWebhookSignature, listExercises, downloadFit, parsePolarStartTime } from "@/lib/polar-client";
 import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
@@ -91,10 +91,11 @@ export async function POST(request: NextRequest) {
 
         const normalizedType = normalizePolarType(exercise.sport, exercise.detailed_sport_info);
         const fallbackName = exercise.detailed_sport_info || exercise.sport || "Training";
+        const startTime = parsePolarStartTime(exercise.start_time, exercise.start_time_utc_offset);
         const aiName = await generateActivityTitle({
           type: normalizedType,
           subType: exercise.detailed_sport_info ?? null,
-          startTime: new Date(exercise.start_time),
+          startTime,
           distanceMeters: exercise.distance ?? null,
           durationSeconds,
           ascentMeters: fitSession?.totalAscent ?? null,
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           name: aiName,
           type: normalizedType,
-          startTime: new Date(exercise.start_time),
+          startTime,
           duration: durationSeconds,
           movingTime: fitSession?.movingTime ?? null,
           distance: exercise.distance,

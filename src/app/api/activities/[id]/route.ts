@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unlink } from "fs/promises";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
+import {
+  activities,
+  activityPhotos,
+  deletedPolarActivities,
+} from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function PATCH(
@@ -70,4 +75,61 @@ export async function PATCH(
   }
 
   return NextResponse.json({ activity: result[0] });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const activity = await db.query.activities.findFirst({
+      where: and(eq(activities.id, id), eq(activities.userId, session.user.id)),
+    });
+    if (!activity) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const photos = await db
+      .select({
+        filePath: activityPhotos.filePath,
+        thumbnailPath: activityPhotos.thumbnailPath,
+      })
+      .from(activityPhotos)
+      .where(eq(activityPhotos.activityId, id));
+
+    if (activity.polarId) {
+      await db
+        .insert(deletedPolarActivities)
+        .values({ userId: session.user.id, polarId: activity.polarId })
+        .onConflictDoNothing();
+    }
+
+    await db.delete(activities).where(eq(activities.id, id));
+
+    await Promise.all(
+      photos.flatMap((p) => [
+        unlink(p.filePath).catch(() => {}),
+        unlink(p.thumbnailPath).catch(() => {}),
+      ])
+    );
+    if (activity.fitFilePath) {
+      await unlink(activity.fitFilePath).catch(() => {});
+    }
+
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    console.error("DELETE /api/activities/[id] failed:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      { error: "Delete failed", details: message },
+      { status: 500 }
+    );
+  }
 }

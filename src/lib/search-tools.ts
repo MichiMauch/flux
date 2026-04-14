@@ -121,7 +121,10 @@ export function getSearchTools(userId: string): ToolSet {
         const conditions: SQL[] = [eq(activities.userId, userId)];
 
         if (args.type) {
-          conditions.push(eq(activities.type, args.type.toUpperCase()));
+          const t = args.type.toUpperCase();
+          if (t !== "ANY" && t !== "ALL" && t !== "") {
+            conditions.push(eq(activities.type, t));
+          }
         }
         if (args.nameContains) {
           conditions.push(ilike(activities.name, `%${args.nameContains}%`));

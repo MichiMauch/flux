@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Plus, X, Trash2, Loader2 } from "lucide-react";
 import { BottomSheet } from "./bottom-sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface PhotoItem {
   id: string;
@@ -49,6 +59,8 @@ export function ActivityEditSheet({
   const [photos, setPhotos] = useState<PhotoItem[]>(initialPhotos);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
 
   // Reset when activity changes or sheet opens
   useEffect(() => {
@@ -103,21 +115,31 @@ export function ActivityEditSheet({
     router.refresh();
   }
 
-  async function handleDeletePhoto(id: string) {
+  function handleDeletePhoto(id: string) {
     if (id.startsWith("tmp-")) {
       setPhotos((prev) => prev.filter((p) => p.id !== id));
       return;
     }
-    if (!confirm("Foto wirklich löschen?")) return;
+    setPhotoToDelete(id);
+  }
+
+  async function confirmDeletePhoto() {
+    if (!photoToDelete) return;
+    const id = photoToDelete;
     const prev = photos;
+    setDeletingPhoto(true);
     setPhotos((list) => list.filter((p) => p.id !== id));
     try {
       const res = await fetch(`/api/photos/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
+      setPhotoToDelete(null);
       router.refresh();
     } catch {
       setPhotos(prev);
       setError("Foto konnte nicht gelöscht werden.");
+      setPhotoToDelete(null);
+    } finally {
+      setDeletingPhoto(false);
     }
   }
 
@@ -326,6 +348,38 @@ export function ActivityEditSheet({
           </div>
         )}
       </div>
+
+      <AlertDialog
+        open={photoToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingPhoto) setPhotoToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Foto löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Das Foto wird endgültig entfernt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingPhoto}>
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDeletePhoto();
+              }}
+              disabled={deletingPhoto}
+              variant="destructive"
+            >
+              {deletingPhoto && <Loader2 className="h-4 w-4 animate-spin" />}
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </BottomSheet>
   );
 }

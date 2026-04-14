@@ -27,17 +27,22 @@ Regeln:
 4. Bei Aggregaten (z.B. Summen, Durchschnitte) rechne selbst aus den Tool-Ergebnissen und benenne die Quellzeilen.
 5. Wenn keine passenden Aktivitäten gefunden werden, sag das ehrlich.
 6. Heute ist ${new Date().toISOString().slice(0, 10)}.
+7. Tool-Parameter nur setzen, wenn der User sie explizit nennt. Niemals type="ANY" oder "ALL" — lass den Parameter einfach weg, um über alle Typen zu suchen. Gültige Typen sind ausschliesslich: RUNNING, CYCLING, HIKING, WALKING, SWIMMING.
+8. Für "längste/kürzeste/schnellste" Aktivitäten: nutze search_activities mit orderBy und limit=1. Keine Datums-Default-Filter setzen.
 
 Sprache: Deutsch. Ton: sachlich, knapp, hilfsbereit.`;
 
 export async function POST(req: NextRequest) {
+  console.log("[/api/chat] POST received");
   const session = await auth();
   if (!session?.user?.id) {
+    console.warn("[/api/chat] unauthorized");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
   }
+  console.log("[/api/chat] userId:", session.user.id);
 
   const body = await req.json();
   const messages = body.messages;
@@ -60,7 +65,18 @@ export async function POST(req: NextRequest) {
     tools: getSearchTools(session.user.id),
     stopWhen: stepCountIs(5),
     temperature: 0.3,
+    onError: (e) => {
+      console.error("[/api/chat] streamText error:", e);
+    },
+    onFinish: ({ text, finishReason, usage }) => {
+      console.log("[/api/chat] finished:", { finishReason, textLen: text.length, usage });
+    },
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    onError: (e) => {
+      console.error("[/api/chat] stream response error:", e);
+      return e instanceof Error ? e.message : "Unknown error";
+    },
+  });
 }

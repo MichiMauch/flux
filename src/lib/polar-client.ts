@@ -15,6 +15,7 @@ interface PolarExercise {
   device: string;
   device_id: string;
   start_time: string;
+  start_time_utc_offset?: number;
   duration: string;
   calories: number;
   distance: number;
@@ -42,6 +43,20 @@ interface PolarGpxPoint {
   lng: number;
   time?: string;
   elevation?: number;
+}
+
+// Polar returns `start_time` as wall-clock local time without timezone info
+// (e.g. "2026-04-14T10:30:00.000") plus `start_time_utc_offset` in minutes.
+// `new Date(start_time)` would parse it as server-local time, producing a
+// wrong instant on non-local servers (e.g. UTC in prod). Combine both fields
+// to get the correct UTC instant.
+export function parsePolarStartTime(
+  startTime: string,
+  utcOffsetMinutes: number | undefined
+): Date {
+  const offset = utcOffsetMinutes ?? 0;
+  const asIfUtc = Date.parse(startTime + "Z");
+  return new Date(asIfUtc - offset * 60_000);
 }
 
 // ── OAuth ──────────────────────────────────────────────────────────────────

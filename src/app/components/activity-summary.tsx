@@ -12,7 +12,7 @@ import {
   Wind,
   ChevronDown,
 } from "lucide-react";
-import { EditButton } from "./edit-button";
+import { ActivityActionsMenu } from "./activity-actions-menu";
 import { HrZonesChart } from "./hr-zones-chart";
 import { ActivityLottie } from "./activity-lottie";
 import { windDirection, wmoEmoji, type WeatherData } from "@/lib/weather";
@@ -140,7 +140,7 @@ export function ActivitySummary({
           </h1>
         </div>
         {isOwner && (
-          <EditButton
+          <ActivityActionsMenu
             activity={{
               id: activity.id,
               name: activity.name,
