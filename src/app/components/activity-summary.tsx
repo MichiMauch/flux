@@ -108,6 +108,7 @@ export function ActivitySummary({
   const isRunning = activity.type.toUpperCase() === "RUNNING";
   const locationLabel = photos.find((p) => p.location)?.location ?? null;
   const hasMacros = activity.fatPercentage != null;
+  const hasLeftContent = photos.length > 0 || !!activity.notes;
 
   const dateLabel = activity.startTime.toLocaleDateString("de-CH", {
     weekday: "short",
@@ -153,72 +154,82 @@ export function ActivitySummary({
       </div>
 
     <div className="rounded-b-lg border-x border-b border-border bg-background overflow-hidden -mt-px">
-      <div className="grid md:grid-cols-[minmax(280px,0.8fr)_1px_1.2fr]">
-        {/* LEFT */}
-        <div className="p-4 border-b md:border-b-0 border-border flex flex-col">
-          {activity.notes && (
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {activity.notes}
-            </p>
-          )}
+      <div
+        className={
+          hasLeftContent
+            ? "grid md:grid-cols-[minmax(280px,0.8fr)_1px_1.2fr]"
+            : "grid"
+        }
+      >
+        {hasLeftContent && (
+          <>
+            {/* LEFT */}
+            <div className="p-4 border-b md:border-b-0 border-border flex flex-col">
+              {activity.notes && (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {activity.notes}
+                </p>
+              )}
 
-          {photos.length > 0 && (
-            <div className="mt-3 flex gap-1 overflow-x-auto scrollbar-none">
-              {photos.slice(0, 6).map((p) => (
-                <a
-                  key={p.id}
-                  href={`#photo=${p.id}`}
-                  className="flex-shrink-0 block rounded-sm overflow-hidden hover:opacity-90 transition-opacity"
-                  style={{ width: 56, height: 56 }}
-                >
-                  <Image
-                    src={`/api/photos/${p.id}?thumb=1`}
-                    alt=""
-                    width={56}
-                    height={56}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
-                </a>
-              ))}
-              {photos.length > 6 && (
-                <div
-                  className="flex-shrink-0 flex items-center justify-center rounded-sm bg-surface text-foreground border border-border text-xs font-bold"
-                  style={{ width: 56, height: 56 }}
-                >
-                  +{photos.length - 6}
+              {photos.length > 0 && (
+                <div className="mt-3 flex gap-1 overflow-x-auto scrollbar-none">
+                  {photos.slice(0, 6).map((p) => (
+                    <a
+                      key={p.id}
+                      href={`#photo=${p.id}`}
+                      className="flex-shrink-0 block rounded-sm overflow-hidden hover:opacity-90 transition-opacity"
+                      style={{ width: 56, height: 56 }}
+                    >
+                      <Image
+                        src={`/api/photos/${p.id}?thumb=1`}
+                        alt=""
+                        width={56}
+                        height={56}
+                        className="w-full h-full object-cover"
+                        unoptimized
+                      />
+                    </a>
+                  ))}
+                  {photos.length > 6 && (
+                    <div
+                      className="flex-shrink-0 flex items-center justify-center rounded-sm bg-surface text-foreground border border-border text-xs font-bold"
+                      style={{ width: 56, height: 56 }}
+                    >
+                      +{photos.length - 6}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {weather && (
+                <div className="mt-auto pt-3 border-t border-border">
+                  <div className="grid grid-cols-4 gap-2 tabular-nums">
+                    <WeatherItem
+                      icon={<span className="text-base leading-none">{wmoEmoji(weather.icon)}</span>}
+                      value={weather.description}
+                      isLabel
+                    />
+                    <WeatherItem
+                      icon={<Thermometer className="h-3.5 w-3.5 text-muted-foreground" />}
+                      value={`${weather.temp.toFixed(0)}°C`}
+                    />
+                    <WeatherItem
+                      icon={<Wind className="h-3.5 w-3.5 text-muted-foreground" />}
+                      value={`${Math.round(weather.windSpeed)} km/h ${windDirection(weather.windDeg)}`}
+                    />
+                    <WeatherItem
+                      icon={<Droplets className="h-3.5 w-3.5 text-muted-foreground" />}
+                      value={`${weather.humidity}%`}
+                    />
+                  </div>
                 </div>
               )}
             </div>
-          )}
 
-          {weather && (
-            <div className="mt-auto pt-3 border-t border-border">
-              <div className="grid grid-cols-4 gap-2 tabular-nums">
-                <WeatherItem
-                  icon={<span className="text-base leading-none">{wmoEmoji(weather.icon)}</span>}
-                  value={weather.description}
-                  isLabel
-                />
-                <WeatherItem
-                  icon={<Thermometer className="h-3.5 w-3.5 text-muted-foreground" />}
-                  value={`${weather.temp.toFixed(0)}°C`}
-                />
-                <WeatherItem
-                  icon={<Wind className="h-3.5 w-3.5 text-muted-foreground" />}
-                  value={`${Math.round(weather.windSpeed)} km/h ${windDirection(weather.windDeg)}`}
-                />
-                <WeatherItem
-                  icon={<Droplets className="h-3.5 w-3.5 text-muted-foreground" />}
-                  value={`${weather.humidity}%`}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* divider */}
-        <div className="hidden md:block bg-border" />
+            {/* divider */}
+            <div className="hidden md:block bg-border" />
+          </>
+        )}
 
         {/* RIGHT */}
         <div className="flex flex-col">
@@ -314,6 +325,31 @@ export function ActivitySummary({
             >
               <HrZonesChart samples={heartRateData} user={userProfile} />
             </AccordionSection>
+          )}
+
+          {/* Weather fallback when left column is collapsed */}
+          {!hasLeftContent && weather && (
+            <div className="px-4 py-3 border-t border-border">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 tabular-nums">
+                <WeatherItem
+                  icon={<span className="text-base leading-none">{wmoEmoji(weather.icon)}</span>}
+                  value={weather.description}
+                  isLabel
+                />
+                <WeatherItem
+                  icon={<Thermometer className="h-3.5 w-3.5 text-muted-foreground" />}
+                  value={`${weather.temp.toFixed(0)}°C`}
+                />
+                <WeatherItem
+                  icon={<Wind className="h-3.5 w-3.5 text-muted-foreground" />}
+                  value={`${Math.round(weather.windSpeed)} km/h ${windDirection(weather.windDeg)}`}
+                />
+                <WeatherItem
+                  icon={<Droplets className="h-3.5 w-3.5 text-muted-foreground" />}
+                  value={`${weather.humidity}%`}
+                />
+              </div>
+            </div>
           )}
 
           {/* Footer meta */}
@@ -551,8 +587,8 @@ function TrimpValues({
             Cardio Load
           </div>
           <div className="flex items-center gap-2">
-            <Dots count={trimpDots} color={activeZone.color} />
-            <span className="text-[11px] font-medium" style={{ color: activeZone.color }}>
+            <Dots count={trimpDots} color="var(--brand-dark)" />
+            <span className="text-[11px] font-semibold text-foreground">
               {label}
             </span>
           </div>
@@ -566,8 +602,8 @@ function TrimpValues({
               Intensität /h
             </div>
             <div className="flex items-center gap-2">
-              <Dots count={intensityDots} color={activeIntensity.color} />
-              <span className="text-[11px] font-medium" style={{ color: activeIntensity.color }}>
+              <Dots count={intensityDots} color="var(--brand-dark)" />
+              <span className="text-[11px] font-semibold text-foreground">
                 {interpretTrimp(perHour)}
               </span>
             </div>
@@ -580,14 +616,14 @@ function TrimpValues({
 
 function Dots({ count, color }: { count: number; color: string }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="flex gap-1">
       {[0, 1, 2, 3, 4].map((i) => (
         <span
           key={i}
-          className="w-2 h-2 rounded-full"
+          className="w-2.5 h-2.5 rounded-full"
           style={{
-            background: i < count ? color : "transparent",
-            border: i < count ? "none" : "1px solid var(--border)",
+            background: i < count ? color : "var(--surface-2)",
+            boxShadow: i < count ? "none" : "inset 0 0 0 1px var(--border-strong)",
           }}
         />
       ))}
