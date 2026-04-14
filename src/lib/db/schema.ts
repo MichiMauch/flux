@@ -6,6 +6,7 @@ import {
   real,
   json,
   primaryKey,
+  boolean,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -160,6 +161,51 @@ export const activityPhotos = pgTable("activity_photos", {
   width: integer("width"),
   height: integer("height"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ── Goals ──────────────────────────────────────────────────────────────────
+
+export const goals = pgTable("goals", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title"),
+  metric: text("metric").notNull(), // 'distance' | 'duration' | 'ascent' | 'count'
+  activityType: text("activity_type"), // null = alle Typen
+  timeframe: text("timeframe").notNull(), // 'week' | 'month' | 'year'
+  targetValue: real("target_value").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ── Daily Activity (Polar Activity Transactions) ───────────────────────────
+
+export const dailyActivity = pgTable("daily_activity", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  date: text("date").notNull(), // YYYY-MM-DD local to device
+  polarActivityId: text("polar_activity_id"),
+  steps: integer("steps"),
+  activeSteps: integer("active_steps"),
+  calories: integer("calories"),
+  activeCalories: integer("active_calories"),
+  durationSec: integer("duration_sec"),
+  distance: real("distance"), // meters
+  activeTimeGoalSec: integer("active_time_goal_sec"),
+  activeGoalCompletion: real("active_goal_completion"), // 0-1
+  activeTimeZones: json("active_time_zones"), // raw array from Polar
+  inactivityStamps: json("inactivity_stamps"), // array of ISO strings
+  raw: json("raw"), // full Polar response for debug
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // ── Weight (Withings) ──────────────────────────────────────────────────────

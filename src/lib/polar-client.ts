@@ -212,6 +212,135 @@ export async function downloadGpx(
   return res.text();
 }
 
+// ── Daily Activity (Transaction Flow) ──────────────────────────────────────
+
+export interface PolarDailyActivity {
+  id: string;
+  polar_user: string;
+  transaction_id?: number;
+  date: string; // YYYY-MM-DD
+  created: string; // ISO
+  calories?: number;
+  "active-calories"?: number;
+  duration?: string; // ISO duration PT…
+  "active-steps"?: number;
+  distance?: number;
+  "active-time-goal"?: string; // ISO duration
+  "active-time-zones"?: Array<{
+    index: number;
+    "inzone-duration"?: string;
+  }>;
+  "active-goal-completion"?: number; // 0-1 or 0-100 depending on API
+  "inactivity-stamps"?: string[];
+  // Catch-all for any extra fields Polar adds
+  [key: string]: unknown;
+}
+
+interface ActivityTransactionStart {
+  "transaction-id": number;
+  "resource-uri": string;
+}
+
+interface ActivityListResponse {
+  "activity-log"?: string[];
+}
+
+export async function createActivityTransaction(
+  token: string,
+  polarUserId: string
+): Promise<ActivityTransactionStart | null> {
+  const res = await fetch(
+    `${POLAR_API_BASE}/v3/users/${polarUserId}/activity-transactions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    }
+  );
+  if (res.status === 204) return null; // no new data
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to create activity transaction: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+export async function listDailyActivities(
+  token: string,
+  polarUserId: string,
+  transactionId: number
+): Promise<string[]> {
+  const res = await fetch(
+    `${POLAR_API_BASE}/v3/users/${polarUserId}/activity-transactions/${transactionId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    }
+  );
+  if (res.status === 204) return [];
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to list daily activities: ${res.status} ${text}`);
+  }
+  const data = (await res.json()) as ActivityListResponse;
+  return data["activity-log"] ?? [];
+}
+
+export async function getDailyActivity(
+  token: string,
+  url: string
+): Promise<PolarDailyActivity> {
+  // Polar returns absolute URLs in the activity-log; use them directly.
+  const full = url.startsWith("http") ? url : `${POLAR_API_BASE}${url}`;
+  const res = await fetch(full, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get daily activity: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+export async function commitActivityTransaction(
+  token: string,
+  polarUserId: string,
+  transactionId: number
+): Promise<void> {
+  const res = await fetch(
+    `${POLAR_API_BASE}/v3/users/${polarUserId}/activity-transactions/${transactionId}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    }
+  );
+  if (!res.ok && res.status !== 200 && res.status !== 204) {
+    const text = await res.text();
+    throw new Error(`Failed to commit activity transaction: ${res.status} ${text}`);
+  }
+}
+
+/** Parse an ISO 8601 duration (PT1H30M45S) into seconds. */
+export function parseIsoDuration(s: string | undefined | null): number | null {
+  if (!s) return null;
+  const m = s.match(/^PT(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?$/);
+  if (!m) return null;
+  const h = parseFloat(m[1] || "0");
+  const mm = parseFloat(m[2] || "0");
+  const ss = parseFloat(m[3] || "0");
+  return Math.round(h * 3600 + mm * 60 + ss);
+}
+
 // ── Webhook Validation ─────────────────────────────────────────────────────
 
 export async function validateWebhookSignature(

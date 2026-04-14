@@ -1,0 +1,287 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, Loader2 } from "lucide-react";
+import { BottomSheet } from "./bottom-sheet";
+import type { GoalMetric, GoalTimeframe } from "@/lib/goals";
+
+const METRICS: { value: GoalMetric; label: string; unit: string }[] = [
+  { value: "distance", label: "Distanz", unit: "km" },
+  { value: "duration", label: "Aktivitätszeit", unit: "h" },
+  { value: "ascent", label: "Aufstieg", unit: "m" },
+  { value: "count", label: "Aktivitäten", unit: "" },
+];
+const TIMEFRAMES: { value: GoalTimeframe; label: string }[] = [
+  { value: "week", label: "Pro Woche" },
+  { value: "month", label: "Pro Monat" },
+  { value: "year", label: "Pro Jahr" },
+];
+const TYPES = [
+  { value: "", label: "Alle Sportarten" },
+  { value: "RUNNING", label: "Laufen" },
+  { value: "CYCLING", label: "Rad" },
+  { value: "HIKING", label: "Wandern" },
+  { value: "WALKING", label: "Gehen" },
+];
+
+const inputCls =
+  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-base focus:outline-none focus:border-brand focus:ring-[3px] focus:ring-brand-soft";
+
+interface ExistingGoal {
+  id: string;
+  title: string | null;
+  metric: GoalMetric;
+  activityType: string | null;
+  timeframe: GoalTimeframe;
+  targetValue: number;
+}
+
+interface GoalFormSheetProps {
+  open: boolean;
+  onClose: () => void;
+  existing?: ExistingGoal | null;
+}
+
+function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
+  const router = useRouter();
+  const isEdit = !!existing;
+
+  const [metric, setMetric] = useState<GoalMetric>(existing?.metric ?? "distance");
+  const [timeframe, setTimeframe] = useState<GoalTimeframe>(
+    existing?.timeframe ?? "week"
+  );
+  const [activityType, setActivityType] = useState(existing?.activityType ?? "");
+  const [targetValue, setTargetValue] = useState(
+    existing ? String(existing.targetValue) : ""
+  );
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setMetric(existing?.metric ?? "distance");
+      setTimeframe(existing?.timeframe ?? "week");
+      setActivityType(existing?.activityType ?? "");
+      setTargetValue(existing ? String(existing.targetValue) : "");
+      setTitle(existing?.title ?? "");
+      setError(null);
+    }
+  }, [open, existing]);
+
+  async function handleSave() {
+    setError(null);
+    const n = Number(targetValue);
+    if (!Number.isFinite(n) || n <= 0) {
+      setError("Zielwert muss eine positive Zahl sein.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = isEdit
+        ? await fetch(`/api/goals/${existing!.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              targetValue: n,
+              title: title || "",
+              activityType: activityType || null,
+            }),
+          })
+        : await fetch("/api/goals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              metric,
+              timeframe,
+              activityType: activityType || null,
+              targetValue: n,
+              title: title || null,
+            }),
+          });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Speichern fehlgeschlagen");
+      }
+      onClose();
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fehler");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const activeMetric = METRICS.find((m) => m.value === metric)!;
+
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={isEdit ? "Ziel bearbeiten" : "Neues Ziel"}
+      footer={
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 h-11 rounded-md border border-border text-sm font-semibold hover:bg-surface"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 h-11 rounded-md bg-foreground text-background text-sm font-semibold hover:bg-brand disabled:opacity-50 inline-flex items-center justify-center gap-2"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Speichern
+          </button>
+        </div>
+      }
+    >
+      <div className="p-4 space-y-5">
+        <label className="block">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+            Sportart
+          </span>
+          <select
+            value={activityType}
+            onChange={(e) => setActivityType(e.target.value)}
+            className={inputCls}
+          >
+            {TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+            Metrik {isEdit && <span className="normal-case text-muted-foreground">(nicht änderbar)</span>}
+          </span>
+          <select
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as GoalMetric)}
+            className={inputCls}
+            disabled={isEdit}
+          >
+            {METRICS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+            Zeitraum {isEdit && <span className="normal-case text-muted-foreground">(nicht änderbar)</span>}
+          </span>
+          <select
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value as GoalTimeframe)}
+            className={inputCls}
+            disabled={isEdit}
+          >
+            {TIMEFRAMES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+            Zielwert {activeMetric.unit && `(${activeMetric.unit})`}
+          </span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="any"
+            min={0}
+            value={targetValue}
+            onChange={(e) => setTargetValue(e.target.value)}
+            className={inputCls}
+            placeholder={
+              metric === "distance"
+                ? "z.B. 20"
+                : metric === "duration"
+                  ? "z.B. 5"
+                  : metric === "ascent"
+                    ? "z.B. 500"
+                    : "z.B. 4"
+            }
+          />
+        </label>
+
+        <label className="block">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+            Titel (optional)
+          </span>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={120}
+            className={inputCls}
+            placeholder="Leer lassen für automatischen Titel"
+          />
+        </label>
+
+        {error && (
+          <div className="p-3 rounded-md bg-destructive/10 text-destructive text-xs">
+            {error}
+          </div>
+        )}
+      </div>
+    </BottomSheet>
+  );
+}
+
+export function NewGoalButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 text-sm font-semibold hover:bg-brand transition-colors"
+      >
+        <Plus className="h-4 w-4" />
+        Neues Ziel
+      </button>
+      <GoalFormSheet open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
+export function EditGoalButton({ goal }: { goal: ExistingGoal }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface"
+        aria-label="Bearbeiten"
+      >
+        <PencilIcon />
+      </button>
+      <GoalFormSheet open={open} onClose={() => setOpen(false)} existing={goal} />
+    </>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}

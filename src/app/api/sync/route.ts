@@ -7,6 +7,7 @@ import { listExercises, downloadFit, parsePolarStartTime } from "@/lib/polar-cli
 import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
+import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
@@ -135,7 +136,19 @@ export async function POST() {
       synced++;
     }
 
-    return NextResponse.json({ synced, total: exercises.length });
+    // Daily activity (best effort)
+    let dailySynced = 0;
+    if (user.polarUserId) {
+      try {
+        dailySynced = await syncDailyActivity(user.id, user.polarToken, user.polarUserId);
+      } catch (e) {
+        console.error("Daily activity sync failed:", e);
+      }
+    } else {
+      console.warn("[sync] skipping daily: user has no polarUserId");
+    }
+
+    return NextResponse.json({ synced, dailySynced, total: exercises.length });
   } catch (error) {
     console.error("Sync error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

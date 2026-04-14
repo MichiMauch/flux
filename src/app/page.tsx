@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Navbar } from "./components/navbar";
 import { SyncButton } from "./components/sync-button";
 import { WeeklySummary } from "./components/weekly-summary";
+import { GoalsSummary } from "./components/goals-summary";
 import { ActivityFeedCard } from "./components/activity-feed-card";
 import { db } from "@/lib/db";
 import { activities, activityPhotos } from "@/lib/db/schema";
@@ -88,6 +89,7 @@ export default async function HomePage({
           <SyncButton />
         </div>
 
+        <GoalsSummary userId={session.user.id} />
         <WeeklySummary userId={session.user.id} />
 
         {/* Type Filter */}
