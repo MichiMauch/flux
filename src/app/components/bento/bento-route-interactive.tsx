@@ -102,7 +102,7 @@ export function BentoRouteInteractive({
     <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] overflow-hidden">
       <div className="grid md:grid-cols-[200px_1fr]">
         <aside
-          className="border-b md:border-b-0 md:border-r border-[#1f1f1f] overflow-y-auto"
+          className="border-b md:border-b-0 md:border-r border-[#1f1f1f] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           style={{ maxHeight: MAP_HEIGHT }}
         >
           <div className="[font-family:var(--bento-mono)] px-3 py-2 bg-[#0a0a0a] border-b border-[#1f1f1f] text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] sticky top-0 z-10">

@@ -421,34 +421,55 @@ export default async function ActivityBentoPage({
         </Tile>
 
         {/* Map (left) + stat grid + elevation (right) */}
-        <div className="grid gap-3 lg:grid-cols-2 items-stretch">
-          {route.length > 0 ? (
-            <BentoRouteInteractive
-              routeData={route}
-              heartRateData={hr}
-              totalDistance={activity.distance}
-              totalAscent={activity.ascent}
-              totalDescent={activity.descent}
-              isRunning={isRunning}
-              photos={photos
-                .filter((p) => p.lat != null && p.lng != null)
-                .map((p) => ({ id: p.id, lat: p.lat as number, lng: p.lng as number }))}
-            />
-          ) : (
-            <Tile className="p-2 overflow-hidden">
-              <div className="h-[560px] flex items-center justify-center text-[#555] text-xs uppercase tracking-[0.16em]">
-                keine Route
-              </div>
-            </Tile>
-          )}
+        <div className="grid gap-3 lg:grid-cols-2 items-start">
+          <div className="flex flex-col gap-3">
+            {route.length > 0 ? (
+              <BentoRouteInteractive
+                routeData={route}
+                heartRateData={hr}
+                totalDistance={activity.distance}
+                totalAscent={activity.ascent}
+                totalDescent={activity.descent}
+                isRunning={isRunning}
+                photos={photos
+                  .filter((p) => p.lat != null && p.lng != null)
+                  .map((p) => ({ id: p.id, lat: p.lat as number, lng: p.lng as number }))}
+              />
+            ) : (
+              <Tile className="p-2 overflow-hidden">
+                <div className="h-[560px] flex items-center justify-center text-[#555] text-xs uppercase tracking-[0.16em]">
+                  keine Route
+                </div>
+              </Tile>
+            )}
+            <BentoNotesTile notes={activity.notes} />
+            <BentoWeatherTile weather={weather} />
+          </div>
 
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col gap-3 h-[520px]">
+              <Tile className="flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between mb-2">
+                  <TileLabel>Höhenprofil</TileLabel>
+                  <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b]">
+                    Aufstieg{" "}
+                    <span className="text-white tabular-nums">
+                      {ascent != null ? `${ascent} m` : "–"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <ElevationProfile route={route} />
+                </div>
+              </Tile>
               {hrZones && (
-                <div className="col-span-3">
+                <div className="flex-1 min-h-0">
                   <HrZonesTile zones={hrZones.zones} />
                 </div>
               )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
               <StatTile icon={<Heart />} label="Ø Puls" value={fmt(avgHr)} unit="bpm" />
               <StatTile icon={<Heart />} label="Max Puls" value={fmt(maxHr)} unit="bpm" />
               <GiantTile
@@ -460,14 +481,16 @@ export default async function ActivityBentoPage({
               <DotsTile
                 icon={<Zap />}
                 label="TRIMP"
-                value={fmt(trimp != null ? Math.round(trimp) : null)}
                 count={trimp != null ? dotsForTrimp(trimp) : 0}
               />
               <DotsTile
                 icon={<Gauge />}
-                label="Cardio-Load"
-                value={fmt(cardioLoad, 1)}
-                count={cardioLoad != null ? dotsForCardioLoad(cardioLoad) : 0}
+                label="Intensität /h"
+                count={
+                  trimp != null && duration > 0
+                    ? dotsForIntensity(trimp / (duration / 3600))
+                    : 0
+                }
               />
               <StatTile
                 icon={<ActivityIcon />}
@@ -476,21 +499,6 @@ export default async function ActivityBentoPage({
                 unit="km/h"
               />
             </div>
-
-            <Tile className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <TileLabel>Höhenprofil</TileLabel>
-                <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b]">
-                  Aufstieg{" "}
-                  <span className="text-white tabular-nums">
-                    {ascent != null ? `${ascent} m` : "–"}
-                  </span>
-                </div>
-              </div>
-              <div className="h-[240px]">
-                <ElevationProfile route={route} />
-              </div>
-            </Tile>
 
             {avgCadence != null && (
               <StatTile icon={<ActivityIcon />} label="Ø Kadenz" value={fmt(avgCadence)} unit="rpm" />
@@ -579,13 +587,6 @@ export default async function ActivityBentoPage({
             )}
           </Tile>
         </div>
-
-        {(activity.notes || weather) && (
-          <div className="grid gap-3 md:grid-cols-2">
-            <BentoNotesTile notes={activity.notes} />
-            <BentoWeatherTile weather={weather} />
-          </div>
-        )}
 
         {route.length > 0 && (
           <BentoSplitsTable
@@ -845,9 +846,9 @@ function HrZonesTile({ zones }: { zones: HrZone[] }) {
   const ordered = [...zones].reverse();
   const max = Math.max(...zones.map((z) => z.seconds), 1);
   return (
-    <Tile className="flex flex-col">
+    <Tile className="flex flex-col h-full">
       <TileLabel>Herzfrequenz-Zonen</TileLabel>
-      <div className="flex flex-col gap-2 mt-1">
+      <div className="flex-1 flex flex-col justify-between gap-2 mt-1">
         {ordered.map((z) => {
           const color = ZONE_NEON[z.index - 1];
           const w = Math.max(2, (z.seconds / max) * 100);
@@ -891,28 +892,26 @@ function dotsForTrimp(v: number): number {
   return 5;
 }
 
-function dotsForCardioLoad(v: number): number {
-  if (v < 1) return 1;
-  if (v < 2) return 2;
-  if (v < 4) return 3;
-  if (v < 6) return 4;
+function dotsForIntensity(perHour: number): number {
+  if (perHour < 30) return 1;
+  if (perHour < 60) return 2;
+  if (perHour < 120) return 3;
+  if (perHour < 180) return 4;
   return 5;
 }
 
 function DotsTile({
   label,
-  value,
   count,
   icon,
 }: {
   label: string;
-  value: string;
   count: number;
   icon?: React.ReactNode;
 }) {
   return (
     <Tile>
-      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] mb-2">
+      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] mb-3">
         {icon && (
           <span className="[&>svg]:h-3 [&>svg]:w-3" style={{ color: NEON_DIM }}>
             {icon}
@@ -920,20 +919,17 @@ function DotsTile({
         )}
         {label}
       </div>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2">
         {[0, 1, 2, 3, 4].map((i) => (
           <span
             key={i}
-            className="h-2.5 w-2.5 rounded-full"
+            className="h-3 w-3 rounded-full"
             style={{
               background: i < count ? NEON : "#1f1f1f",
-              boxShadow: i < count ? `0 0 6px ${NEON}99` : "inset 0 0 0 1px #2a2a2a",
+              boxShadow: i < count ? `0 0 8px ${NEON}99` : "inset 0 0 0 1px #2a2a2a",
             }}
           />
         ))}
-      </div>
-      <div style={{ fontSize: "22px" }}>
-        <SevenSegDisplay value={value} />
       </div>
     </Tile>
   );
