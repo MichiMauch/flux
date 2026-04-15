@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
         try {
           const fitBuffer = await downloadFit(user.polarToken, exercise.id);
-          const fitDir = join(process.env.FIT_FILES_PATH || "./data/fit-files", user.id);
+          const fitDir = join(process.env.FIT_FILES_PATH || "/data/fit-files", user.id);
           await mkdir(fitDir, { recursive: true });
           fitFilePath = join(fitDir, `${exercise.id}.fit`);
           await writeFile(fitFilePath, Buffer.from(fitBuffer));

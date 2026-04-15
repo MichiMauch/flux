@@ -60,7 +60,7 @@ export async function POST() {
 
         // Archive FIT file
         const fitDir = join(
-          process.env.FIT_FILES_PATH || "./data/fit-files",
+          process.env.FIT_FILES_PATH || "/data/fit-files",
           user.id
         );
         await mkdir(fitDir, { recursive: true });

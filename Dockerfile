@@ -40,8 +40,12 @@ COPY --from=builder /app/src/lib/db/schema.ts ./src/lib/db/schema.ts
 # Scripts
 COPY --from=builder /app/scripts ./scripts
 
-# Data directories (FIT files + photos)
-RUN mkdir -p /data/fit-files /data/photos && chown -R nextjs:nodejs /data
+# Data directories (FIT files, photos, portraits).
+# IMPORTANT: Mount a Coolify persistent volume at /data so uploads
+# survive container rebuilds. Without it, uploaded files are wiped on
+# every deploy.
+RUN mkdir -p /data/fit-files /data/photos /data/portraits && chown -R nextjs:nodejs /data
+VOLUME ["/data"]
 
 USER nextjs
 
