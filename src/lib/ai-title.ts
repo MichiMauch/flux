@@ -91,7 +91,10 @@ export async function generateActivityTitle(
   ctx: ActivityTitleContext
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return ctx.fallbackTitle;
+  if (!apiKey) {
+    console.warn("[ai-title] OPENAI_API_KEY missing — using fallback");
+    return ctx.fallbackTitle;
+  }
 
   try {
     const route = ctx.routeData ?? [];
@@ -160,14 +163,29 @@ export async function generateActivityTitle(
     });
 
     const title = response.choices?.[0]?.message?.content?.trim();
-    if (!title) return ctx.fallbackTitle;
+    if (!title) {
+      console.warn("[ai-title] Empty response from OpenAI", {
+        model: MODEL,
+        finishReason: response.choices?.[0]?.finish_reason,
+      });
+      return ctx.fallbackTitle;
+    }
 
     // Strip surrounding quotes if the model added them
     const cleaned = title.replace(/^["'«»]+|["'«»]+$/g, "").trim();
-    if (cleaned.length === 0 || cleaned.length > 80) return ctx.fallbackTitle;
+    if (cleaned.length === 0 || cleaned.length > 80) {
+      console.warn("[ai-title] Cleaned title invalid", { raw: title, cleaned });
+      return ctx.fallbackTitle;
+    }
     return cleaned;
   } catch (e) {
-    console.warn("AI title generation failed:", e);
+    const err = e as { status?: number; message?: string; code?: string };
+    console.warn("[ai-title] OpenAI call failed", {
+      model: MODEL,
+      status: err?.status,
+      code: err?.code,
+      message: err?.message,
+    });
     return ctx.fallbackTitle;
   }
 }
