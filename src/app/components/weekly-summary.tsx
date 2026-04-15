@@ -41,19 +41,21 @@ export async function WeeklySummary({ userId }: { userId: string }) {
   const weekNo = isoWeek(from);
 
   return (
-    <div className="rounded-lg border border-border bg-surface/60 px-4 py-3 flex items-center gap-6 flex-wrap">
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+    <div className="rounded-lg border border-border bg-surface/60 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Diese Woche
-        </div>
-        <div className="text-sm font-semibold mt-0.5">
+        </span>
+        <span className="text-[11px] font-semibold text-muted-foreground">
           KW {weekNo}
-        </div>
+        </span>
       </div>
-      <SummaryStat icon={<Activity className="h-3.5 w-3.5" />} label="Aktivitäten" value={count.toString()} />
-      <SummaryStat icon={<Ruler className="h-3.5 w-3.5" />} label="Distanz" value={distance > 0 ? formatDistance(distance) : "–"} />
-      <SummaryStat icon={<Activity className="h-3.5 w-3.5" />} label="Zeit" value={duration > 0 ? formatDuration(duration) : "–"} />
-      <SummaryStat icon={<Zap className="h-3.5 w-3.5" />} label="TRIMP" value={trimp > 0 ? Math.round(trimp).toString() : "–"} accent />
+      <div className="grid grid-cols-2 gap-2">
+        <SummaryStat icon={<Activity className="h-3.5 w-3.5" />} label="Aktivitäten" value={count.toString()} />
+        <SummaryStat icon={<Ruler className="h-3.5 w-3.5" />} label="Distanz" value={distance > 0 ? formatDistance(distance) : "–"} />
+        <SummaryStat icon={<Activity className="h-3.5 w-3.5" />} label="Zeit" value={duration > 0 ? formatDuration(duration) : "–"} />
+        <SummaryStat icon={<Zap className="h-3.5 w-3.5" />} label="TRIMP" value={trimp > 0 ? Math.round(trimp).toString() : "–"} accent />
+      </div>
     </div>
   );
 }
@@ -73,10 +75,10 @@ function SummaryStat({
     <div className="flex items-center gap-2">
       <span className={accent ? "text-brand" : "text-muted-foreground"}>{icon}</span>
       <div className="leading-tight">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           {label}
         </div>
-        <div className={`text-sm font-bold tabular-nums tracking-[-0.02em] ${accent ? "text-brand" : ""}`}>
+        <div className={`text-base font-bold tabular-nums tracking-[-0.02em] ${accent ? "text-brand" : ""}`}>
           {value}
         </div>
       </div>

@@ -5,6 +5,7 @@ import { SyncButton } from "./components/sync-button";
 import { WeeklySummary } from "./components/weekly-summary";
 import { GoalsSummary } from "./components/goals-summary";
 import { LevelWidget } from "./components/level-widget";
+import { EarnedTrophies } from "./components/earned-trophies";
 import { ActivityFeedCard } from "./components/activity-feed-card";
 import { db } from "@/lib/db";
 import { activities, activityPhotos } from "@/lib/db/schema";
@@ -48,6 +49,7 @@ export default async function HomePage({
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
+      routeData: activities.routeData,
       photoCount: photoCountSql,
     })
     .from(activities)
@@ -69,14 +71,12 @@ export default async function HomePage({
           <SyncButton />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-[260px_1fr] items-start">
+        <div className="grid gap-4 md:grid-cols-[260px_1fr_260px] items-start">
           <aside className="md:sticky md:top-4 md:self-start space-y-3">
+            <WeeklySummary userId={session.user.id} />
             <GoalsSummary userId={session.user.id} />
-            <LevelWidget userId={session.user.id} />
           </aside>
           <div className="space-y-4 min-w-0">
-        <WeeklySummary userId={session.user.id} />
-
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Activity className="h-12 w-12 mb-4" />
@@ -107,6 +107,10 @@ export default async function HomePage({
           </>
         )}
           </div>
+          <aside className="md:sticky md:top-4 md:self-start space-y-3">
+            <LevelWidget userId={session.user.id} />
+            <EarnedTrophies userId={session.user.id} />
+          </aside>
         </div>
       </main>
     </>

@@ -6,6 +6,7 @@ import {
   computeLevel,
 } from "@/lib/trophies-server";
 import { TrophyIcon } from "@/app/components/trophy-icon";
+import { TrophyRescanButton } from "@/app/components/trophy-rescan-button";
 import { tierColor, formatXp, type TrophyCategory } from "@/lib/trophies";
 import { Trophy, Lock, CheckCircle2 } from "lucide-react";
 
@@ -63,8 +64,11 @@ export default async function TrophiesPage() {
       <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-[-0.025em]">Trophäen</h1>
-          <div className="text-sm text-muted-foreground tabular-nums">
-            {unlockedCount} / {state.length} freigeschaltet
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-muted-foreground tabular-nums">
+              {unlockedCount} / {state.length} freigeschaltet
+            </div>
+            <TrophyRescanButton />
           </div>
         </div>
 
@@ -143,27 +147,37 @@ export default async function TrophiesPage() {
                             {def.description}
                           </div>
                           {!isUnlocked && progress && (
-                            <>
-                              <div className="relative mt-2 h-1.5 rounded-full bg-surface overflow-hidden">
-                                <div
-                                  className="absolute inset-y-0 left-0 bg-brand"
-                                  style={{
-                                    width: `${Math.min(100, progress.progressPct)}%`,
-                                  }}
-                                />
-                              </div>
-                              <div className="mt-1 text-[10px] text-muted-foreground tabular-nums">
+                            def.criterion.kind === "single_activity" ? (
+                              <div className="mt-1.5 text-[10px] text-muted-foreground tabular-nums">
+                                Bestwert:{" "}
                                 {formatProgress(
                                   progress.currentValue,
                                   progress.unit
-                                )}{" "}
-                                /{" "}
-                                {formatProgress(
-                                  progress.targetValue,
-                                  progress.unit
                                 )}
                               </div>
-                            </>
+                            ) : (
+                              <>
+                                <div className="relative mt-2 h-1.5 rounded-full bg-surface overflow-hidden">
+                                  <div
+                                    className="absolute inset-y-0 left-0 bg-brand"
+                                    style={{
+                                      width: `${Math.min(100, progress.progressPct)}%`,
+                                    }}
+                                  />
+                                </div>
+                                <div className="mt-1 text-[10px] text-muted-foreground tabular-nums">
+                                  {formatProgress(
+                                    progress.currentValue,
+                                    progress.unit
+                                  )}{" "}
+                                  /{" "}
+                                  {formatProgress(
+                                    progress.targetValue,
+                                    progress.unit
+                                  )}
+                                </div>
+                              </>
+                            )
                           )}
                           {isUnlocked && unlockedAt && (
                             <div className="mt-1.5 text-[10px] text-muted-foreground">

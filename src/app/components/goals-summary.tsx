@@ -38,12 +38,12 @@ export async function GoalsSummary({ userId }: { userId: string }) {
   return (
     <div className="rounded-lg border border-border bg-surface/40 p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <Target className="h-3 w-3" /> Ziele
         </span>
         <Link
           href="/goals"
-          className="text-[10px] font-semibold text-brand hover:underline"
+          className="text-[11px] font-semibold text-brand hover:underline"
         >
           Alle ansehen →
         </Link>
@@ -64,17 +64,17 @@ export async function GoalsSummary({ userId }: { userId: string }) {
               href="/goals"
               className="block rounded-md bg-background border border-border p-2.5 hover:bg-surface transition-colors"
             >
-              <div className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground truncate">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground truncate">
                 {typeLabel}
               </div>
-              <div className="text-xs font-bold truncate mt-0.5" title={title}>
+              <div className="text-sm font-bold truncate mt-0.5" title={title}>
                 {title}
               </div>
               <div className="flex items-baseline justify-between mt-2 tabular-nums">
-                <span className="text-xs font-semibold">
+                <span className="text-sm font-semibold">
                   {formatGoalValue(goal.metric, progress.currentValue)}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   {pct}%
                 </span>
               </div>
@@ -90,7 +90,7 @@ export async function GoalsSummary({ userId }: { userId: string }) {
                   />
                 )}
               </div>
-              <div className="mt-1.5 text-[10px] font-semibold flex items-center gap-1">
+              <div className="mt-1.5 text-[11px] font-semibold flex items-center gap-1">
                 {achieved ? (
                   <span className="inline-flex items-center gap-1 text-green-700">
                     <CheckCircle2 className="h-3 w-3" />
