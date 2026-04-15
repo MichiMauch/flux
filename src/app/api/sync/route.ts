@@ -8,6 +8,7 @@ import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
+import { evaluateTrophies } from "@/lib/trophies-server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
@@ -136,6 +137,15 @@ export async function POST() {
       synced++;
     }
 
+    let unlockedTrophies: string[] = [];
+    if (synced > 0) {
+      try {
+        unlockedTrophies = await evaluateTrophies(user.id);
+      } catch (e) {
+        console.error("Trophy evaluation error:", e);
+      }
+    }
+
     // Daily activity (best effort)
     let dailySynced = 0;
     if (user.polarUserId) {
@@ -148,7 +158,12 @@ export async function POST() {
       console.warn("[sync] skipping daily: user has no polarUserId");
     }
 
-    return NextResponse.json({ synced, dailySynced, total: exercises.length });
+    return NextResponse.json({
+      synced,
+      dailySynced,
+      total: exercises.length,
+      unlockedTrophies,
+    });
   } catch (error) {
     console.error("Sync error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

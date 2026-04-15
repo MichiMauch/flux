@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "./components/theme-provider";
+import { UnlockCelebration } from "./components/unlock-celebration";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -38,6 +39,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <UnlockCelebration />
         </ThemeProvider>
       </body>
     </html>

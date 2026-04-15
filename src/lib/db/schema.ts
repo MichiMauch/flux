@@ -182,6 +182,33 @@ export const goals = pgTable("goals", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ── Trophies ───────────────────────────────────────────────────────────────
+
+export const userTrophies = pgTable("user_trophies", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  trophyCode: text("trophy_code").notNull(),
+  activityId: text("activity_id").references(() => activities.id, {
+    onDelete: "set null",
+  }),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
+export const pendingUnlocks = pgTable("pending_unlocks", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  trophyCode: text("trophy_code").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ── Daily Activity (Polar Activity Transactions) ───────────────────────────
 
 export const dailyActivity = pgTable("daily_activity", {

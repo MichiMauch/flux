@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { Activity, Heart, BarChart3, User, Calendar, Search, Sun, Target } from "lucide-react";
+import { Activity, Heart, BarChart3, User, Calendar, Search, Sun, Target, Trophy } from "lucide-react";
 import { LogoutMenuItem } from "./logout-menu-item";
 import { auth, signOut } from "@/auth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +25,13 @@ export async function Navbar() {
     .map((n) => n[0])
     .join("")
     .toUpperCase() ?? "?";
+
+  const [userRow] = await db
+    .select({ image: users.image })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+  const portraitUrl = userRow?.image ?? null;
 
   return (
     <nav className="border-b bg-background">
@@ -66,6 +76,15 @@ export async function Navbar() {
               </span>
             </Link>
             <Link
+              href="/trophies"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span className="flex items-center gap-1">
+                <Trophy className="h-3.5 w-3.5" />
+                Trophäen
+              </span>
+            </Link>
+            <Link
               href="/search"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -100,6 +119,7 @@ export async function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger className="relative h-8 w-8 rounded-full focus:outline-none">
               <Avatar className="h-8 w-8">
+                {portraitUrl && <AvatarImage src={portraitUrl} alt={initials} />}
                 <AvatarFallback className="text-xs">
                   {initials}
                 </AvatarFallback>

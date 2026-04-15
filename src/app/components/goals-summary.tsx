@@ -48,7 +48,7 @@ export async function GoalsSummary({ userId }: { userId: string }) {
           Alle ansehen →
         </Link>
       </div>
-      <div className="grid gap-2 md:grid-cols-3">
+      <div className="flex flex-col gap-2">
         {visible.map(({ goal, progress }) => {
           const title = goal.title ?? defaultTitle(goal);
           const typeLabel = goal.activityType

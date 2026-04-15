@@ -6,6 +6,7 @@ import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
 import { db } from "@/lib/db";
 import { users, activities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { evaluateTrophies } from "@/lib/trophies-server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
@@ -137,6 +138,19 @@ export async function POST(request: NextRequest) {
           fitFilePath,
         });
         synced++;
+      }
+
+      if (synced > 0) {
+        try {
+          const unlocked = await evaluateTrophies(user.id);
+          if (unlocked.length > 0) {
+            console.log(
+              `Unlocked trophies for user ${user.name}: ${unlocked.join(", ")}`
+            );
+          }
+        } catch (e) {
+          console.error("Trophy evaluation error:", e);
+        }
       }
 
       console.log(`Webhook sync complete: ${synced} new activities for user ${user.name}`);
