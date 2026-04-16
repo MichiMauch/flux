@@ -8,6 +8,7 @@ import {
   type HrSample,
   type RoutePoint,
 } from "@/lib/splits";
+import { useHover } from "./hover-context";
 
 const NEON = "#FF6A00";
 
@@ -59,6 +60,7 @@ export function BentoRouteInteractive({
   photos = [],
 }: Props) {
   const [selectedKm, setSelectedKm] = useState<number | null>(null);
+  const { hoverIdx } = useHover();
 
   const splits = useMemo(
     () =>
@@ -197,6 +199,7 @@ export function BentoRouteInteractive({
             routeData={routeData}
             photos={photos}
             highlightRange={highlightRange}
+            hoverIdx={hoverIdx}
           />
         </div>
       </div>

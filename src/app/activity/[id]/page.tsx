@@ -1,40 +1,23 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import {
-  activities,
-  users,
-  activityPhotos,
-  userTrophies,
-} from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
-import { computeLevel } from "@/lib/trophies-server";
+import { activities, users, activityPhotos } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { computeHrZones, formatZoneDuration, type HrZone } from "@/lib/hr-zones";
 import { fetchHistoricalWeather, type WeatherData } from "@/lib/weather";
 import { BentoNotesTile } from "@/app/components/bento/bento-notes-tile";
 import { BentoWeatherTile } from "@/app/components/bento/bento-weather-tile";
 import { BentoSplitsTable } from "@/app/components/bento/bento-splits-table";
+import { BentoGpxTile } from "@/app/components/bento/bento-gpx-tile";
 import { ActivityActionsMenu } from "@/app/components/activity-actions-menu";
 import { PhotoLightbox } from "@/app/components/photo-lightbox";
 import { BentoRouteInteractive } from "@/app/components/bento/bento-route-interactive";
-import { getTrophy, tierColor } from "@/lib/trophies";
-import { TrophyIcon } from "@/app/components/trophy-icon";
-import { ArrowLeft, Clock, Ruler, Mountain, Heart, Flame, Zap, Activity as ActivityIcon, Gauge, TrendingDown } from "lucide-react";
+import { HoverProvider } from "@/app/components/bento/hover-context";
+import { BentoElevationChart } from "@/app/components/bento/bento-elevation-chart";
+import { ArrowLeft, Clock, Ruler, Mountain, Heart, Flame, Zap, Activity as ActivityIcon, Gauge, TrendingDown, Footprints } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
-import { Rajdhani, Space_Mono } from "next/font/google";
-
-const rajdhani = Rajdhani({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  display: "swap",
-});
-
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  display: "swap",
-});
+import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
+import { SevenSegDisplay } from "@/app/components/bento/seven-seg";
 
 const NEON = "#FF6A00";
 const NEON_DIM = "#b34600";
@@ -167,9 +150,9 @@ function ElevationProfile({
               x2={width - padR}
               y1={y}
               y2={y}
-              stroke="#1f1f1f"
+              stroke="#3a3a3a"
               strokeWidth={1}
-              strokeDasharray="2 3"
+              strokeDasharray="3 4"
             />
             <text
               x={padL - 6}
@@ -195,9 +178,9 @@ function ElevationProfile({
               x2={x}
               y1={padT}
               y2={padT + plotH}
-              stroke="#1f1f1f"
+              stroke="#3a3a3a"
               strokeWidth={1}
-              strokeDasharray="2 3"
+              strokeDasharray="3 4"
             />
             <text
               x={x}
@@ -214,8 +197,8 @@ function ElevationProfile({
       })}
 
       {/* Axes */}
-      <line x1={padL} x2={width - padR} y1={padT + plotH} y2={padT + plotH} stroke="#2a2a2a" strokeWidth={1} />
-      <line x1={padL} x2={padL} y1={padT} y2={padT + plotH} stroke="#2a2a2a" strokeWidth={1} />
+      <line x1={padL} x2={width - padR} y1={padT + plotH} y2={padT + plotH} stroke="#4a4a4a" strokeWidth={1} />
+      <line x1={padL} x2={padL} y1={padT} y2={padT + plotH} stroke="#4a4a4a" strokeWidth={1} />
 
       {/* Area + line */}
       <path d={area} fill="url(#elev-grad)" />
@@ -279,16 +262,6 @@ export default async function ActivityBentoPage({
     .where(eq(activityPhotos.activityId, activity.id))
     .orderBy(activityPhotos.takenAt);
 
-  const [level, recentTrophies] = await Promise.all([
-    computeLevel(activity.userId),
-    db
-      .select({ code: userTrophies.trophyCode })
-      .from(userTrophies)
-      .where(eq(userTrophies.userId, activity.userId))
-      .orderBy(desc(userTrophies.unlockedAt))
-      .limit(4),
-  ]);
-
   const route = (activity.routeData as RoutePoint[] | null) ?? [];
   const isRunning = activity.type?.toUpperCase() === "RUNNING";
 
@@ -331,6 +304,7 @@ export default async function ActivityBentoPage({
   const avgHr = activity.avgHeartRate;
   const maxHr = activity.maxHeartRate;
   const avgCadence = activity.avgCadence;
+  const totalSteps = activity.totalSteps;
   const cardioLoad = activity.cardioLoad;
   const trimp = activity.trimp;
   const avgSpeed = activity.avgSpeed;
@@ -421,6 +395,7 @@ export default async function ActivityBentoPage({
         </Tile>
 
         {/* Map (left) + stat grid + elevation (right) */}
+        <HoverProvider>
         <div className="grid gap-3 lg:grid-cols-2 items-start">
           <div className="flex flex-col gap-3">
             {route.length > 0 ? (
@@ -459,7 +434,7 @@ export default async function ActivityBentoPage({
                   </div>
                 </div>
                 <div className="flex-1 min-h-0">
-                  <ElevationProfile route={route} />
+                  <BentoElevationChart route={route} />
                 </div>
               </Tile>
               {hrZones && (
@@ -472,11 +447,11 @@ export default async function ActivityBentoPage({
             <div className="grid grid-cols-3 gap-3">
               <StatTile icon={<Heart />} label="Ø Puls" value={fmt(avgHr)} unit="bpm" />
               <StatTile icon={<Heart />} label="Max Puls" value={fmt(maxHr)} unit="bpm" />
-              <GiantTile
+              <StatTile
+                icon={<TrendingDown />}
                 label="Abstieg"
                 value={fmt(descent)}
                 unit="m"
-                icon={<TrendingDown />}
               />
               <DotsTile
                 icon={<Zap />}
@@ -500,93 +475,15 @@ export default async function ActivityBentoPage({
               />
             </div>
 
-            {avgCadence != null && (
-              <StatTile icon={<ActivityIcon />} label="Ø Kadenz" value={fmt(avgCadence)} unit="rpm" />
-            )}
+            <div className="grid grid-cols-2 gap-3">
+              {totalSteps != null && totalSteps > 0 && (
+                <StatTile icon={<Footprints />} label="Schritte" value={fmt(totalSteps)} />
+              )}
+              {route.length > 0 && <BentoGpxTile activityId={activity.id} />}
+            </div>
           </div>
         </div>
-
-        {/* Level + Trophies + Photos */}
-        <div className="grid gap-3 md:grid-cols-3">
-          <Tile>
-            <TileLabel>Level</TileLabel>
-            <div className="flex items-center gap-4">
-              <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl"
-                style={{
-                  background: `${NEON}14`,
-                  border: `1px solid ${NEON}55`,
-                  fontSize: "38px",
-                }}
-              >
-                <SevenSegDisplay value={String(level.level)} on={NEON} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="[font-family:var(--bento-mono)] text-xs text-[#9ca3af] tabular-nums">
-                  {Math.round(level.xpIntoLevel)} / {Math.round(level.xpForNextLevel)} XP
-                </div>
-                <div className="relative mt-2 h-2 rounded-full bg-[#1f1f1f] overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0"
-                    style={{
-                      width: `${Math.min(100, level.progressPct)}%`,
-                      background: NEON,
-                      boxShadow: `0 0 10px ${NEON}`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </Tile>
-
-          <Tile>
-            <TileLabel>Trophäen</TileLabel>
-            <div className="flex gap-2">
-              {recentTrophies.length === 0 && (
-                <div className="text-xs text-[#6b6b6b]">noch keine</div>
-              )}
-              {recentTrophies.map((t) => {
-                const def = getTrophy(t.code);
-                if (!def) return null;
-                return (
-                  <div
-                    key={t.code}
-                    className="flex h-14 w-14 items-center justify-center rounded-lg border border-[#1f1f1f] bg-[#0a0a0a]"
-                    title={def.title}
-                  >
-                    <TrophyIcon name={def.icon} className={`h-6 w-6 ${tierColor(def.tier)}`} />
-                  </div>
-                );
-              })}
-            </div>
-          </Tile>
-
-          <Tile>
-            <TileLabel>Fotos · {photos.length}</TileLabel>
-            {photos.length === 0 ? (
-              <div className="text-xs text-[#6b6b6b]">Keine Fotos</div>
-            ) : (
-              <div className="grid grid-cols-4 gap-1.5">
-                {photos.slice(0, 8).map((p) => (
-                  <a
-                    key={p.id}
-                    href={`#photo=${p.id}`}
-                    className="relative aspect-square overflow-hidden rounded-md border border-[#1f1f1f] hover:border-[#3a3a3a] transition-colors"
-                  >
-                    <Image
-                      src={`/api/photos/${p.id}?thumb=1`}
-                      alt=""
-                      fill
-                      sizes="80px"
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
-          </Tile>
-        </div>
+        </HoverProvider>
 
         {route.length > 0 && (
           <BentoSplitsTable
@@ -604,135 +501,6 @@ export default async function ActivityBentoPage({
   );
 }
 
-// 7-segment digit rendering (SVG). Segments labelled a..g.
-// Digit viewBox: 60 x 100
-const SEG_MAP: Record<string, string[]> = {
-  "0": ["a", "b", "c", "d", "e", "f"],
-  "1": ["b", "c"],
-  "2": ["a", "b", "g", "e", "d"],
-  "3": ["a", "b", "g", "c", "d"],
-  "4": ["f", "g", "b", "c"],
-  "5": ["a", "f", "g", "c", "d"],
-  "6": ["a", "f", "g", "e", "c", "d"],
-  "7": ["a", "b", "c"],
-  "8": ["a", "b", "c", "d", "e", "f", "g"],
-  "9": ["a", "b", "c", "d", "f", "g"],
-  "-": ["g"],
-  " ": [],
-};
-
-function horizSeg(cx: number, cy: number, w: number, t: number): string {
-  const h = w / 2;
-  const th = t / 2;
-  return [
-    [cx - h, cy],
-    [cx - h + th, cy - th],
-    [cx + h - th, cy - th],
-    [cx + h, cy],
-    [cx + h - th, cy + th],
-    [cx - h + th, cy + th],
-  ]
-    .map((p) => p.join(","))
-    .join(" ");
-}
-
-function vertSeg(cx: number, cy: number, h: number, t: number): string {
-  const hh = h / 2;
-  const th = t / 2;
-  return [
-    [cx, cy - hh],
-    [cx + th, cy - hh + th],
-    [cx + th, cy + hh - th],
-    [cx, cy + hh],
-    [cx - th, cy + hh - th],
-    [cx - th, cy - hh + th],
-  ]
-    .map((p) => p.join(","))
-    .join(" ");
-}
-
-function SevenSegDigit({ char, on, off }: { char: string; on: string; off: string }) {
-  const t = 9;
-  const hW = 40;
-  const vH = 40;
-  const segs: Record<string, string> = {
-    a: horizSeg(30, 6, hW, t),
-    g: horizSeg(30, 50, hW, t),
-    d: horizSeg(30, 94, hW, t),
-    f: vertSeg(6, 28, vH, t),
-    b: vertSeg(54, 28, vH, t),
-    e: vertSeg(6, 72, vH, t),
-    c: vertSeg(54, 72, vH, t),
-  };
-  const active = SEG_MAP[char] ?? [];
-  return (
-    <svg viewBox="-2 -2 64 104" width="0.6em" height="1em" style={{ overflow: "visible" }}>
-      {Object.entries(segs).map(([k, pts]) => {
-        const isOn = active.includes(k);
-        return (
-          <polygon
-            key={k}
-            points={pts}
-            fill={isOn ? on : off}
-            style={
-              isOn
-                ? { filter: `drop-shadow(0 0 4px ${on}) drop-shadow(0 0 8px ${on}aa)` }
-                : undefined
-            }
-          />
-        );
-      })}
-    </svg>
-  );
-}
-
-function SevenSegColon({ on }: { on: string }) {
-  return (
-    <svg viewBox="-2 -2 20 104" width="0.22em" height="1em" style={{ overflow: "visible" }}>
-      <circle cx="8" cy="36" r="5" fill={on} style={{ filter: `drop-shadow(0 0 4px ${on})` }} />
-      <circle cx="8" cy="64" r="5" fill={on} style={{ filter: `drop-shadow(0 0 4px ${on})` }} />
-    </svg>
-  );
-}
-
-function SevenSegDot({ on }: { on: string }) {
-  // period/comma: small square at bottom-right
-  return (
-    <svg viewBox="-2 -2 20 104" width="0.22em" height="1em" style={{ overflow: "visible" }}>
-      <rect x="3" y="87" width="10" height="10" fill={on} style={{ filter: `drop-shadow(0 0 4px ${on})` }} />
-    </svg>
-  );
-}
-
-function SevenSegApos({ on }: { on: string }) {
-  // thousand separator: small square top-right
-  return (
-    <svg viewBox="-2 -2 14 104" width="0.14em" height="1em" style={{ overflow: "visible" }}>
-      <rect x="3" y="8" width="6" height="14" fill={on} style={{ filter: `drop-shadow(0 0 4px ${on})` }} />
-    </svg>
-  );
-}
-
-function SevenSegDisplay({
-  value,
-  on = "#ffffff",
-  off = "#1a1a1a",
-}: {
-  value: string;
-  on?: string;
-  off?: string;
-}) {
-  return (
-    <div className="inline-flex items-center gap-[0.08em] leading-none">
-      {value.split("").map((ch, i) => {
-        if (ch === ":") return <SevenSegColon key={i} on={on} />;
-        if (ch === "." || ch === ",") return <SevenSegDot key={i} on={on} />;
-        if (ch === "'" || ch === "\u2019") return <SevenSegApos key={i} on={on} />;
-        return <SevenSegDigit key={i} char={ch} on={on} off={off} />;
-      })}
-    </div>
-  );
-}
 
 function SevenSegTile({
   icon,

@@ -37,8 +37,21 @@ export async function GET(
     ? photo[0].activity_photos.thumbnailPath
     : photo[0].activity_photos.filePath;
 
+  async function readWithFallback(p: string) {
+    try {
+      return await readFile(p);
+    } catch {
+      // Dev fallback: prod-style absolute paths (e.g. /data/photos/...)
+      // don't exist locally when files live under ./data/photos/...
+      if (p.startsWith("/data/")) {
+        return await readFile("." + p);
+      }
+      throw new Error("NOT_FOUND");
+    }
+  }
+
   try {
-    const buffer = await readFile(path);
+    const buffer = await readWithFallback(path);
     const lower = path.toLowerCase();
     const contentType = lower.endsWith(".webp")
       ? "image/webp"

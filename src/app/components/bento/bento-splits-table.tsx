@@ -1,4 +1,6 @@
 import { computeSplits, type HrSample, type RoutePoint } from "@/lib/splits";
+import { spaceMono } from "./bento-fonts";
+import { SevenSegDisplay } from "./seven-seg";
 
 interface Props {
   routeData: RoutePoint[];
@@ -54,11 +56,11 @@ export function BentoSplitsTable({
 
   return (
     <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] overflow-hidden">
-      <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] px-4 pt-4 pb-2">
+      <div className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] px-4 pt-4 pb-2`}>
         Splits · 1 km
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm tabular-nums [font-family:var(--bento-mono)]">
+        <table className={`w-full text-sm tabular-nums ${spaceMono.className}`}>
           <thead>
             <tr className="text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b6b6b] border-t border-[#1f1f1f]">
               <th className="px-3 py-2 text-center w-10">#</th>
@@ -69,54 +71,78 @@ export function BentoSplitsTable({
               <Th title="Hm" sub="↑ / ↓" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-base">
             {splits.map((s) => (
               <tr
                 key={s.index}
-                className="border-t border-[#151515] hover:bg-[#151515] transition-colors"
+                className="border-t border-[#151515] hover:bg-[#151515] transition-colors align-middle"
               >
-                <td className="px-3 py-2 text-center text-[#6b6b6b] font-bold">
-                  {s.index}
+                <td className="px-3 py-2 text-center">
+                  <SevenSegDisplay value={String(s.index)} />
                 </td>
                 <td className="px-3 py-2">
-                  <span className="font-bold text-white">{formatDuration(s.durationSec)}</span>
-                  <span className="text-[#6b6b6b]"> / {formatDuration(s.cumDurationSec)}</span>
+                  <SplitCell
+                    primary={formatDuration(s.durationSec)}
+                    secondary={formatDuration(s.cumDurationSec)}
+                  />
                 </td>
                 <td className="px-3 py-2">
-                  <span className="font-bold text-white">{s.distanceKm.toFixed(2)}</span>
-                  <span className="text-[#6b6b6b]"> / {s.cumDistanceKm.toFixed(2)}</span>
+                  <SplitCell
+                    primary={s.distanceKm.toFixed(2)}
+                    secondary={s.cumDistanceKm.toFixed(2)}
+                  />
                 </td>
                 <td className="px-3 py-2">
                   {s.hrAvg != null ? (
-                    <>
-                      <span className="font-bold text-white">{s.hrAvg}</span>
-                      <span className="text-[#6b6b6b]"> / {s.hrMax}</span>
-                    </>
+                    <SplitCell
+                      primary={String(s.hrAvg)}
+                      secondary={String(s.hrMax ?? "–")}
+                    />
                   ) : (
                     <span className="text-[#6b6b6b]">–</span>
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  <span className="font-bold text-white">
-                    {isRunning ? formatPace(s.paceSecPerKm) : formatSpeed(s.paceSecPerKm)}
-                  </span>
-                  <span className="text-[#6b6b6b]">
-                    {" "}
-                    /{" "}
-                    {isRunning
-                      ? formatPace(s.paceBestSecPerKm)
-                      : formatSpeed(s.paceBestSecPerKm)}
-                  </span>
+                  <SplitCell
+                    primary={
+                      isRunning
+                        ? formatPace(s.paceSecPerKm)
+                        : formatSpeed(s.paceSecPerKm)
+                    }
+                    secondary={
+                      isRunning
+                        ? formatPace(s.paceBestSecPerKm)
+                        : formatSpeed(s.paceBestSecPerKm)
+                    }
+                  />
                 </td>
                 <td className="px-3 py-2">
-                  <span className="font-bold text-white">{s.ascent}</span>
-                  <span className="text-[#6b6b6b]"> / {s.descent}</span>
+                  <SplitCell
+                    primary={String(s.ascent)}
+                    secondary={String(s.descent)}
+                  />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function SplitCell({
+  primary,
+  secondary,
+}: {
+  primary: string;
+  secondary: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 leading-none">
+      <SevenSegDisplay value={primary} />
+      <span className="text-[#4a4a4a] text-sm">/</span>
+      <SevenSegDisplay value={secondary} on="#6b6b6b" off="#1a1a1a" />
     </div>
   );
 }
