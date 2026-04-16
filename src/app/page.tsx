@@ -6,8 +6,7 @@ import { rajdhani, spaceMono } from "./components/bento/bento-fonts";
 import { BentoSyncButton } from "./components/bento/home/bento-sync-button";
 import { BentoHomeWeekly } from "./components/bento/home/bento-home-weekly";
 import { BentoHomeGoals } from "./components/bento/home/bento-home-goals";
-import { BentoHomeLevel } from "./components/bento/home/bento-home-level";
-import { BentoHomeTrophies } from "./components/bento/home/bento-home-trophies";
+import { BentoHomeLevelTrophies } from "./components/bento/home/bento-home-level-trophies";
 import { BentoDashboardHero } from "./components/bento/home/bento-dashboard-hero";
 import { BentoDashboardStreak } from "./components/bento/home/bento-dashboard-streak";
 import { BentoDashboardMonthly } from "./components/bento/home/bento-dashboard-monthly";
@@ -82,20 +81,12 @@ export default async function DashboardPage() {
           <div className="md:col-span-4 md:row-span-2">
             <BentoDashboardHero userId={userId} />
           </div>
-          {/* Right column: level + streak */}
-          <div className="md:col-span-2">
-            <BentoHomeLevel userId={userId} />
-          </div>
-          <div className="md:col-span-2">
-            <BentoDashboardStreak userId={userId} />
-          </div>
-
-          {/* Row: weekly + monthly */}
-          <div className="md:col-span-3">
+          {/* 2×2 mini-grid next to map: weekly / monthly / level+trophies / streak */}
+          <div className="md:col-span-2 md:row-span-2 grid grid-cols-2 grid-rows-2 gap-3">
             <BentoHomeWeekly userId={userId} />
-          </div>
-          <div className="md:col-span-3">
             <BentoDashboardMonthly userId={userId} />
+            <BentoHomeLevelTrophies userId={userId} />
+            <BentoDashboardStreak userId={userId} />
           </div>
 
           {/* Goals full width, three abreast */}
@@ -127,12 +118,9 @@ export default async function DashboardPage() {
             <BentoDashboardSteps userId={userId} />
           </div>
 
-          {/* Heatmap + trophies */}
-          <div className="md:col-span-4">
+          {/* Heatmap full width */}
+          <div className="md:col-span-6">
             <BentoDashboardHeatmap userId={userId} />
-          </div>
-          <div className="md:col-span-2">
-            <BentoHomeTrophies userId={userId} />
           </div>
         </div>
 

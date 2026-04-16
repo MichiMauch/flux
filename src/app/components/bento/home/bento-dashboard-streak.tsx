@@ -11,16 +11,6 @@ function dayKey(d: Date): string {
   return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
 }
 
-function todayKey(): string {
-  return dayKey(new Date());
-}
-
-function yesterdayKey(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return dayKey(d);
-}
-
 function currentStreak(activeDays: Set<string>): number {
   let d = new Date();
   // If today isn't active, start from yesterday (streak still alive for one "rest" night)
@@ -77,33 +67,15 @@ export async function BentoDashboardStreak({ userId }: { userId: string }) {
 
   const current = currentStreak(activeDays);
   const longest = longestStreak(activeDays);
-  const t = todayKey();
-  const y = yesterdayKey();
-  const activeToday = activeDays.has(t);
-  const activeYest = activeDays.has(y);
-  const status = activeToday
-    ? "AKTIV HEUTE"
-    : activeYest
-      ? "HEUTE NOCH OFFEN"
-      : current > 0
-        ? "STREAK GEFÄHRDET"
-        : "INAKTIV";
-  const statusColor = activeToday ? NEON : current > 0 ? "#FFD700" : "#6b6b6b";
 
   return (
     <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center mb-3">
         <span
           className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
         >
           <Flame className="h-3 w-3" style={{ color: NEON }} />
           Streak
-        </span>
-        <span
-          className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.12em]`}
-          style={{ color: statusColor, textShadow: `0 0 6px ${statusColor}88` }}
-        >
-          {status}
         </span>
       </div>
       <div className="flex-1 flex items-center">

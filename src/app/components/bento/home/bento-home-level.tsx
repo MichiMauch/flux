@@ -12,7 +12,7 @@ export async function BentoHomeLevel({ userId }: { userId: string }) {
   return (
     <Link
       href="/trophies"
-      className="block rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 hover:border-[#2a2a2a] transition-colors"
+      className="flex h-full flex-col rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 hover:border-[#2a2a2a] transition-colors"
     >
       <div className="flex items-center justify-between mb-3">
         <span

@@ -1,4 +1,4 @@
-import { Activity, Ruler, Clock, Zap } from "lucide-react";
+import { Activity, Ruler, Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
 import { and, eq, gte, lt } from "drizzle-orm";
@@ -32,7 +32,6 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
     .select({
       distance: activities.distance,
       duration: activities.duration,
-      trimp: activities.trimp,
     })
     .from(activities)
     .where(
@@ -46,11 +45,10 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
   const count = rows.length;
   const distance = rows.reduce((s, r) => s + (r.distance ?? 0), 0);
   const duration = rows.reduce((s, r) => s + (r.duration ?? 0), 0);
-  const trimp = rows.reduce((s, r) => s + (r.trimp ?? 0), 0);
   const monthLabel = MONTHS[from.getMonth()];
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-3 h-full">
+    <div className="flex h-full flex-col rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-3">
       <div className="flex items-center justify-between mb-3">
         <span
           className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
@@ -64,7 +62,7 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
           {monthLabel}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 flex-1 content-center">
         <Stat icon={<Activity className="h-3 w-3" />} label="Aktiv." value={String(count)} />
         <Stat
           icon={<Ruler className="h-3 w-3" />}
@@ -77,11 +75,6 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
           label="Zeit"
           value={duration > 0 ? formatDurationH(duration) : "–"}
           unit="h"
-        />
-        <Stat
-          icon={<Zap className="h-3 w-3" />}
-          label="TRIMP"
-          value={trimp > 0 ? String(Math.round(trimp)) : "–"}
         />
       </div>
     </div>
@@ -109,7 +102,7 @@ function Stat({
       </div>
       <div
         className="flex items-baseline gap-1 leading-none"
-        style={{ fontSize: "18px" }}
+        style={{ fontSize: "32px" }}
       >
         <SevenSegDisplay value={value} />
         {unit && (

@@ -22,7 +22,7 @@ export async function BentoHomeTrophies({ userId }: { userId: string }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-3">
+    <div className="flex h-full flex-col rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-3">
       <div className="flex items-center justify-between mb-3">
         <span
           className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
