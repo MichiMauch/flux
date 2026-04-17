@@ -67,7 +67,7 @@ export function PortraitUpload({
   return (
     <div className="flex items-center gap-4">
       <div className="relative">
-        <div className="w-24 h-24 rounded-full overflow-hidden bg-surface border border-border flex items-center justify-center">
+        <div className="w-24 h-24 rounded-full overflow-hidden bg-black/40 border border-[#2a2a2a] flex items-center justify-center">
           {showPortrait ? (
             <Image
               src={`/api/profile/portrait/${userId}?v=${cacheBust}`}
@@ -78,14 +78,14 @@ export function PortraitUpload({
               unoptimized
             />
           ) : (
-            <span className="text-2xl font-bold text-muted-foreground">
+            <span className="text-2xl font-bold text-[#d0c5ba]">
               {initials}
             </span>
           )}
         </div>
         {uploading && (
-          <div className="absolute inset-0 rounded-full bg-background/80 flex items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="absolute inset-0 rounded-full bg-black/80 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-white" />
           </div>
         )}
       </div>
@@ -106,7 +106,7 @@ export function PortraitUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-semibold hover:bg-surface disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-[#3a3128] bg-black/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white hover:bg-black/60 hover:border-[#4a4a4a] disabled:opacity-50"
         >
           <Camera className="h-3.5 w-3.5" />
           {showPortrait ? "Ändern" : "Portrait hochladen"}
@@ -116,13 +116,13 @@ export function PortraitUpload({
             type="button"
             onClick={handleDelete}
             disabled={uploading}
-            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-surface disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-red-400 hover:bg-black/40 disabled:opacity-50"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Entfernen
           </button>
         )}
-        {error && <p className="text-[11px] text-destructive">{error}</p>}
+        {error && <p className="text-[11px] text-red-400">{error}</p>}
       </div>
     </div>
   );

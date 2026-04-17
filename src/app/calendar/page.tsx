@@ -14,6 +14,10 @@ import {
 } from "@/lib/activity-week";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BentoPageShell } from "../components/bento/bento-page-shell";
+import { BentoPageHeader } from "../components/bento/bento-page-header";
+import { BentoTile } from "../components/bento/bento-tile";
+import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
 
 const MONTH_LABELS = [
   "Januar",
@@ -42,7 +46,6 @@ export default async function CalendarPage({
   const { year, month } = parseMonthParam(params.month);
   const { from, to } = monthRange(year, month);
 
-  // Extend a bit to include overflow days in the grid (prev/next month shown weeks)
   const gridFrom = new Date(from);
   gridFrom.setDate(gridFrom.getDate() - 7);
   const gridTo = new Date(to);
@@ -65,7 +68,6 @@ export default async function CalendarPage({
       )
     );
 
-  // Group by day key
   const byDay: Record<
     string,
     { id: string; type: string; name: string; distanceKm: number | null }[]
@@ -88,45 +90,53 @@ export default async function CalendarPage({
     today.getFullYear() === year && today.getMonth() === month;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-[-0.025em]">Kalender</h1>
+    <BentoPageShell>
+      <BentoPageHeader section="Kalender" title="Kalender" />
+
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
+        <div className="md:col-span-6">
+          <BentoTile label="Woche" title="Aktuelle Woche">
+            <WeeklySummary userId={session.user.id} />
+          </BentoTile>
         </div>
 
-        <WeeklySummary userId={session.user.id} />
-
-        {/* Month navigator */}
-        <div className="flex items-center justify-between">
-          <Link
-            href={`/calendar?month=${formatMonthParam(prev.year, prev.month)}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border text-sm font-medium hover:bg-surface"
+        <div className="md:col-span-6">
+          <BentoTile
+            label="Monat"
+            title={`${MONTH_LABELS[month]} ${year}`}
+            right={
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/calendar?month=${formatMonthParam(prev.year, prev.month)}`}
+                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  {MONTH_LABELS[prev.month]}
+                </Link>
+                {!isCurrentMonth && (
+                  <Link
+                    href="/calendar"
+                    className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#FF6A00]/40 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#FF6A00] hover:bg-[#FF6A00]/10 transition-colors`}
+                  >
+                    Heute
+                  </Link>
+                )}
+                <Link
+                  href={`/calendar?month=${formatMonthParam(next.year, next.month)}`}
+                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
+                >
+                  {MONTH_LABELS[next.month]}
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            }
           >
-            <ChevronLeft className="h-4 w-4" />
-            {MONTH_LABELS[prev.month]}
-          </Link>
-          <div className="text-center">
-            <div className="text-lg font-bold tracking-[-0.02em]">
-              {MONTH_LABELS[month]} {year}
+            <div className={rajdhani.className}>
+              <ActivityCalendar year={year} month={month} byDay={byDay} />
             </div>
-            {!isCurrentMonth && (
-              <Link
-                href="/calendar"
-                className="text-[10px] font-semibold uppercase tracking-[0.1em] text-brand hover:underline"
-              >
-                Heute
-              </Link>
-            )}
-          </div>
-          <Link
-            href={`/calendar?month=${formatMonthParam(next.year, next.month)}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border text-sm font-medium hover:bg-surface"
-          >
-            {MONTH_LABELS[next.month]}
-            <ChevronRight className="h-4 w-4" />
-          </Link>
+          </BentoTile>
         </div>
-
-        <ActivityCalendar year={year} month={month} byDay={byDay} />
-    </main>
+      </div>
+    </BentoPageShell>
   );
 }

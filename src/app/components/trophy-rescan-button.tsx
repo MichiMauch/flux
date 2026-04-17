@@ -25,7 +25,7 @@ export function TrophyRescanButton() {
     <button
       onClick={handle}
       disabled={busy}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-semibold hover:bg-surface transition-colors disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-md border border-[#3a3128] bg-black/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white hover:bg-black/60 hover:border-[#4a4a4a] transition-colors disabled:opacity-50"
     >
       <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} />
       {busy ? "Prüfe..." : "Neu prüfen"}

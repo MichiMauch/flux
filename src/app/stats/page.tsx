@@ -6,6 +6,10 @@ import { eq, sql, desc, and, gte } from "drizzle-orm";
 import { WeeklyChart } from "../components/weekly-chart";
 import { MonthlyChart } from "../components/monthly-chart";
 import { Ruler, Clock, Mountain, Flame, Activity } from "lucide-react";
+import { BentoPageShell } from "../components/bento/bento-page-shell";
+import { BentoPageHeader } from "../components/bento/bento-page-header";
+import { BentoTile } from "../components/bento/bento-tile";
+import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
 
 function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(0)} km`;
@@ -23,7 +27,6 @@ export default async function StatsPage() {
 
   const userId = session.user.id;
 
-  // Year totals
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
   const yearFilter = and(
     eq(activities.userId, userId),
@@ -42,7 +45,6 @@ export default async function StatsPage() {
 
   const year = yearTotals[0];
 
-  // By type this year
   const byType = await db
     .select({
       type: activities.type,
@@ -55,7 +57,6 @@ export default async function StatsPage() {
     .groupBy(activities.type)
     .orderBy(desc(sql`sum(${activities.distance})`));
 
-  // Weekly data (last 12 weeks)
   const weeklyData = await db
     .select({
       week: sql<string>`to_char(${activities.startTime}, 'IYYY-IW')`,
@@ -71,7 +72,6 @@ export default async function StatsPage() {
     .groupBy(sql`to_char(${activities.startTime}, 'IYYY-IW')`)
     .orderBy(sql`to_char(${activities.startTime}, 'IYYY-IW')`);
 
-  // Monthly data (last 12 months)
   const monthlyData = await db
     .select({
       month: sql<string>`to_char(${activities.startTime}, 'YYYY-MM')`,
@@ -88,116 +88,125 @@ export default async function StatsPage() {
     .groupBy(sql`to_char(${activities.startTime}, 'YYYY-MM')`)
     .orderBy(sql`to_char(${activities.startTime}, 'YYYY-MM')`);
 
+  const currentYear = new Date().getFullYear();
+
+  type Metric = {
+    icon: typeof Activity;
+    label: string;
+    value: string;
+  };
+  const metrics: Metric[] = [
+    { icon: Activity, label: "Aktivitäten", value: `${year.count}` },
+    { icon: Ruler, label: "Distanz", value: formatDistance(year.totalDistance) },
+    { icon: Clock, label: "Dauer", value: formatDuration(year.totalDuration) },
+    {
+      icon: Mountain,
+      label: "Höhenmeter",
+      value: `${Math.round(year.totalAscent).toLocaleString("de-CH")} m`,
+    },
+    {
+      icon: Flame,
+      label: "kcal",
+      value: Math.round(year.totalCalories).toLocaleString("de-CH"),
+    },
+  ];
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Statistiken</h1>
+    <BentoPageShell>
+      <BentoPageHeader section="Stats" title="Statistiken" />
 
-        {/* Year Summary */}
-        <div className="rounded-lg border p-6 mb-6">
-          <h2 className="font-semibold mb-4">{new Date().getFullYear()}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                <Activity className="h-4 w-4" />
-              </div>
-              <div className="text-2xl font-bold">{year.count}</div>
-              <div className="text-xs text-muted-foreground">Aktivitäten</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                <Ruler className="h-4 w-4" />
-              </div>
-              <div className="text-2xl font-bold">
-                {formatDistance(year.totalDistance)}
-              </div>
-              <div className="text-xs text-muted-foreground">Distanz</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                <Clock className="h-4 w-4" />
-              </div>
-              <div className="text-2xl font-bold">
-                {formatDuration(year.totalDuration)}
-              </div>
-              <div className="text-xs text-muted-foreground">Dauer</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                <Mountain className="h-4 w-4" />
-              </div>
-              <div className="text-2xl font-bold">
-                {Math.round(year.totalAscent).toLocaleString("de-CH")} m
-              </div>
-              <div className="text-xs text-muted-foreground">Höhenmeter</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                <Flame className="h-4 w-4" />
-              </div>
-              <div className="text-2xl font-bold">
-                {Math.round(year.totalCalories).toLocaleString("de-CH")}
-              </div>
-              <div className="text-xs text-muted-foreground">kcal</div>
-            </div>
-          </div>
-
-          {/* By type */}
-          {byType.length > 1 && (
-            <div className="mt-6 pt-4 border-t">
-              <div className="grid gap-2">
-                {byType.map((t) => (
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
+        <div className="md:col-span-6">
+          <BentoTile label={`Jahresbilanz · ${currentYear}`} title="Gesamt">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {metrics.map((m) => {
+                const Icon = m.icon;
+                return (
                   <div
-                    key={t.type}
-                    className="flex items-center justify-between text-sm"
+                    key={m.label}
+                    className="rounded-lg border border-[#2a2a2a] bg-black/40 p-3 text-center"
                   >
-                    <span className="font-medium">{t.type}</span>
-                    <span className="text-muted-foreground">
-                      {t.count}× · {formatDistance(t.totalDistance)} ·{" "}
-                      {formatDuration(t.totalDuration)}
-                    </span>
+                    <Icon className="mx-auto mb-1 h-4 w-4 text-[#a3a3a3]" />
+                    <div
+                      className={`${rajdhani.className} text-2xl font-bold leading-none text-white`}
+                    >
+                      {m.value}
+                    </div>
+                    <div
+                      className={`${spaceMono.className} mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3]`}
+                    >
+                      {m.label}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Weekly Chart */}
-        <div className="rounded-lg border p-6 mb-6">
-          <h2 className="font-semibold mb-4">Wochenübersicht (12 Wochen)</h2>
-          <div style={{ height: 250 }}>
-            <WeeklyChart
-              data={weeklyData.map((w) => ({
-                week: "KW " + w.week.split("-")[1],
-                distance: Math.round(w.totalDistance / 1000),
-                duration: Math.round(w.totalDuration / 60),
-                count: w.count,
-              }))}
-            />
-          </div>
-        </div>
-
-        {/* Monthly Chart */}
-        <div className="rounded-lg border p-6 mb-6">
-          <h2 className="font-semibold mb-4">Monatsübersicht (12 Monate)</h2>
-          <div style={{ height: 250 }}>
-            <MonthlyChart
-              data={monthlyData.map((m) => {
-                const [y, mo] = m.month.split("-");
-                const monthNames = [
-                  "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
-                  "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
-                ];
-                return {
-                  month: monthNames[parseInt(mo) - 1] + " " + y.slice(2),
-                  distance: Math.round(m.totalDistance / 1000),
-                  ascent: Math.round(m.totalAscent),
-                  count: m.count,
-                };
+                );
               })}
-            />
-          </div>
+            </div>
+
+            {byType.length > 1 && (
+              <div className="mt-4 border-t border-[#2a2a2a] pt-4">
+                <div
+                  className={`${spaceMono.className} mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#a3a3a3]`}
+                >
+                  Nach Sportart
+                </div>
+                <div className="grid gap-1.5">
+                  {byType.map((t) => (
+                    <div
+                      key={t.type}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="font-semibold text-white">{t.type}</span>
+                      <span
+                        className={`${spaceMono.className} text-[11px] text-[#9ca3af]`}
+                      >
+                        {t.count}× · {formatDistance(t.totalDistance)} ·{" "}
+                        {formatDuration(t.totalDuration)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </BentoTile>
         </div>
-    </main>
+
+        <div className="md:col-span-3">
+          <BentoTile label="Wochen" title="Letzte 12 Wochen">
+            <div style={{ height: 260 }}>
+              <WeeklyChart
+                data={weeklyData.map((w) => ({
+                  week: "KW " + w.week.split("-")[1],
+                  distance: Math.round(w.totalDistance / 1000),
+                  duration: Math.round(w.totalDuration / 60),
+                  count: w.count,
+                }))}
+              />
+            </div>
+          </BentoTile>
+        </div>
+
+        <div className="md:col-span-3">
+          <BentoTile label="Monate" title="Letzte 12 Monate">
+            <div style={{ height: 260 }}>
+              <MonthlyChart
+                data={monthlyData.map((m) => {
+                  const [y, mo] = m.month.split("-");
+                  const monthNames = [
+                    "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
+                    "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
+                  ];
+                  return {
+                    month: monthNames[parseInt(mo) - 1] + " " + y.slice(2),
+                    distance: Math.round(m.totalDistance / 1000),
+                    ascent: Math.round(m.totalAscent),
+                    count: m.count,
+                  };
+                })}
+              />
+            </div>
+          </BentoTile>
+        </div>
+      </div>
+    </BentoPageShell>
   );
 }

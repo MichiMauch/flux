@@ -41,12 +41,12 @@ export async function WeeklySummary({ userId }: { userId: string }) {
   const weekNo = isoWeek(from);
 
   return (
-    <div className="rounded-lg border border-border bg-surface/60 p-3">
+    <div className="rounded-lg border border-[#2a2a2a] bg-black/40 p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba]">
           Diese Woche
         </span>
-        <span className="text-[11px] font-semibold text-muted-foreground">
+        <span className="text-[11px] font-bold tabular-nums text-[#d0c5ba]">
           KW {weekNo}
         </span>
       </div>
@@ -73,12 +73,12 @@ function SummaryStat({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className={accent ? "text-brand" : "text-muted-foreground"}>{icon}</span>
+      <span className={accent ? "text-[#FF6A00]" : "text-[#9ca3af]"}>{icon}</span>
       <div className="leading-tight">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3]">
           {label}
         </div>
-        <div className={`text-base font-bold tabular-nums tracking-[-0.02em] ${accent ? "text-brand" : ""}`}>
+        <div className={`text-base font-bold tabular-nums tracking-[-0.02em] ${accent ? "text-[#FF6A00]" : "text-white"}`}>
           {value}
         </div>
       </div>

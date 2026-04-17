@@ -26,7 +26,7 @@ const TYPES = [
 ];
 
 const inputCls =
-  "w-full rounded-md border border-input bg-background px-3 py-2.5 text-base focus:outline-none focus:border-brand focus:ring-[3px] focus:ring-brand-soft";
+  "w-full rounded-md border border-[#3a3128] bg-black/40 px-3 py-2.5 text-base text-white placeholder:text-[#9ca3af] focus:outline-none focus:border-[#FF6A00]/70 focus:ring-[3px] focus:ring-[#FF6A00]/20 disabled:opacity-60";
 
 interface ExistingGoal {
   id: string;
@@ -125,7 +125,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-11 rounded-md border border-border text-sm font-semibold hover:bg-surface"
+            className="flex-1 h-11 rounded-md border border-[#3a3128] text-sm font-semibold text-white hover:bg-black/40"
           >
             Abbrechen
           </button>
@@ -133,7 +133,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 h-11 rounded-md bg-foreground text-background text-sm font-semibold hover:bg-brand disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="flex-1 h-11 rounded-md bg-[#FF6A00] text-black text-sm font-bold uppercase tracking-[0.08em] hover:bg-[#FF8533] disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Speichern
@@ -143,7 +143,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
     >
       <div className="p-4 space-y-5">
         <label className="block">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] mb-1.5">
             Sportart
           </span>
           <select
@@ -160,8 +160,8 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
         </label>
 
         <label className="block">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
-            Metrik {isEdit && <span className="normal-case text-muted-foreground">(nicht änderbar)</span>}
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] mb-1.5">
+            Metrik {isEdit && <span className="normal-case text-[#9ca3af]">(nicht änderbar)</span>}
           </span>
           <select
             value={metric}
@@ -178,8 +178,8 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
         </label>
 
         <label className="block">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
-            Zeitraum {isEdit && <span className="normal-case text-muted-foreground">(nicht änderbar)</span>}
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] mb-1.5">
+            Zeitraum {isEdit && <span className="normal-case text-[#9ca3af]">(nicht änderbar)</span>}
           </span>
           <select
             value={timeframe}
@@ -196,7 +196,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
         </label>
 
         <label className="block">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] mb-1.5">
             Zielwert {activeMetric.unit && `(${activeMetric.unit})`}
           </span>
           <input
@@ -220,7 +220,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
         </label>
 
         <label className="block">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] mb-1.5">
             Titel (optional)
           </span>
           <input
@@ -234,7 +234,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
         </label>
 
         {error && (
-          <div className="p-3 rounded-md bg-destructive/10 text-destructive text-xs">
+          <div className="p-3 rounded-md border border-red-500/30 bg-red-500/10 text-red-300 text-xs">
             {error}
           </div>
         )}
@@ -250,7 +250,7 @@ export function NewGoalButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 text-sm font-semibold hover:bg-brand transition-colors"
+        className="inline-flex items-center gap-2 rounded-md bg-[#FF6A00] text-black px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] hover:bg-[#FF8533] transition-colors"
       >
         <Plus className="h-4 w-4" />
         Neues Ziel
@@ -267,7 +267,7 @@ export function EditGoalButton({ goal }: { goal: ExistingGoal }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface"
+        className="p-1.5 rounded-md text-[#9ca3af] hover:text-white hover:bg-black/40"
         aria-label="Bearbeiten"
       >
         <PencilIcon />

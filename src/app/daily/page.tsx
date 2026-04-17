@@ -6,6 +6,10 @@ import { and, eq, desc } from "drizzle-orm";
 import { DailyActivityView } from "@/app/components/daily-activity-view";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BentoPageShell } from "../components/bento/bento-page-shell";
+import { BentoPageHeader } from "../components/bento/bento-page-header";
+import { BentoTile } from "../components/bento/bento-tile";
+import { spaceMono } from "../components/bento/bento-fonts";
 
 function parseDateParam(v: string | undefined): string | null {
   if (!v) return null;
@@ -41,7 +45,6 @@ export default async function DailyPage({
   const params = await searchParams;
   const requestedDate = parseDateParam(params.date);
 
-  // If no date given, pick latest synced day
   let date = requestedDate;
   if (!date) {
     const latest = await db
@@ -66,51 +69,55 @@ export default async function DailyPage({
   const isToday = date === today;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-[-0.025em]">Tagesaktivität</h1>
-        </div>
+    <BentoPageShell>
+      <BentoPageHeader section="Tag" title="Tagesaktivität" />
 
-        {/* Date navigator */}
-        <div className="flex items-center justify-between gap-2">
-          <Link
-            href={`/daily?date=${prevDate}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border text-sm font-medium hover:bg-surface"
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
+        <div className="md:col-span-6">
+          <BentoTile
+            label="Datum"
+            title={formatLongDate(date)}
+            right={
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/daily?date=${prevDate}`}
+                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  {formatLongDate(prevDate).split(",")[0]}
+                </Link>
+                {!isToday && (
+                  <Link
+                    href="/daily"
+                    className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#FF6A00]/40 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#FF6A00] hover:bg-[#FF6A00]/10 transition-colors`}
+                  >
+                    Heute
+                  </Link>
+                )}
+                <Link
+                  href={`/daily?date=${nextDate}`}
+                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
+                >
+                  {formatLongDate(nextDate).split(",")[0]}
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            }
           >
-            <ChevronLeft className="h-4 w-4" />
-            {formatLongDate(prevDate).split(",")[0]}
-          </Link>
-          <div className="text-center">
-            <div className="text-sm font-bold">{formatLongDate(date)}</div>
-            {!isToday && (
-              <Link
-                href="/daily"
-                className="text-[10px] font-semibold uppercase tracking-[0.1em] text-brand hover:underline"
-              >
-                Heute
-              </Link>
+            {row ? (
+              <DailyActivityView data={row} />
+            ) : (
+              <div className="rounded-lg border border-dashed border-[#2a2a2a] bg-black/40 p-10 text-center">
+                <p className="font-semibold text-white">Keine Daten für diesen Tag.</p>
+                <p className="mt-1 text-sm text-[#9ca3af]">
+                  Synchronisiere die Tagesaktivität auf <code>/</code> oder warte
+                  auf den nächsten Polar-Push.
+                </p>
+              </div>
             )}
-          </div>
-          <Link
-            href={`/daily?date=${nextDate}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border text-sm font-medium hover:bg-surface"
-          >
-            {formatLongDate(nextDate).split(",")[0]}
-            <ChevronRight className="h-4 w-4" />
-          </Link>
+          </BentoTile>
         </div>
-
-        {row ? (
-          <DailyActivityView data={row} />
-        ) : (
-          <div className="rounded-lg border border-dashed border-border p-10 text-center text-muted-foreground">
-            <p className="font-semibold">Keine Daten für diesen Tag.</p>
-            <p className="text-sm mt-1">
-              Synchronisiere die Tagesaktivität auf <code>/</code> oder warte
-              auf den nächsten Polar-Push.
-            </p>
-          </div>
-        )}
-    </main>
+      </div>
+    </BentoPageShell>
   );
 }

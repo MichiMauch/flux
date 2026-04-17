@@ -8,18 +8,20 @@ import { WeightChart } from "../components/weight-chart";
 import { WithingsConnect } from "../components/withings-connect";
 import { BpSyncButton } from "../components/bp-sync-button";
 import Link from "next/link";
+import { BentoPageShell } from "../components/bento/bento-page-shell";
+import { BentoPageHeader } from "../components/bento/bento-page-header";
+import { BentoTile } from "../components/bento/bento-tile";
+import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
 
 export default async function HealthPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  // Check Withings connection
   const user = await db.query.users.findFirst({
     where: eq(users.id, session.user.id),
   });
   const withingsConnected = !!user?.withingsAccessToken;
 
-  // Weight data
   const weightData = await db
     .select()
     .from(weightMeasurements)
@@ -29,7 +31,6 @@ export default async function HealthPage() {
 
   const latestWeight = weightData[0];
 
-  // Blood pressure data
   const bpData = await db
     .select()
     .from(bloodPressureSessions)
@@ -43,70 +44,81 @@ export default async function HealthPage() {
 
   const latestBp = bpData[0];
 
-  return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Gesundheit</h1>
+  type Stat = { value: string; label: string };
+  const metricBox = ({ value, label }: Stat) => (
+    <div
+      key={label}
+      className="rounded-lg border border-[#2a2a2a] bg-black/40 p-3 text-center"
+    >
+      <div className={`${rajdhani.className} text-2xl font-bold text-white`}>
+        {value}
+      </div>
+      <div
+        className={`${spaceMono.className} mt-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3]`}
+      >
+        {label}
+      </div>
+    </div>
+  );
 
-        <div className="grid gap-6">
-          {/* Weight */}
-          <div className="rounded-lg border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">Gewicht</h2>
-              {withingsConnected && <WithingsConnect connected />}
-            </div>
+  const weightStats: Stat[] = latestWeight
+    ? [
+        { value: latestWeight.weight.toFixed(1), label: "kg" },
+        ...(latestWeight.fatMass != null
+          ? [{ value: latestWeight.fatMass.toFixed(1), label: "Fett (kg)" }]
+          : []),
+        ...(latestWeight.muscleMass != null
+          ? [{ value: latestWeight.muscleMass.toFixed(1), label: "Muskel (kg)" }]
+          : []),
+        ...(latestWeight.bmi != null
+          ? [{ value: latestWeight.bmi.toFixed(1), label: "BMI" }]
+          : []),
+      ]
+    : [];
+
+  const bpStats: Stat[] = latestBp
+    ? [
+        { value: `${latestBp.systolicAvg}`, label: "Systolisch" },
+        { value: `${latestBp.diastolicAvg}`, label: "Diastolisch" },
+        { value: latestBp.pulseAvg != null ? `${latestBp.pulseAvg.toFixed(0)}` : "–", label: "Puls" },
+      ]
+    : [];
+
+  return (
+    <BentoPageShell>
+      <BentoPageHeader section="Health" title="Gesundheit" />
+
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
+        <div className="md:col-span-6">
+          <BentoTile
+            label="Gewicht"
+            title="Körperwerte"
+            right={withingsConnected ? <WithingsConnect connected /> : null}
+          >
             {!withingsConnected ? (
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <p className="text-sm mb-4">Verbinde Withings, um Gewichtsdaten zu sehen.</p>
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <p className="text-sm mb-4 text-[#9ca3af]">
+                  Verbinde Withings, um Gewichtsdaten zu sehen.
+                </p>
                 <Link
                   href="/api/withings/authorize"
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[#FF6A00] hover:bg-[#FF6A00]/20 transition-colors`}
                 >
                   Withings verbinden
                 </Link>
               </div>
             ) : weightData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <p className="text-sm">Noch keine Gewichtsdaten. Sync starten.</p>
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <p className="text-sm text-[#9ca3af]">
+                  Noch keine Gewichtsdaten. Sync starten.
+                </p>
                 <WithingsConnect connected />
               </div>
             ) : (
               <div>
-                {latestWeight && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">
-                        {latestWeight.weight.toFixed(1)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">kg</div>
-                    </div>
-                    {latestWeight.fatMass != null && (
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">
-                          {latestWeight.fatMass.toFixed(1)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Fettmasse (kg)
-                        </div>
-                      </div>
-                    )}
-                    {latestWeight.muscleMass != null && (
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">
-                          {latestWeight.muscleMass.toFixed(1)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Muskelmasse (kg)
-                        </div>
-                      </div>
-                    )}
-                    {latestWeight.bmi != null && (
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">
-                          {latestWeight.bmi.toFixed(1)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">BMI</div>
-                      </div>
-                    )}
+                {latestWeight && weightStats.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                    {weightStats.map(metricBox)}
                   </div>
                 )}
                 <div style={{ height: 300 }}>
@@ -122,46 +134,26 @@ export default async function HealthPage() {
                 </div>
               </div>
             )}
-          </div>
+          </BentoTile>
+        </div>
 
-          {/* Blood Pressure */}
-          <div className="rounded-lg border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">Blutdruck</h2>
-              <BpSyncButton />
-            </div>
+        <div className="md:col-span-6">
+          <BentoTile
+            label="Blutdruck"
+            title="Herz & Kreislauf"
+            right={<BpSyncButton />}
+          >
             {bpData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <p className="text-sm">Noch keine Blutdruck-Daten.</p>
+              <div className="flex flex-col items-center justify-center py-10">
+                <p className="text-sm text-[#9ca3af]">
+                  Noch keine Blutdruck-Daten.
+                </p>
               </div>
             ) : (
               <div>
                 {latestBp && (
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">
-                        {latestBp.systolicAvg}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Systolisch
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">
-                        {latestBp.diastolicAvg}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Diastolisch
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">
-                        {latestBp.pulseAvg?.toFixed(0) ?? "–"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Puls
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    {bpStats.map(metricBox)}
                   </div>
                 )}
                 <div style={{ height: 300 }}>
@@ -178,8 +170,9 @@ export default async function HealthPage() {
                 </div>
               </div>
             )}
-          </div>
+          </BentoTile>
         </div>
-    </main>
+      </div>
+    </BentoPageShell>
   );
 }

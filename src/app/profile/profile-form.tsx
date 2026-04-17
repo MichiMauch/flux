@@ -17,7 +17,7 @@ interface ProfileFormProps {
 }
 
 const inputCls =
-  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
+  "w-full rounded-md border border-[#3a3128] bg-black/40 px-3 py-2 text-sm text-white placeholder:text-[#9ca3af] focus:border-[#FF6A00]/60 focus:outline-none";
 
 export function ProfileForm({ initial }: ProfileFormProps) {
   const [state, formAction, isPending] = useActionState(
@@ -30,7 +30,7 @@ export function ProfileForm({ initial }: ProfileFormProps) {
   return (
     <form action={formAction} className="space-y-6 max-w-xl">
       <section className="space-y-4">
-        <h2 className="font-semibold">Persönliche Angaben</h2>
+        <h2 className="font-semibold text-white">Persönliche Angaben</h2>
         <Field label="Name">
           <input
             name="name"
@@ -71,8 +71,8 @@ export function ProfileForm({ initial }: ProfileFormProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="font-semibold">Herzfrequenz-Schwellen</h2>
-        <p className="text-xs text-muted-foreground">
+        <h2 className="font-semibold text-white">Herzfrequenz-Schwellen</h2>
+        <p className="text-xs text-[#d0c5ba]">
           Wird für TRIMP (Cardio Load) verwendet. Ohne Angabe: HRmax wird aus
           Alter (Tanaka: 208 − 0.7·Alter) geschätzt, HRrest = 60.
         </p>
@@ -118,13 +118,13 @@ export function ProfileForm({ initial }: ProfileFormProps) {
         </Field>
       </section>
 
-      {state?.error && <p className="text-sm text-red-500">{state.error}</p>}
-      {state?.ok && <p className="text-sm text-green-600">Gespeichert.</p>}
+      {state?.error && <p className="text-sm text-red-400">{state.error}</p>}
+      {state?.ok && <p className="text-sm text-green-400">Gespeichert.</p>}
 
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        className="rounded-md bg-[#FF6A00] px-4 py-2 text-sm font-bold uppercase tracking-[0.1em] text-black hover:bg-[#FF8533] disabled:opacity-50"
       >
         {isPending ? "Speichert…" : "Speichern"}
       </button>
@@ -135,7 +135,7 @@ export function ProfileForm({ initial }: ProfileFormProps) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[200px_1fr] items-center gap-4">
-      <label className="text-sm">{label}</label>
+      <label className="text-sm text-[#d0c5ba]">{label}</label>
       {children}
     </div>
   );

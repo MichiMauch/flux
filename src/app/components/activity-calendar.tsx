@@ -37,13 +37,13 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
   today.setHours(0, 0, 0, 0);
 
   return (
-    <div className="rounded-lg border border-border bg-background overflow-hidden">
+    <div className="rounded-lg border border-[#2a2a2a] bg-black/40 overflow-hidden">
       {/* Weekday header */}
-      <div className="grid grid-cols-7 border-b border-border bg-surface/60">
+      <div className="grid grid-cols-7 border-b border-[#2a2a2a] bg-black/60">
         {WEEKDAYS.map((w) => (
           <div
             key={w}
-            className="text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground py-2"
+            className="text-center text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] py-2"
           >
             {w}
           </div>
@@ -62,23 +62,23 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
           return (
             <div
               key={key}
-              className={`min-h-[84px] sm:min-h-[104px] p-1.5 border-border flex flex-col gap-1 ${
+              className={`min-h-[84px] sm:min-h-[104px] p-1.5 border-[#2a2a2a] flex flex-col gap-1 ${
                 isWeekEnd ? "" : "border-r"
               } ${isLastRow ? "" : "border-b"} ${
-                inMonth ? "bg-background" : "bg-surface/30"
+                inMonth ? "bg-[#0f0f0f]" : "bg-black/80"
               }`}
             >
               <div
                 className={`text-[11px] font-semibold tabular-nums leading-none ${
                   !inMonth
-                    ? "text-muted-foreground/60"
+                    ? "text-[#5a5149]"
                     : isToday
-                      ? "text-brand"
-                      : "text-foreground"
+                      ? "text-[#FF6A00]"
+                      : "text-white"
                 }`}
               >
                 {isToday ? (
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand text-white">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#FF6A00] text-black font-bold">
                     {d.getDate()}
                   </span>
                 ) : (
@@ -91,7 +91,7 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                   <Link
                     key={e.id}
                     href={`/activity/${e.id}`}
-                    className="flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-surface min-w-0"
+                    className="flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-black/60 min-w-0"
                   >
                     <span
                       className="w-1 h-4 rounded-sm flex-shrink-0"
@@ -101,9 +101,9 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                       <ActivityLottie activityType={e.type} activityName={e.name} size={24} />
                     </span>
                     {e.distanceKm != null && e.distanceKm > 0 && (
-                      <span className="text-[10px] font-semibold tabular-nums truncate">
+                      <span className="text-[10px] font-semibold tabular-nums truncate text-white">
                         {e.distanceKm.toFixed(1)}
-                        <span className="text-muted-foreground font-normal ml-0.5">km</span>
+                        <span className="text-[#9ca3af] font-normal ml-0.5">km</span>
                       </span>
                     )}
                   </Link>

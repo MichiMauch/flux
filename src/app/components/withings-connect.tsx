@@ -37,9 +37,15 @@ export function WithingsConnect({ connected }: { connected?: boolean }) {
   return (
     <div className="flex items-center gap-2">
       {result && (
-        <span className="text-xs text-muted-foreground">{result}</span>
+        <span className="text-xs text-[#d0c5ba]">{result}</span>
       )}
-      <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleSync}
+        disabled={syncing}
+        className="border-[#3a3128] bg-black/40 text-white hover:bg-black/60 hover:text-white"
+      >
         <RefreshCw className={`h-4 w-4 mr-1.5 ${syncing ? "animate-spin" : ""}`} />
         {syncing ? "Sync..." : "Sync"}
       </Button>

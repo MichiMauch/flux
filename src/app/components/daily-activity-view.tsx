@@ -45,7 +45,7 @@ const ZONE_LABELS: Record<number, string> = {
 };
 
 const ZONE_COLORS: Record<number, string> = {
-  0: "var(--border-strong)",
+  0: "#4a3e32",
   1: "#FFD9CC",
   2: "#FFB199",
   3: "#FF8466",
@@ -72,35 +72,35 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
   return (
     <div className="space-y-4">
       {/* Hero metrics */}
-      <div className="rounded-lg border border-border bg-background p-4 space-y-4">
+      <div className="rounded-lg border border-[#2a2a2a] bg-black/40 p-4 space-y-4">
         {completionPct != null && (
           <div>
             <div className="flex items-end justify-between mb-2">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3]">
                   Tagesziel
                 </div>
-                <div className="text-3xl font-bold tabular-nums tracking-[-0.03em]">
+                <div className="text-3xl font-bold tabular-nums tracking-[-0.03em] text-white">
                   {completionPct}%
                 </div>
               </div>
-              <div className="text-right text-[11px] text-muted-foreground">
+              <div className="text-right text-[11px] text-[#9ca3af]">
                 Aktivitätszeit / Ziel
-                <div className="font-mono text-foreground mt-0.5">
+                <div className="font-mono text-white mt-0.5">
                   {formatDuration(data.durationSec)} / {formatDuration(data.activeTimeGoalSec)}
                 </div>
               </div>
             </div>
-            <div className="h-2 w-full rounded-full bg-surface overflow-hidden">
+            <div className="h-2 w-full rounded-full bg-black/60 overflow-hidden">
               <div
-                className="h-full bg-brand transition-all"
+                className="h-full bg-[#FF6A00] transition-all"
                 style={{ width: `${Math.min(100, completionPct)}%` }}
               />
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[#2a2a2a]">
           <Stat icon={<Footprints />} label="Schritte" value={formatNumber(data.steps)} />
           <Stat
             icon={<Ruler />}
@@ -139,17 +139,17 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
 
       {/* Activity zones */}
       {zones.length > 0 && totalZoneSec > 0 && (
-        <div className="rounded-lg border border-border bg-background p-4">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground mb-3">
+        <div className="rounded-lg border border-[#2a2a2a] bg-black/40 p-4">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3] mb-3">
             <Activity className="h-3 w-3" /> Aktivitätszonen
           </div>
-          <div className="flex h-3 rounded overflow-hidden">
+          <div className="flex h-3 rounded overflow-hidden bg-black/60">
             {zones.map((z) => (
               <div
                 key={z.index}
                 style={{
                   width: `${(z.seconds / totalZoneSec) * 100}%`,
-                  background: ZONE_COLORS[z.index] ?? "var(--muted)",
+                  background: ZONE_COLORS[z.index] ?? "#4a3e32",
                 }}
                 title={`${ZONE_LABELS[z.index] ?? `Zone ${z.index}`}: ${formatDuration(z.seconds)}`}
               />
@@ -163,15 +163,15 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
               >
                 <span
                   className="w-2 h-2 rounded-sm flex-shrink-0"
-                  style={{ background: ZONE_COLORS[z.index] ?? "var(--muted)" }}
+                  style={{ background: ZONE_COLORS[z.index] ?? "#4a3e32" }}
                 />
-                <span className="font-semibold w-28 truncate">
+                <span className="font-semibold w-28 truncate text-white">
                   {ZONE_LABELS[z.index] ?? `Zone ${z.index}`}
                 </span>
-                <span className="ml-auto font-mono">
+                <span className="ml-auto font-mono text-white">
                   {formatDuration(z.seconds)}
                 </span>
-                <span className="text-muted-foreground font-mono w-12 text-right">
+                <span className="text-[#9ca3af] font-mono w-12 text-right">
                   {Math.round((z.seconds / totalZoneSec) * 100)}%
                 </span>
               </div>
@@ -182,15 +182,15 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
 
       {/* Inactivity stamps */}
       {inactivity.length > 0 && (
-        <div className="rounded-lg border border-border bg-background p-4">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground mb-3">
+        <div className="rounded-lg border border-[#2a2a2a] bg-black/40 p-4">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3] mb-3">
             <Moon className="h-3 w-3" /> Inaktivitätsstempel ({inactivity.length})
           </div>
           <div className="flex flex-wrap gap-1.5">
             {inactivity.map((ts, i) => (
               <span
                 key={i}
-                className="inline-flex px-2 py-0.5 rounded-sm bg-surface border border-border text-[11px] font-mono tabular-nums"
+                className="inline-flex px-2 py-0.5 rounded-sm bg-black/60 border border-[#2a2a2a] text-[11px] font-mono tabular-nums text-white"
                 title={ts}
               >
                 {formatStamp(ts)}
@@ -201,16 +201,16 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
       )}
 
       {/* Raw JSON dump */}
-      <details className="rounded-lg border border-border bg-background">
-        <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+      <details className="rounded-lg border border-[#2a2a2a] bg-black/40">
+        <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3] hover:text-white">
           Raw Polar-Daten
         </summary>
-        <pre className="px-4 pb-3 text-[11px] font-mono overflow-x-auto text-muted-foreground whitespace-pre-wrap">
+        <pre className="px-4 pb-3 text-[11px] font-mono overflow-x-auto text-[#9ca3af] whitespace-pre-wrap">
           {JSON.stringify(data.raw, null, 2)}
         </pre>
       </details>
 
-      <div className="text-[10px] text-muted-foreground font-mono text-center">
+      <div className="text-[10px] text-[#9ca3af] font-mono text-center">
         Synced: {data.updatedAt.toLocaleString("de-CH")}
       </div>
     </div>
@@ -230,19 +230,19 @@ function Stat({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="flex-shrink-0 text-muted-foreground mt-0.5 [&>svg]:w-3.5 [&>svg]:h-3.5">
+      <span className="flex-shrink-0 text-[#9ca3af] mt-0.5 [&>svg]:w-3.5 [&>svg]:h-3.5">
         {icon}
       </span>
       <div className="min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground leading-tight">
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3] leading-tight">
           {label}
         </div>
         <div className="flex items-baseline gap-1 mt-0.5">
-          <span className="text-sm font-bold tabular-nums tracking-[-0.01em]">
+          <span className="text-sm font-bold tabular-nums tracking-[-0.01em] text-white">
             {value}
           </span>
           {unit && (
-            <span className="text-[10px] text-muted-foreground">{unit}</span>
+            <span className="text-[10px] text-[#9ca3af]">{unit}</span>
           )}
         </div>
       </div>
