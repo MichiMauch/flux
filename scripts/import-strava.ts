@@ -93,7 +93,16 @@ async function main() {
   console.log(`Received ${stravaList.length} activities from Strava`);
   console.log("");
 
-  const rl = dryRun || yes
+  const hasTty = Boolean(process.stdin.isTTY);
+  if (!dryRun && !yes && !hasTty) {
+    console.error(
+      "ERROR: stdin is not a TTY and --yes was not passed.\n" +
+        "  Weak-match prompts cannot be answered. Re-run in a real terminal,\n" +
+        "  or add --yes to auto-accept same-day matches."
+    );
+    process.exit(2);
+  }
+  const rl = dryRun || yes || !hasTty
     ? null
     : readline.createInterface({ input: process.stdin, output: process.stdout });
   let globalYes = yes;
