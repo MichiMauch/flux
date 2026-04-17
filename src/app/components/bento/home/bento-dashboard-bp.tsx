@@ -75,8 +75,8 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
   });
 
   return (
-    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between mb-2">
         <span
           className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
@@ -89,8 +89,8 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
           {dateLabel}
         </span>
       </div>
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-baseline gap-2" style={{ fontSize: "44px" }}>
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="flex items-baseline gap-2" style={{ fontSize: "28px" }}>
           <SevenSegDisplay value={String(Math.round(latest.systolicAvg))} />
           <span
             className={`${spaceMono.className} text-[0.4em] font-bold`}
@@ -107,9 +107,9 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
           </span>
         </div>
       </div>
-      <div className="flex items-center justify-between mt-2">
+      <div className="flex items-center justify-between mt-1 gap-2">
         <span
-          className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] px-2 py-0.5 rounded`}
+          className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded truncate`}
           style={{
             color: cls.color,
             background: `${cls.color}1a`,
@@ -117,13 +117,13 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
             textShadow: `0 0 6px ${cls.color}88`,
           }}
         >
-          {cls.label}
+          {cls.short}
         </span>
         {latest.pulseAvg != null && (
           <span
-            className={`${spaceMono.className} text-[11px] font-bold text-[#9ca3af] tabular-nums uppercase tracking-[0.1em]`}
+            className={`${spaceMono.className} text-[10px] font-bold text-[#9ca3af] tabular-nums uppercase tracking-[0.1em]`}
           >
-            ♥ {Math.round(latest.pulseAvg)} bpm
+            ♥ {Math.round(latest.pulseAvg)}
           </span>
         )}
       </div>

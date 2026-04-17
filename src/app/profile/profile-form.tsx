@@ -40,12 +40,19 @@ export function ProfileForm({ initial }: ProfileFormProps) {
           />
         </Field>
         <Field label="Geburtstag">
-          <input
-            name="birthday"
-            type="date"
-            defaultValue={initial.birthday ?? ""}
-            className={inputCls}
-          />
+          <div>
+            <input
+              type="text"
+              value={formatDateDe(initial.birthday)}
+              readOnly
+              className={`${inputCls} cursor-default`}
+            />
+            <input
+              type="hidden"
+              name="birthday"
+              value={initial.birthday ?? ""}
+            />
+          </div>
         </Field>
         <Field label="Geschlecht">
           <select
@@ -139,4 +146,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+function formatDateDe(iso: string | null): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}.${m}.${y}`;
 }

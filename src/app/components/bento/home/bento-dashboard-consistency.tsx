@@ -5,6 +5,7 @@ import { and, eq, gte } from "drizzle-orm";
 import { dayKey, isoWeek, startOfWeek } from "@/lib/activity-week";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import { WeeklyBarsScope, type WeekBar } from "./weekly-bars-scope";
 
 const NEON = "#FF6A00";
 const OK = "#39FF14";
@@ -60,14 +61,19 @@ export async function BentoDashboardConsistency({ userId }: { userId: string }) 
     d.setDate(d.getDate() - i * 7);
     weekStarts.push(startOfWeek(d));
   }
-  const perWeek = weekStarts.map((ws) => {
+  const weeks: WeekBar[] = weekStarts.map((ws) => {
     const weekEnd = new Date(ws);
     weekEnd.setDate(weekEnd.getDate() + 7);
-    return rows.filter(
+    const count = rows.filter(
       (r) => r.startTime >= ws && r.startTime < weekEnd
     ).length;
+    return {
+      start: ws.toISOString(),
+      count,
+      week: isoWeek(ws),
+    };
   });
-  const maxWeek = Math.max(...perWeek, 1);
+  const maxWeek = Math.max(...weeks.map((w) => w.count), 1);
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
@@ -136,30 +142,7 @@ export async function BentoDashboardConsistency({ userId }: { userId: string }) 
           <span>Akt. / Woche · {WEEKS} Wochen</span>
           <span style={{ color: NEON }}>Max {maxWeek}</span>
         </div>
-        <div
-          className="flex items-end gap-[3px]"
-          style={{ height: 32 }}
-        >
-          {perWeek.map((n, i) => {
-            const h = (n / maxWeek) * 100;
-            const isCurrent = i === perWeek.length - 1;
-            return (
-              <div
-                key={i}
-                className="flex-1 rounded-sm"
-                style={{
-                  height: `${Math.max(4, h)}%`,
-                  background: isCurrent
-                    ? NEON
-                    : n > 0
-                      ? `${NEON}77`
-                      : "#2a2a2a",
-                  boxShadow: isCurrent ? `0 0 6px ${NEON}` : undefined,
-                }}
-              />
-            );
-          })}
-        </div>
+        <WeeklyBarsScope weeks={weeks} maxWeek={maxWeek} />
       </div>
     </div>
   );

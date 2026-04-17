@@ -49,8 +49,8 @@ const SPORT_TYPE_MAP: Record<string, string> = {
   Crossfit: "STRENGTH_TRAINING",
   Elliptical: "OTHER_INDOOR",
   StairStepper: "OTHER_INDOOR",
-  Yoga: "OTHER_INDOOR",
-  Pilates: "CORE",
+  Yoga: "YOGA",
+  Pilates: "YOGA",
 
   // Other
   RockClimbing: "OTHER",

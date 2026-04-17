@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Plus, X, Trash2, Loader2 } from "lucide-react";
 import { BottomSheet } from "./bottom-sheet";
+import { ACTIVITY_TYPE_OPTIONS } from "@/lib/activity-types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,7 @@ interface ActivityEditSheetProps {
   activity: {
     id: string;
     name: string;
+    type: string;
     notes: string | null;
     ascent: number | null;
     descent: number | null;
@@ -49,6 +51,7 @@ export function ActivityEditSheet({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(activity.name);
+  const [type, setType] = useState(activity.type);
   const [notes, setNotes] = useState(activity.notes ?? "");
   const [ascent, setAscent] = useState(
     activity.ascent != null ? String(Math.round(activity.ascent)) : ""
@@ -66,6 +69,7 @@ export function ActivityEditSheet({
   useEffect(() => {
     if (open) {
       setName(activity.name);
+      setType(activity.type);
       setNotes(activity.notes ?? "");
       setAscent(activity.ascent != null ? String(Math.round(activity.ascent)) : "");
       setDescent(activity.descent != null ? String(Math.round(activity.descent)) : "");
@@ -76,6 +80,7 @@ export function ActivityEditSheet({
 
   const dirty =
     name.trim() !== activity.name ||
+    type !== activity.type ||
     notes.trim() !== (activity.notes ?? "") ||
     ascent !== (activity.ascent != null ? String(Math.round(activity.ascent)) : "") ||
     descent !== (activity.descent != null ? String(Math.round(activity.descent)) : "");
@@ -153,6 +158,7 @@ export function ActivityEditSheet({
     try {
       const payload: Record<string, unknown> = {};
       if (name.trim() !== activity.name) payload.name = name.trim();
+      if (type !== activity.type) payload.type = type;
       if (notes.trim() !== (activity.notes ?? "")) {
         payload.notes = notes.trim() || null;
       }
@@ -225,6 +231,27 @@ export function ActivityEditSheet({
             className={inputCls}
             maxLength={200}
           />
+        </label>
+
+        {/* Sportart */}
+        <label className="block">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+            Sportart
+          </span>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className={inputCls}
+          >
+            {ACTIVITY_TYPE_OPTIONS.some((o) => o.value === type) ? null : (
+              <option value={type}>{type}</option>
+            )}
+            {ACTIVITY_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
         </label>
 
         {/* Notiz */}

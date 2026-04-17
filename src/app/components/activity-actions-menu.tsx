@@ -25,6 +25,7 @@ interface ActivityActionsMenuProps {
   activity: {
     id: string;
     name: string;
+    type: string;
     notes: string | null;
     ascent: number | null;
     descent: number | null;

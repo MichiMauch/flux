@@ -330,6 +330,143 @@ export async function commitActivityTransaction(
   }
 }
 
+// ── Sleep (AccessLink /v3/users/sleep) ─────────────────────────────────────
+
+export interface PolarSleepListItem {
+  date: string;
+  polar_user?: string;
+}
+
+export interface PolarSleepStageElement {
+  "seconds-in-sleep-stage"?: number;
+  "sleep-stage"?: string | number;
+  stage?: string;
+  duration?: number;
+  offset?: number;
+  [k: string]: unknown;
+}
+
+export interface PolarSleep {
+  polar_user?: string;
+  date: string;
+  sleep_start_time?: string;
+  sleep_end_time?: string;
+  device_id?: string;
+  continuity?: number;
+  continuity_class?: number;
+  light_sleep?: number;
+  deep_sleep?: number;
+  rem_sleep?: number;
+  unrecognized_sleep_stage?: number;
+  total_interruption_duration?: number;
+  short_interruption_duration?: number;
+  long_interruption_duration?: number;
+  sleep_goal?: number;
+  sleep_rating?: number;
+  sleep_score?: number;
+  sleep_charge?: number;
+  sleep_cycles?: number;
+  group_duration_score?: number;
+  group_solidity_score?: number;
+  group_regeneration_score?: number;
+  hypnogram?: unknown;
+  heart_rate_samples?: unknown;
+  [k: string]: unknown;
+}
+
+export interface PolarNight {
+  polar_user?: string;
+  date: string;
+  heart_rate_avg?: number;
+  beat_to_beat_avg?: number;
+  heart_rate_variability_avg?: number;
+  breathing_rate_avg?: number;
+  nightly_recharge_status?: number;
+  ans_charge?: number;
+  ans_charge_status?: number;
+  sleep_charge?: number;
+  sleep_charge_status?: number;
+  [k: string]: unknown;
+}
+
+interface SleepListResponse {
+  nights?: PolarSleepListItem[];
+}
+
+interface NightsListResponse {
+  recharges?: PolarSleepListItem[];
+}
+
+export async function listSleep(token: string): Promise<PolarSleepListItem[]> {
+  const res = await fetch(`${POLAR_API_BASE}/v3/users/sleep`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+  if (res.status === 204) return [];
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to list sleep: ${res.status} ${text}`);
+  }
+  const data = (await res.json()) as SleepListResponse | PolarSleepListItem[];
+  if (Array.isArray(data)) return data;
+  return data.nights ?? [];
+}
+
+export async function getSleep(
+  token: string,
+  date: string
+): Promise<PolarSleep | null> {
+  const res = await fetch(`${POLAR_API_BASE}/v3/users/sleep/${date}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+  if (res.status === 204 || res.status === 404) return null;
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get sleep ${date}: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+export async function listNights(token: string): Promise<PolarSleepListItem[]> {
+  const res = await fetch(`${POLAR_API_BASE}/v3/users/nights`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+  if (res.status === 204) return [];
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to list nights: ${res.status} ${text}`);
+  }
+  const data = (await res.json()) as NightsListResponse | PolarSleepListItem[];
+  if (Array.isArray(data)) return data;
+  return data.recharges ?? [];
+}
+
+export async function getNight(
+  token: string,
+  date: string
+): Promise<PolarNight | null> {
+  const res = await fetch(`${POLAR_API_BASE}/v3/users/nights/${date}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+  if (res.status === 204 || res.status === 404) return null;
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get night ${date}: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
 /** Parse an ISO 8601 duration (PT1H30M45S) into seconds. */
 export function parseIsoDuration(s: string | undefined | null): number | null {
   if (!s) return null;

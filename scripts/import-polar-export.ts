@@ -102,12 +102,15 @@ async function main() {
         continue;
       }
 
-      // Skip tiny sessions (accidentally started/stopped on the watch)
+      // Skip tiny sessions (accidentally started/stopped on the watch).
+      // Indoor sessions (no GPS, distance null/0) bypass the distance check.
       const MIN_DURATION_SEC = 300;
       const MIN_DISTANCE_M = 500;
       const tooShort = (parsed.durationSec ?? 0) < MIN_DURATION_SEC;
+      const hasRecordedDistance =
+        parsed.distanceMeters != null && parsed.distanceMeters > 0;
       const tooSmall =
-        parsed.distanceMeters != null && parsed.distanceMeters < MIN_DISTANCE_M;
+        hasRecordedDistance && (parsed.distanceMeters as number) < MIN_DISTANCE_M;
       if (tooShort || tooSmall) {
         console.log(
           `  → SKIP   ${parsed.polarId}  ${isoDate(parsed.startTime)}  (mini session: ${Math.round((parsed.durationSec ?? 0) / 60)}min / ${fmtMeters(parsed.distanceMeters)})`

@@ -1,8 +1,9 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { NavLink } from "./nav-link";
+import { NavLottie } from "./nav-lottie";
 import { PRIMARY_ITEMS, isSecondaryActive } from "./nav-items";
 
 interface AppBottomNavProps {
@@ -12,6 +13,7 @@ interface AppBottomNavProps {
 export function AppBottomNav({ onOpenMore }: AppBottomNavProps) {
   const pathname = usePathname();
   const moreActive = isSecondaryActive(pathname);
+  const [moreHover, setMoreHover] = useState(false);
 
   return (
     <nav
@@ -26,12 +28,17 @@ export function AppBottomNav({ onOpenMore }: AppBottomNavProps) {
             href={item.href}
             label={item.label}
             icon={item.icon}
+            lottieFile={item.lottieFile}
             variant="bottom"
           />
         ))}
         <button
           type="button"
           onClick={onOpenMore}
+          onMouseEnter={() => setMoreHover(true)}
+          onMouseLeave={() => setMoreHover(false)}
+          onTouchStart={() => setMoreHover(true)}
+          onTouchEnd={() => setMoreHover(false)}
           aria-label="Mehr"
           aria-expanded={false}
           className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold transition-colors ${
@@ -40,10 +47,7 @@ export function AppBottomNav({ onOpenMore }: AppBottomNavProps) {
               : "text-foreground/75 hover:text-foreground"
           }`}
         >
-          <MoreHorizontal
-            className="h-5 w-5"
-            strokeWidth={moreActive ? 2.25 : 1.75}
-          />
+          <NavLottie file="more" size={26} playing={moreHover} />
           <span className="tracking-tight">Mehr</span>
         </button>
       </div>

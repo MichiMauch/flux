@@ -144,6 +144,7 @@ export function ActivitySummary({
             activity={{
               id: activity.id,
               name: activity.name,
+              type: activity.type,
               notes: activity.notes,
               ascent: activity.ascent,
               descent: activity.descent,

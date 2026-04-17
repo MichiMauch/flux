@@ -4,10 +4,10 @@ import {
   Calendar,
   Heart,
   Home,
+  Moon,
   Sun,
   Target,
   Trophy,
-  User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,19 +17,20 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  lottieFile?: string;
   group: NavGroup;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Home", icon: Home, group: "primary" },
-  { href: "/activities", label: "Aktivitäten", icon: Activity, group: "primary" },
-  { href: "/calendar", label: "Kalender", icon: Calendar, group: "primary" },
-  { href: "/stats", label: "Statistiken", icon: BarChart3, group: "primary" },
-  { href: "/daily", label: "Tag", icon: Sun, group: "secondary" },
-  { href: "/goals", label: "Ziele", icon: Target, group: "secondary" },
-  { href: "/trophies", label: "Trophäen", icon: Trophy, group: "secondary" },
-  { href: "/health", label: "Gesundheit", icon: Heart, group: "secondary" },
-  { href: "/profile", label: "Profil", icon: User, group: "secondary" },
+  { href: "/", label: "Home", icon: Home, lottieFile: "home", group: "primary" },
+  { href: "/activities", label: "Aktivitäten", icon: Activity, lottieFile: "activity-feed", group: "primary" },
+  { href: "/calendar", label: "Kalender", icon: Calendar, lottieFile: "calendar", group: "primary" },
+  { href: "/stats", label: "Statistiken", icon: BarChart3, lottieFile: "stats", group: "primary" },
+  { href: "/daily", label: "Tag", icon: Sun, lottieFile: "daily", group: "secondary" },
+  { href: "/goals", label: "Ziele", icon: Target, lottieFile: "goals", group: "secondary" },
+  { href: "/trophies", label: "Trophäen", icon: Trophy, lottieFile: "trophy", group: "secondary" },
+  { href: "/health", label: "Gesundheit", icon: Heart, lottieFile: "heartbeat", group: "secondary" },
+  { href: "/sleep", label: "Schlaf", icon: Moon, lottieFile: "sleep", group: "secondary" },
 ];
 
 export const PRIMARY_ITEMS = NAV_ITEMS.filter((i) => i.group === "primary");

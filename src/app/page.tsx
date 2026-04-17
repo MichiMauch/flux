@@ -10,6 +10,7 @@ import { BentoDashboardStreak } from "./components/bento/home/bento-dashboard-st
 import { BentoDashboardMonthly } from "./components/bento/home/bento-dashboard-monthly";
 import { BentoDashboardWeight } from "./components/bento/home/bento-dashboard-weight";
 import { BentoDashboardBp } from "./components/bento/home/bento-dashboard-bp";
+import { BentoDashboardSleepAvg } from "./components/bento/home/bento-dashboard-sleep-avg";
 import { BentoDashboardMonthlyKm } from "./components/bento/home/bento-dashboard-monthly-km";
 import { BentoDashboardMonthlyActivities } from "./components/bento/home/bento-dashboard-monthly-activities";
 import { BentoDashboardSports } from "./components/bento/home/bento-dashboard-sports";
@@ -110,11 +111,12 @@ export default async function DashboardPage() {
             <BentoDashboardMonthlyActivities userId={userId} />
           </div>
 
-          {/* Health row */}
+          {/* Health row: weight left, sleep-avg + BP stacked right */}
           <div className="md:col-span-3">
             <BentoDashboardWeight userId={userId} />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-3 grid grid-rows-2 gap-3">
+            <BentoDashboardSleepAvg userId={userId} />
             <BentoDashboardBp userId={userId} />
           </div>
 

@@ -47,7 +47,7 @@ export function AppShellClient({
     });
   }, []);
 
-  const mainPadding = collapsed ? "lg:pl-16" : "lg:pl-60";
+  const mainPadding = collapsed ? "lg:pl-20" : "lg:pl-60";
 
   return (
     <div className="min-h-full">

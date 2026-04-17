@@ -98,21 +98,86 @@ export async function BentoHomeGoals({ userId }: { userId: string }) {
                   {pct}%
                 </span>
               </div>
-              <div className="relative h-4 rounded-sm bg-[#0a0a0a] overflow-hidden mt-2 border border-[#2a2a2a]">
+              <div
+                className="relative h-4 rounded-sm overflow-hidden mt-2 border border-[#2a2a2a]"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at center, #0a0402 0%, #000 70%)",
+                }}
+              >
+                {/* Scanlines */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 mix-blend-overlay opacity-25"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 2px)",
+                  }}
+                />
+
+                {/* Tick marks at 25/50/75% */}
+                {[25, 50, 75].map((t) => (
+                  <div
+                    key={t}
+                    aria-hidden
+                    className="pointer-events-none absolute top-0 bottom-0 w-px"
+                    style={{
+                      left: `${t}%`,
+                      background: color,
+                      opacity: 0.15,
+                    }}
+                  />
+                ))}
+
+                {/* Halo layer */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0"
+                  style={{
+                    width: `${pct}%`,
+                    background: color,
+                    opacity: 0.35,
+                    filter: "blur(3px)",
+                  }}
+                />
+
+                {/* Core fill */}
                 <div
                   className="absolute inset-y-0 left-0"
                   style={{
                     width: `${pct}%`,
-                    background: `linear-gradient(90deg, ${color}cc, ${color})`,
-                    boxShadow: `0 0 12px ${color}, 0 0 24px ${color}aa, inset 0 0 6px ${color}66`,
+                    background: `linear-gradient(90deg, ${color}55, ${color})`,
+                    boxShadow: `0 0 6px ${color}, inset 0 0 4px ${color}88`,
                   }}
                 />
+
+                {/* Leading edge — glowing marker at progress position.
+                    Shown even at 0% so empty bars still have a visible
+                    "start" indicator. */}
+                {pct < 100 && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0"
+                    style={{
+                      left: `max(0px, calc(${pct}% - 1px))`,
+                      width: "2px",
+                      background: color,
+                      boxShadow: `0 0 6px ${color}, 0 0 12px ${color}`,
+                    }}
+                  />
+                )}
+
+                {/* Current-time marker (dashed neon) */}
                 {!achieved && (
                   <div
-                    className="absolute inset-y-0 w-[2px] bg-white"
+                    aria-hidden
+                    className="pointer-events-none absolute top-0 bottom-0"
                     style={{
                       left: `calc(${elapsedCapped}% - 1px)`,
-                      boxShadow: "0 0 6px white",
+                      width: "2px",
+                      background:
+                        "repeating-linear-gradient(0deg, #ffffff 0px, #ffffff 2px, transparent 2px, transparent 4px)",
+                      boxShadow: "0 0 4px #ffffff, 0 0 8px #ffffffaa",
                     }}
                   />
                 )}

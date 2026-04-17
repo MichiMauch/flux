@@ -8,7 +8,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ collapsed }: AppSidebarProps) {
-  const width = collapsed ? "w-16" : "w-60";
+  const width = collapsed ? "w-20" : "w-60";
 
   return (
     <aside
@@ -27,6 +27,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
               href={item.href}
               label={item.label}
               icon={item.icon}
+              lottieFile={item.lottieFile}
               variant="side"
               collapsed={collapsed}
             />
@@ -45,6 +46,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
               href={item.href}
               label={item.label}
               icon={item.icon}
+              lottieFile={item.lottieFile}
               variant="side"
               collapsed={collapsed}
             />

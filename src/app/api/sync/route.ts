@@ -8,6 +8,7 @@ import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
+import { syncSleep } from "@/app/api/sync/sleep/route";
 import { evaluateTrophies } from "@/lib/trophies-server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -158,9 +159,22 @@ export async function POST() {
       console.warn("[sync] skipping daily: user has no polarUserId");
     }
 
+    // Sleep + Nightly Recharge (best effort)
+    let sleepSynced = 0;
+    let nightsSynced = 0;
+    try {
+      const r = await syncSleep(user.id, user.polarToken);
+      sleepSynced = r.sleepSynced;
+      nightsSynced = r.nightsSynced;
+    } catch (e) {
+      console.error("Sleep sync failed:", e);
+    }
+
     return NextResponse.json({
       synced,
       dailySynced,
+      sleepSynced,
+      nightsSynced,
       total: exercises.length,
       unlockedTrophies,
     });

@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, Menu, Search } from "lucide-react";
+import { useState } from "react";
+import { Activity, Menu } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "../theme-toggle";
 import { LogoutMenuItem } from "../logout-menu-item";
-import { BentoSyncButton } from "../bento/home/bento-sync-button";
+import { NavLottie } from "./nav-lottie";
+import { DropdownSyncItem } from "./dropdown-sync-item";
+import { DropdownProfileItem } from "./dropdown-profile-item";
 
 interface AppTopBarProps {
   userName: string;
@@ -33,6 +34,7 @@ export function AppTopBar({
   onToggleSidebar,
   onOpenSearch,
 }: AppTopBarProps) {
+  const [searchHover, setSearchHover] = useState(false);
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="flex h-14 items-center gap-2 px-3 sm:px-4">
@@ -55,23 +57,17 @@ export function AppTopBar({
         <button
           type="button"
           onClick={onOpenSearch}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-surface hover:text-foreground"
+          onMouseEnter={() => setSearchHover(true)}
+          onMouseLeave={() => setSearchHover(false)}
+          className="flex h-11 w-11 items-center justify-center rounded-md text-foreground/80 hover:bg-surface hover:text-foreground"
           aria-label="Suche öffnen"
         >
-          <Search className="h-4 w-4" />
+          <NavLottie file="search" size={34} playing={searchHover} />
         </button>
-
-        <div className="hidden sm:block">
-          <BentoSyncButton />
-        </div>
-
-        <div className="hidden sm:block">
-          <ThemeToggle />
-        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger className="relative h-8 w-8 rounded-full focus:outline-none">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-8 w-8 ring-1 ring-[color:var(--brand)]">
               {portraitUrl && <AvatarImage src={portraitUrl} alt={initials} />}
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
@@ -84,12 +80,8 @@ export function AppTopBar({
               <div className="text-xs text-foreground/70">{userEmail}</div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              render={<Link href="/profile" />}
-              className="flex items-center gap-2"
-            >
-              Profil
-            </DropdownMenuItem>
+            <DropdownSyncItem />
+            <DropdownProfileItem />
             <DropdownMenuSeparator />
             <form action={logoutAction}>
               <LogoutMenuItem />

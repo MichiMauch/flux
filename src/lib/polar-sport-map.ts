@@ -10,11 +10,12 @@
  * activity edit sheet.
  */
 
-// Observed from this user's export (Polar Vantage V3, account 2401976):
-// sport.id "2"  → ROAD_BIKING (speeds 16–20 km/h, Rennrad)
-// sport.id "3"  → WALKING (speeds 4.6–5.6 km/h, not MTB)
-// sport.id "11" → HIKING  (matches Polar Flow label)
-// sport.id "38" → ROAD_BIKING (speeds 17–21 km/h, Rennrad, March 2026)
+// Observed across user exports (Polar Vantage V3 + Grit X Pro):
+// sport.id "2"  → ROAD_BIKING  (Michi + Sibylle, speeds 16–20 km/h)
+// sport.id "3"  → WALKING      (Michi + Sibylle, speeds 4–6 km/h, NOT MTB)
+// sport.id "11" → HIKING       (Michi + Sibylle, Polar Flow label)
+// sport.id "38" → ROAD_BIKING  (Michi, speeds 17–21 km/h)
+// sport.id "83" → YOGA (Sibylle, indoor 60 min)
 //
 // Other IDs below are best-effort guesses; unknown IDs fall back to OTHER.
 // The user can correct labels via the activity edit sheet.
@@ -37,6 +38,7 @@ const SPORT_ID_TO_TYPE: Record<string, string> = {
   "33": "STRENGTH_TRAINING",
   "38": "ROAD_BIKING",
   "52": "CORE",
+  "83": "YOGA",
 };
 
 export function polarSportIdToType(sportId: string | null | undefined): string {

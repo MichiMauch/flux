@@ -1,8 +1,9 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, eq, gte, inArray, lt } from "drizzle-orm";
 import { getCurrentPeriod, type Goal, type GoalProgress } from "./goals";
+import { expandActivityType } from "./activity-types";
 
 export async function computeGoalProgress(
   goal: Goal,
@@ -16,7 +17,12 @@ export async function computeGoalProgress(
     lt(activities.startTime, end),
   ];
   if (goal.activityType) {
-    conditions.push(eq(activities.type, goal.activityType));
+    const types = expandActivityType(goal.activityType);
+    conditions.push(
+      types.length === 1
+        ? eq(activities.type, types[0])
+        : inArray(activities.type, types)
+    );
   }
 
   const rows = await db

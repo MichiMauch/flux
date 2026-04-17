@@ -253,6 +253,70 @@ export const weightMeasurements = pgTable("weight_measurements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ── Sleep Sessions (Polar AccessLink /v3/users/sleep) ─────────────────────
+
+export const sleepSessions = pgTable("sleep_sessions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  date: text("date").notNull(), // YYYY-MM-DD (wake-up day per Polar)
+  polarUserId: text("polar_user_id"),
+  deviceId: text("device_id"),
+  sleepStartTime: timestamp("sleep_start_time"),
+  sleepEndTime: timestamp("sleep_end_time"),
+  totalSleepSec: integer("total_sleep_sec"),
+  continuity: real("continuity"),
+  continuityClass: integer("continuity_class"),
+  lightSleepSec: integer("light_sleep_sec"),
+  deepSleepSec: integer("deep_sleep_sec"),
+  remSleepSec: integer("rem_sleep_sec"),
+  unrecognizedSleepSec: integer("unrecognized_sleep_sec"),
+  sleepScore: integer("sleep_score"),
+  sleepCharge: integer("sleep_charge"),
+  sleepRating: integer("sleep_rating"),
+  sleepGoalSec: integer("sleep_goal_sec"),
+  shortInterruptionSec: integer("short_interruption_sec"),
+  longInterruptionSec: integer("long_interruption_sec"),
+  totalInterruptionSec: integer("total_interruption_sec"),
+  sleepCycles: integer("sleep_cycles"),
+  groupDurationScore: integer("group_duration_score"),
+  groupSolidityScore: integer("group_solidity_score"),
+  groupRegenerationScore: integer("group_regeneration_score"),
+  hypnogram: json("hypnogram"),
+  heartRateSamples: json("heart_rate_samples"),
+  raw: json("raw"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ── Nightly Recharge (Polar AccessLink /v3/users/nights) ──────────────────
+
+export const nightlyRecharge = pgTable("nightly_recharge", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  polarUserId: text("polar_user_id"),
+  heartRateAvg: real("heart_rate_avg"),
+  beatToBeatAvg: real("beat_to_beat_avg"),
+  heartRateVariabilityAvg: real("heart_rate_variability_avg"),
+  breathingRateAvg: real("breathing_rate_avg"),
+  nightlyRechargeStatus: integer("nightly_recharge_status"),
+  ansCharge: real("ans_charge"),
+  ansChargeStatus: integer("ans_charge_status"),
+  sleepCharge: integer("sleep_charge"),
+  sleepChargeStatus: integer("sleep_charge_status"),
+  raw: json("raw"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // ── Blood Pressure (from blood-pressure-tracker) ───────────────────────────
 
 export const bloodPressureSessions = pgTable("blood_pressure_sessions", {
