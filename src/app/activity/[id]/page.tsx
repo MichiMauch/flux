@@ -18,9 +18,23 @@ import { ArrowLeft, Clock, Ruler, Mountain, Heart, Flame, Zap, Activity as Activ
 import Link from "next/link";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
 import { SevenSegDisplay } from "@/app/components/bento/seven-seg";
+import { activityTypeColor } from "@/lib/activity-types";
 
-const NEON = "#FF6A00";
-const NEON_DIM = "#b34600";
+const NEON = "var(--activity-color, #FF6A00)";
+const NEON_DIM = "var(--activity-color-dim, #b34600)";
+
+function dimColor(hex: string): string {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const r = Math.round(parseInt(full.slice(0, 2), 16) * 0.7);
+  const g = Math.round(parseInt(full.slice(2, 4), 16) * 0.7);
+  const b = Math.round(parseInt(full.slice(4, 6), 16) * 0.7);
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+const NEON_ALPHA_66 = "color-mix(in srgb, var(--activity-color, #FF6A00) 40%, transparent)";
+const NEON_ALPHA_33 = "color-mix(in srgb, var(--activity-color, #FF6A00) 20%, transparent)";
+const NEON_ALPHA_99 = "color-mix(in srgb, var(--activity-color, #FF6A00) 60%, transparent)";
 
 function formatDuration(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -159,7 +173,7 @@ function ElevationProfile({
               y={y + 3}
               fontSize={10}
               textAnchor="end"
-              fill="#6b6b6b"
+              fill="#a3a3a3"
               fontFamily="var(--font-jetbrains), monospace"
             >
               {Math.round(v)} m
@@ -187,7 +201,7 @@ function ElevationProfile({
               y={padT + plotH + 14}
               fontSize={10}
               textAnchor="middle"
-              fill="#6b6b6b"
+              fill="#a3a3a3"
               fontFamily="var(--font-jetbrains), monospace"
             >
               {v % 1 === 0 ? v : v.toFixed(1)} km
@@ -217,14 +231,14 @@ function ElevationProfile({
 
 function Tile({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 ${className}`}>{children}</div>
+    <div className={`rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 ${className}`}>{children}</div>
   );
 }
 
 function TileLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`${spaceMono.className} [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] mb-2`}
+      className={`${spaceMono.className} [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] mb-2`}
     >
       {children}
     </div>
@@ -316,26 +330,31 @@ export default async function ActivityBentoPage({
     year: "numeric",
   });
 
+  const color = activityTypeColor(activity.type);
+  const colorDim = dimColor(color);
+
   return (
     <div
       className="dark min-h-screen bg-black text-white"
       style={{
         fontFeatureSettings: '"ss01", "cv11"',
         ["--bento-mono" as string]: spaceMono.style.fontFamily,
+        ["--activity-color" as string]: color,
+        ["--activity-color-dim" as string]: colorDim,
       }}
     >
       <main className="mx-auto w-full max-w-7xl px-4 py-6 space-y-3">
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 [font-family:var(--bento-mono)] text-xs text-[#6b6b6b] hover:text-white uppercase tracking-[0.16em] font-bold"
+            className="inline-flex items-center gap-1 [font-family:var(--bento-mono)] text-xs text-[#a3a3a3] hover:text-white uppercase tracking-[0.16em] font-bold"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Zurück
           </Link>
           <Link
             href={`/activity/${id}/classic`}
-            className="[font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.16em] text-[#6b6b6b] hover:text-white"
+            className="[font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.16em] text-[#a3a3a3] hover:text-white"
           >
             Klassische Ansicht
           </Link>
@@ -349,7 +368,7 @@ export default async function ActivityBentoPage({
             style={{
               fontSize: "clamp(48px, 8vw, 100px)",
               color: NEON,
-              textShadow: `0 0 18px ${NEON}66, 0 0 36px ${NEON}33`,
+              textShadow: `0 0 18px ${NEON_ALPHA_66}, 0 0 36px ${NEON_ALPHA_33}`,
             }}
           >
             {activity.name}
@@ -406,6 +425,7 @@ export default async function ActivityBentoPage({
                 totalAscent={activity.ascent}
                 totalDescent={activity.descent}
                 isRunning={isRunning}
+                color={color}
                 photos={photos
                   .filter((p) => p.lat != null && p.lng != null)
                   .map((p) => ({ id: p.id, lat: p.lat as number, lng: p.lng as number }))}
@@ -426,7 +446,7 @@ export default async function ActivityBentoPage({
               <Tile className="flex-1 flex flex-col min-h-0">
                 <div className="flex items-center justify-between mb-2">
                   <TileLabel>Höhenprofil</TileLabel>
-                  <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b]">
+                  <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]">
                     Aufstieg{" "}
                     <span className="text-white tabular-nums">
                       {ascent != null ? `${ascent} m` : "–"}
@@ -515,7 +535,7 @@ function SevenSegTile({
 }) {
   return (
     <div>
-      <div className="flex items-center gap-2 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] mb-2">
+      <div className="flex items-center gap-2 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] mb-2">
         <span className="[&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</span>
         {label}
       </div>
@@ -550,7 +570,7 @@ function MetricBig({
 }) {
   return (
     <div>
-      <div className="flex items-center gap-2 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] mb-1">
+      <div className="flex items-center gap-2 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] mb-1">
         <span className="[&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</span>
         {label}
       </div>
@@ -558,7 +578,7 @@ function MetricBig({
         className="font-black leading-none tabular-nums tracking-[-0.03em] flex items-baseline gap-2 text-white"
         style={{
           fontSize: "clamp(34px, 4.5vw, 64px)",
-          textShadow: `0 0 14px ${NEON}66`,
+          textShadow: `0 0 14px ${NEON_ALPHA_66}`,
         }}
       >
         <span>{value}</span>
@@ -585,7 +605,7 @@ function StatTile({
 }) {
   return (
     <Tile>
-      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] mb-2">
+      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] mb-2">
         <span className="[&>svg]:h-3 [&>svg]:w-3" style={{ color: NEON_DIM }}>
           {icon}
         </span>
@@ -640,7 +660,7 @@ function HrZonesTile({ zones }: { zones: HrZone[] }) {
                   {z.minBpm}–{z.maxBpm}
                 </span>
                 <span className="font-bold text-white">{formatZoneDuration(z.seconds)}</span>
-                <span className="text-[#6b6b6b] w-12 text-right">
+                <span className="text-[#a3a3a3] w-12 text-right">
                   {z.percent.toFixed(1)}%
                 </span>
               </div>
@@ -679,7 +699,7 @@ function DotsTile({
 }) {
   return (
     <Tile>
-      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] mb-3">
+      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] mb-3">
         {icon && (
           <span className="[&>svg]:h-3 [&>svg]:w-3" style={{ color: NEON_DIM }}>
             {icon}
@@ -693,8 +713,8 @@ function DotsTile({
             key={i}
             className="h-3 w-3 rounded-full"
             style={{
-              background: i < count ? NEON : "#1f1f1f",
-              boxShadow: i < count ? `0 0 8px ${NEON}99` : "inset 0 0 0 1px #2a2a2a",
+              background: i < count ? NEON : "#2a2a2a",
+              boxShadow: i < count ? `0 0 8px ${NEON_ALPHA_99}` : "inset 0 0 0 1px #2a2a2a",
             }}
           />
         ))}
@@ -716,7 +736,7 @@ function GiantTile({
 }) {
   return (
     <Tile className="flex flex-col justify-between">
-      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b]">
+      <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]">
         {icon && (
           <span className="[&>svg]:h-3 [&>svg]:w-3" style={{ color: NEON_DIM }}>
             {icon}
@@ -744,8 +764,8 @@ function GiantTile({
 
 function MiniStat({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-md bg-[#0a0a0a] border border-[#1f1f1f] px-3 py-2">
-      <div className="[font-family:var(--bento-mono)] text-[9px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] flex items-center gap-1">
+    <div className="rounded-md bg-[#0a0a0a] border border-[#2a2a2a] px-3 py-2">
+      <div className="[font-family:var(--bento-mono)] text-[9px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] flex items-center gap-1">
         {icon}
         {label}
       </div>

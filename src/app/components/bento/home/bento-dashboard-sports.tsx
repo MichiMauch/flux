@@ -16,7 +16,7 @@ interface TypeConfig {
 const TYPE_CONFIGS: TypeConfig[] = [
   {
     label: "Laufen",
-    color: "#FF6A00",
+    color: "#FF1493",
     lottieType: "RUNNING",
     match: (t) => t.includes("RUN") || t.includes("JOG"),
   },
@@ -42,7 +42,7 @@ const TYPE_CONFIGS: TypeConfig[] = [
 
 const OTHER_CONFIG: TypeConfig = {
   label: "Andere",
-  color: "#FFFFFF",
+  color: "#B026FF",
   lottieType: "OTHER",
   match: () => true,
 };
@@ -82,10 +82,10 @@ export async function BentoDashboardSports({ userId }: { userId: string }) {
   const total = items.reduce((s, x) => s + x.count, 0);
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <ActivityIcon className="h-3 w-3 text-white" />
           Sportarten · {now.getFullYear()}
@@ -98,7 +98,7 @@ export async function BentoDashboardSports({ userId }: { userId: string }) {
       </div>
       {items.length === 0 ? (
         <div
-          className={`flex-1 flex items-center justify-center ${spaceMono.className} text-xs text-[#6b6b6b]`}
+          className={`flex-1 flex items-center justify-center ${spaceMono.className} text-xs text-[#a3a3a3]`}
         >
           Keine Aktivitäten
         </div>
@@ -112,7 +112,7 @@ export async function BentoDashboardSports({ userId }: { userId: string }) {
           {items.map(({ config, count }) => (
             <div
               key={config.label}
-              className="flex flex-col items-center justify-between gap-2 rounded-lg border border-[#1f1f1f] bg-[#0a0a0a] p-3"
+              className="flex flex-col items-center justify-between gap-2 rounded-lg border border-[#2a2a2a] bg-[#0a0a0a] p-3"
               style={{ boxShadow: `inset 0 0 10px ${config.color}22` }}
             >
               <div

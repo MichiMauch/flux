@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "../components/navbar";
 import { db } from "@/lib/db";
 import { bloodPressureSessions, weightMeasurements, users } from "@/lib/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
@@ -45,9 +44,7 @@ export default async function HealthPage() {
   const latestBp = bpData[0];
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Gesundheit</h1>
 
         <div className="grid gap-6">
@@ -183,7 +180,6 @@ export default async function HealthPage() {
             )}
           </div>
         </div>
-      </main>
-    </>
+    </main>
   );
 }

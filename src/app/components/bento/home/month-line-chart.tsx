@@ -110,7 +110,7 @@ export function MonthLineChart({
             y={yAt(v) + 3}
             fontSize={9}
             textAnchor="end"
-            fill="#6b6b6b"
+            fill="#a3a3a3"
             fontFamily="var(--bento-mono), monospace"
           >
             {v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}

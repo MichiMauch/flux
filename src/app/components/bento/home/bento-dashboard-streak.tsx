@@ -69,17 +69,17 @@ export async function BentoDashboardStreak({ userId }: { userId: string }) {
   const longest = longestStreak(activeDays);
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
-      <div className="flex items-center mb-3">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3 h-full flex flex-col">
+      <div className="flex items-center mb-2">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Flame className="h-3 w-3" style={{ color: NEON }} />
           Streak
         </span>
       </div>
-      <div className="flex-1 flex items-center">
-        <div className="flex items-baseline gap-2" style={{ fontSize: "54px" }}>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex items-baseline gap-1.5" style={{ fontSize: "48px" }}>
           <SevenSegDisplay value={String(current)} />
           <span
             className={`${spaceMono.className} text-[0.32em] font-bold lowercase`}
@@ -90,7 +90,7 @@ export async function BentoDashboardStreak({ userId }: { userId: string }) {
         </div>
       </div>
       <div
-        className={`${spaceMono.className} text-[10px] uppercase tracking-[0.12em] text-[#6b6b6b] tabular-nums`}
+        className={`${spaceMono.className} text-[9px] uppercase tracking-[0.12em] text-[#a3a3a3] tabular-nums text-center`}
       >
         Rekord: <span className="text-white font-bold">{longest} Tage</span>
       </div>

@@ -48,11 +48,11 @@ export function BentoHomeFeedCard(a: Props) {
   return (
     <Link
       href={`/activity/${a.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] transition-all hover:border-[#2a2a2a]"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] transition-all hover:border-[#4a4a4a]"
       style={{ boxShadow: `inset 0 0 0 1px transparent` }}
     >
       {hasRoute && (
-        <div className="border-b border-[#1f1f1f]">
+        <div className="border-b border-[#2a2a2a]">
           <RouteMapStatic route={a.routeData} color={color} height={a.hero ? 240 : 140} />
         </div>
       )}
@@ -65,7 +65,7 @@ export function BentoHomeFeedCard(a: Props) {
             {activityTypeLabel(a.type)}
           </span>
           <span
-            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b6b6b]`}
+            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3]`}
           >
             {dateLabel} · {timeLabel}
           </span>
@@ -141,7 +141,7 @@ function Metric({
     <span className="inline-flex items-baseline gap-1 leading-none">
       <span
         className={`${spaceMono.className} text-[0.5em]`}
-        style={{ color: "#6b6b6b" }}
+        style={{ color: "#a3a3a3" }}
       >
         {icon}
       </span>

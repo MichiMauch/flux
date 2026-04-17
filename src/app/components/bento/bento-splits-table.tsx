@@ -55,14 +55,14 @@ export function BentoSplitsTable({
   const paceUnit = isRunning ? "min/km" : "km/h";
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] overflow-hidden">
-      <div className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] px-4 pt-4 pb-2`}>
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] overflow-hidden">
+      <div className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] px-4 pt-4 pb-2`}>
         Splits · 1 km
       </div>
       <div className="overflow-x-auto">
         <table className={`w-full text-sm tabular-nums ${spaceMono.className}`}>
           <thead>
-            <tr className="text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b6b6b] border-t border-[#1f1f1f]">
+            <tr className="text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3] border-t border-[#2a2a2a]">
               <th className="px-3 py-2 text-center w-10">#</th>
               <Th title="Dauer" sub="Runde / Gesamt" />
               <Th title="Distanz" sub="Runde / Gesamt" />
@@ -99,7 +99,7 @@ export function BentoSplitsTable({
                       secondary={String(s.hrMax ?? "–")}
                     />
                   ) : (
-                    <span className="text-[#6b6b6b]">–</span>
+                    <span className="text-[#a3a3a3]">–</span>
                   )}
                 </td>
                 <td className="px-3 py-2">
@@ -142,7 +142,7 @@ function SplitCell({
     <div className="flex items-center gap-1.5 leading-none">
       <SevenSegDisplay value={primary} />
       <span className="text-[#4a4a4a] text-sm">/</span>
-      <SevenSegDisplay value={secondary} on="#6b6b6b" off="#1a1a1a" />
+      <SevenSegDisplay value={secondary} on="#a3a3a3" off="#1a1a1a" />
     </div>
   );
 }

@@ -3,14 +3,14 @@ import { windDirection, wmoEmoji, type WeatherData } from "@/lib/weather";
 import { spaceMono } from "./bento-fonts";
 import { SevenSegDisplay } from "./seven-seg";
 
-const NEON = "#FF6A00";
+const NEON = "var(--activity-color, #FF6A00)";
 
 export function BentoWeatherTile({ weather }: { weather: WeatherData | null }) {
   if (!weather) return null;
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4">
       <div
-        className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] mb-3`}
+        className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] mb-3`}
       >
         Wetter
       </div>
@@ -58,7 +58,7 @@ function WeatherStat({
   return (
     <div>
       <div
-        className={`flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] mb-1.5`}
+        className={`flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] mb-1.5`}
       >
         <span style={{ color: NEON }}>{icon}</span>
         {label}

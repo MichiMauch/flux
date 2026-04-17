@@ -88,8 +88,9 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
   const activeDays = days.filter((x) => x.bucket > 0).length;
   const totalTrimp = Math.round(days.reduce((s, x) => s + x.trimp, 0));
 
-  const CELL = 11;
-  const GAP = 2;
+  const CELL_W = 6;
+  const CELL_H = 14;
+  const GAP = 1;
 
   // Month labels: show month abbr at the top of first week of each month
   const monthLabels: { col: number; label: string }[] = [];
@@ -105,10 +106,10 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
   });
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Calendar className="h-3 w-3" style={{ color: NEON }} />
           Aktivitäts-Jahr
@@ -120,7 +121,7 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
         </span>
       </div>
 
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 flex items-center justify-center">
         <div className="inline-block">
           {/* Month labels */}
           <div
@@ -128,14 +129,14 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
             style={{
               height: 12,
               marginLeft: 20,
-              width: weeks.length * (CELL + GAP),
+              width: weeks.length * (CELL_W + GAP),
             }}
           >
             {monthLabels.map((m) => (
               <span
                 key={`${m.col}-${m.label}`}
-                className={`${spaceMono.className} absolute text-[9px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b]`}
-                style={{ left: m.col * (CELL + GAP) }}
+                className={`${spaceMono.className} absolute text-[9px] font-bold uppercase tracking-[0.1em] text-[#a3a3a3]`}
+                style={{ left: m.col * (CELL_W + GAP) }}
               >
                 {m.label}
               </span>
@@ -145,7 +146,7 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
             {/* Weekday labels */}
             <div
               className="flex flex-col justify-between"
-              style={{ height: 7 * (CELL + GAP) - GAP, paddingTop: 2 }}
+              style={{ height: 7 * (CELL_H + GAP) - GAP, paddingTop: 2 }}
             >
               {WEEKDAYS.map((w) => (
                 <span
@@ -161,7 +162,8 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
             <HeatmapGrid
               weeks={weeks}
               bucketColors={BUCKET_COLORS}
-              cell={CELL}
+              cellW={CELL_W}
+              cellH={CELL_H}
               gap={GAP}
             />
           </div>
@@ -170,13 +172,13 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
 
       <div className="flex items-center justify-between mt-3">
         <span
-          className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#6b6b6b]`}
+          className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#a3a3a3]`}
         >
           letzte 52 Wochen
         </span>
         <div className="flex items-center gap-1.5">
           <span
-            className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#6b6b6b]`}
+            className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#a3a3a3]`}
           >
             Weniger
           </span>
@@ -192,7 +194,7 @@ export async function BentoDashboardHeatmap({ userId }: { userId: string }) {
             />
           ))}
           <span
-            className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#6b6b6b]`}
+            className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#a3a3a3]`}
           >
             Mehr
           </span>

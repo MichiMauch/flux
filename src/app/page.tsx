@@ -1,9 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "./components/navbar";
 import Link from "next/link";
 import { rajdhani, spaceMono } from "./components/bento/bento-fonts";
-import { BentoSyncButton } from "./components/bento/home/bento-sync-button";
 import { BentoHomeWeekly } from "./components/bento/home/bento-home-weekly";
 import { BentoHomeGoals } from "./components/bento/home/bento-home-goals";
 import { BentoHomeLevelTrophies } from "./components/bento/home/bento-home-level-trophies";
@@ -12,11 +10,15 @@ import { BentoDashboardStreak } from "./components/bento/home/bento-dashboard-st
 import { BentoDashboardMonthly } from "./components/bento/home/bento-dashboard-monthly";
 import { BentoDashboardWeight } from "./components/bento/home/bento-dashboard-weight";
 import { BentoDashboardBp } from "./components/bento/home/bento-dashboard-bp";
-import { BentoDashboardHeatmap } from "./components/bento/home/bento-dashboard-heatmap";
 import { BentoDashboardMonthlyKm } from "./components/bento/home/bento-dashboard-monthly-km";
 import { BentoDashboardMonthlyActivities } from "./components/bento/home/bento-dashboard-monthly-activities";
 import { BentoDashboardSports } from "./components/bento/home/bento-dashboard-sports";
 import { BentoDashboardSteps } from "./components/bento/home/bento-dashboard-steps";
+import { BentoDashboardYtdDistance } from "./components/bento/home/bento-dashboard-ytd-distance";
+import { BentoDashboardYtdAscent } from "./components/bento/home/bento-dashboard-ytd-ascent";
+import { BentoDashboardYtdTime } from "./components/bento/home/bento-dashboard-ytd-time";
+import { BentoDashboardConsistency } from "./components/bento/home/bento-dashboard-consistency";
+import { BentoDashboardRecords } from "./components/bento/home/bento-dashboard-records";
 
 const NEON = "#FF6A00";
 
@@ -38,12 +40,11 @@ export default async function DashboardPage() {
         backgroundSize: "40px 40px",
       }}
     >
-      <Navbar />
       <main className="mx-auto w-full max-w-7xl px-4 py-6 space-y-4">
-        <div className="flex items-end justify-between border-b border-[#1f1f1f] pb-4">
+        <div className="flex items-end justify-between border-b border-[#2a2a2a] pb-4">
           <div>
             <div
-              className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.3em] text-[#6b6b6b] mb-1`}
+              className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.3em] text-[#a3a3a3] mb-1`}
             >
               ► FLUX // DASHBOARD ·{" "}
               {new Date()
@@ -65,15 +66,6 @@ export default async function DashboardPage() {
               Hallo {greetingName}
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/activities"
-              className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] hover:text-white hover:border-[#4a4a4a]`}
-            >
-              Aktivitäten →
-            </Link>
-            <BentoSyncButton />
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
@@ -81,17 +73,20 @@ export default async function DashboardPage() {
           <div className="md:col-span-4 md:row-span-2">
             <BentoDashboardHero userId={userId} />
           </div>
-          {/* 2×2 mini-grid next to map: weekly / monthly / level+trophies / streak */}
+          {/* 2×2 mini-grid next to map: YTD distance / ascent / time / streak */}
           <div className="md:col-span-2 md:row-span-2 grid grid-cols-2 grid-rows-2 gap-3">
-            <BentoHomeWeekly userId={userId} />
-            <BentoDashboardMonthly userId={userId} />
-            <BentoHomeLevelTrophies userId={userId} />
+            <BentoDashboardYtdDistance userId={userId} />
+            <BentoDashboardYtdAscent userId={userId} />
+            <BentoDashboardYtdTime userId={userId} />
             <BentoDashboardStreak userId={userId} />
           </div>
 
-          {/* Goals full width, three abreast */}
-          <div className="md:col-span-6">
+          {/* Goals + steps */}
+          <div className="md:col-span-4">
             <BentoHomeGoals userId={userId} />
+          </div>
+          <div className="md:col-span-2">
+            <BentoDashboardSteps userId={userId} />
           </div>
 
           {/* Sport breakdown full width */}
@@ -99,7 +94,15 @@ export default async function DashboardPage() {
             <BentoDashboardSports userId={userId} />
           </div>
 
-          {/* Monthly split: km + count line charts */}
+          {/* Jahresbilanz: consistency + records */}
+          <div className="md:col-span-3">
+            <BentoDashboardConsistency userId={userId} />
+          </div>
+          <div className="md:col-span-3">
+            <BentoDashboardRecords userId={userId} />
+          </div>
+
+          {/* Monthly line charts: km + activities, half-width each */}
           <div className="md:col-span-3">
             <BentoDashboardMonthlyKm userId={userId} />
           </div>
@@ -108,19 +111,22 @@ export default async function DashboardPage() {
           </div>
 
           {/* Health row */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <BentoDashboardWeight userId={userId} />
           </div>
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <BentoDashboardBp userId={userId} />
           </div>
-          <div className="md:col-span-2">
-            <BentoDashboardSteps userId={userId} />
-          </div>
 
-          {/* Heatmap full width */}
-          <div className="md:col-span-6">
-            <BentoDashboardHeatmap userId={userId} />
+          {/* End: weekly / monthly / level+trophies */}
+          <div className="md:col-span-2">
+            <BentoHomeWeekly userId={userId} />
+          </div>
+          <div className="md:col-span-2">
+            <BentoDashboardMonthly userId={userId} />
+          </div>
+          <div className="md:col-span-2">
+            <BentoHomeLevelTrophies userId={userId} />
           </div>
         </div>
 

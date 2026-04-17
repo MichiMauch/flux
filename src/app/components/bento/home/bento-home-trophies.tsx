@@ -22,10 +22,10 @@ export async function BentoHomeTrophies({ userId }: { userId: string }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-3">
+    <div className="flex h-full flex-col rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3">
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Trophy className="h-3 w-3" style={{ color: NEON }} /> Trophäen
         </span>
@@ -47,7 +47,7 @@ export async function BentoHomeTrophies({ userId }: { userId: string }) {
               key={r.code}
               href="/trophies"
               title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH")}`}
-              className="flex aspect-square items-center justify-center rounded-md border border-[#1f1f1f] bg-[#0a0a0a] hover:border-[#2a2a2a] transition-colors"
+              className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#4a4a4a] transition-colors"
               style={{ boxShadow: `inset 0 0 6px ${glow}22` }}
             >
               <span style={{ color: glow, filter: `drop-shadow(0 0 4px ${glow}88)` }}>

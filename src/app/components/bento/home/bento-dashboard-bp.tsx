@@ -50,17 +50,17 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
 
   if (!latest) {
     return (
-      <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
+      <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
         <div className="flex items-center gap-1.5 mb-3">
           <HeartPulse className="h-3 w-3" style={{ color: NEON }} />
           <span
-            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
           >
             Blutdruck
           </span>
         </div>
         <div
-          className={`flex-1 flex items-center justify-center ${spaceMono.className} text-xs text-[#6b6b6b]`}
+          className={`flex-1 flex items-center justify-center ${spaceMono.className} text-xs text-[#a3a3a3]`}
         >
           Keine Messung
         </div>
@@ -75,16 +75,16 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
   });
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <HeartPulse className="h-3 w-3" style={{ color: NEON }} />
           Blutdruck
         </span>
         <span
-          className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b6b6b] tabular-nums`}
+          className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3] tabular-nums`}
         >
           {dateLabel}
         </span>

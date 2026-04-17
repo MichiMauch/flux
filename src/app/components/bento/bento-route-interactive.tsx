@@ -10,12 +10,15 @@ import {
 } from "@/lib/splits";
 import { useHover } from "./hover-context";
 
-const NEON = "#FF6A00";
+const NEON = "var(--activity-color, #FF6A00)";
+const NEON_ALPHA_1A = "color-mix(in srgb, var(--activity-color, #FF6A00) 10%, transparent)";
+const NEON_ALPHA_22 = "color-mix(in srgb, var(--activity-color, #FF6A00) 13%, transparent)";
+const NEON_ALPHA_55 = "color-mix(in srgb, var(--activity-color, #FF6A00) 33%, transparent)";
 
 const BentoMapClient = dynamic(() => import("./bento-map-client"), {
   ssr: false,
   loading: () => (
-    <div className="h-full w-full bg-[#0a0a0a] flex items-center justify-center text-[#6b6b6b] text-xs uppercase tracking-[0.16em]">
+    <div className="h-full w-full bg-[#0a0a0a] flex items-center justify-center text-[#a3a3a3] text-xs uppercase tracking-[0.16em]">
       Lade Karte…
     </div>
   ),
@@ -35,6 +38,7 @@ interface Props {
   totalDescent?: number | null;
   isRunning?: boolean;
   photos?: PhotoMarker[];
+  color?: string;
 }
 
 function formatPace(sec: number | null): string {
@@ -58,6 +62,7 @@ export function BentoRouteInteractive({
   totalDescent,
   isRunning = false,
   photos = [],
+  color,
 }: Props) {
   const [selectedKm, setSelectedKm] = useState<number | null>(null);
   const { hoverIdx } = useHover();
@@ -101,17 +106,17 @@ export function BentoRouteInteractive({
   const MAP_HEIGHT = 520;
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] overflow-hidden">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] overflow-hidden">
       <div className="grid md:grid-cols-[200px_1fr]">
         <aside
-          className="border-b md:border-b-0 md:border-r border-[#1f1f1f] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          className="border-b md:border-b-0 md:border-r border-[#2a2a2a] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           style={{ maxHeight: MAP_HEIGHT }}
         >
-          <div className="[font-family:var(--bento-mono)] px-3 py-2 bg-[#0a0a0a] border-b border-[#1f1f1f] text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b] sticky top-0 z-10">
+          <div className="[font-family:var(--bento-mono)] px-3 py-2 bg-[#0a0a0a] border-b border-[#2a2a2a] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] sticky top-0 z-10">
             Runden
           </div>
           {highlights && (
-            <div className="flex flex-col gap-1 p-2 border-b border-[#1f1f1f]">
+            <div className="flex flex-col gap-1 p-2 border-b border-[#2a2a2a]">
               {highlights.fastest && (
                 <HighlightChip
                   onClick={() => setSelectedKm(highlights.fastest!.index)}
@@ -151,7 +156,7 @@ export function BentoRouteInteractive({
               )}
             </div>
           )}
-          <ul className="divide-y divide-[#1f1f1f]">
+          <ul className="divide-y divide-[#2a2a2a]">
             {splits.map((s) => {
               const active = selectedKm === s.index;
               return (
@@ -163,13 +168,13 @@ export function BentoRouteInteractive({
                     style={
                       active
                         ? {
-                            background: `${NEON}1a`,
+                            background: NEON_ALPHA_1A,
                             borderLeft: `3px solid ${NEON}`,
                           }
                         : undefined
                     }
                   >
-                    <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b]">
+                    <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]">
                       km {s.index}
                     </div>
                     <div className="[font-family:var(--bento-mono)] mt-0.5 text-[11px] tabular-nums text-white flex items-baseline gap-1.5">
@@ -177,15 +182,15 @@ export function BentoRouteInteractive({
                         {isRunning
                           ? formatPace(s.paceSecPerKm)
                           : formatSpeed(s.paceSecPerKm)}
-                        <span className="ml-0.5 text-[9px] text-[#6b6b6b]">
+                        <span className="ml-0.5 text-[9px] text-[#a3a3a3]">
                           {isRunning ? "min/km" : "km/h"}
                         </span>
                       </span>
                       <span className="text-[#3a3a3a]">|</span>
                       <span>
                         <span>+{s.ascent}</span>
-                        <span className="text-[#6b6b6b] mx-1">·</span>
-                        <span className="text-[#6b6b6b]">−{s.descent}</span>
+                        <span className="text-[#a3a3a3] mx-1">·</span>
+                        <span className="text-[#a3a3a3]">−{s.descent}</span>
                       </span>
                     </div>
                   </button>
@@ -200,6 +205,7 @@ export function BentoRouteInteractive({
             photos={photos}
             highlightRange={highlightRange}
             hoverIdx={hoverIdx}
+            color={color}
           />
         </div>
       </div>
@@ -231,8 +237,8 @@ function HighlightChip({
       className="w-full text-left rounded-md px-2.5 py-1.5 transition-colors hover:bg-[#151515]"
       style={
         active
-          ? { background: `${NEON}22`, border: `1px solid ${NEON}55` }
-          : { border: "1px solid #1f1f1f" }
+          ? { background: NEON_ALPHA_22, border: `1px solid ${NEON_ALPHA_55}` }
+          : { border: "1px solid #2a2a2a" }
       }
     >
       <div className="flex items-center justify-between gap-2">
@@ -240,13 +246,13 @@ function HighlightChip({
           <span style={{ color: NEON }}>{icon}</span>
           {label}
         </div>
-        <div className="[font-family:var(--bento-mono)] text-[9px] text-[#6b6b6b]">
+        <div className="[font-family:var(--bento-mono)] text-[9px] text-[#a3a3a3]">
           km {kmIndex}
         </div>
       </div>
       <div className="[font-family:var(--bento-mono)] mt-0.5 text-sm font-bold tabular-nums text-white">
         {value}
-        <span className="ml-1 text-[9px] text-[#6b6b6b]">{unit}</span>
+        <span className="ml-1 text-[9px] text-[#a3a3a3]">{unit}</span>
       </div>
     </button>
   );

@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/app/components/navbar";
 import { SyncButton } from "@/app/components/sync-button";
 import { WeeklySummary } from "@/app/components/weekly-summary";
 import { GoalsSummary } from "@/app/components/goals-summary";
@@ -62,9 +61,7 @@ export default async function ClassicHomePage({
   const nextTakeHref = `/classic?take=${take + PAGE_SIZE}`;
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 space-y-4">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-[-0.025em]">Aktivitäten</h1>
           <div className="flex items-center gap-3">
@@ -118,7 +115,6 @@ export default async function ClassicHomePage({
             <EarnedTrophies userId={session.user.id} />
           </aside>
         </div>
-      </main>
-    </>
+    </main>
   );
 }

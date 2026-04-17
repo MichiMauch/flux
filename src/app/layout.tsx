@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "./components/theme-provider";
 import { UnlockCelebration } from "./components/unlock-celebration";
+import { AppShell } from "./components/app-shell/app-shell";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -28,17 +29,17 @@ export default function RootLayout({
   return (
     <html
       lang="de"
-      className={`${manrope.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`dark ${manrope.variable} ${jetbrains.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" style={{ fontFeatureSettings: '"ss01", "cv11"' }}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <AppShell>{children}</AppShell>
           <UnlockCelebration />
         </ThemeProvider>
       </body>

@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/app/components/navbar";
 import { db } from "@/lib/db";
 import { dailyActivity } from "@/lib/db/schema";
 import { and, eq, desc } from "drizzle-orm";
@@ -67,9 +66,7 @@ export default async function DailyPage({
   const isToday = date === today;
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-3xl px-4 py-6 space-y-4">
+    <main className="mx-auto w-full max-w-3xl px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-[-0.025em]">Tagesaktivität</h1>
         </div>
@@ -114,7 +111,6 @@ export default async function DailyPage({
             </p>
           </div>
         )}
-      </main>
-    </>
+    </main>
   );
 }

@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "../components/navbar";
 import { db } from "@/lib/db";
 import { activities, activityPhotos } from "@/lib/db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
@@ -80,12 +79,11 @@ export default async function ActivitiesPage({
         backgroundSize: "40px 40px",
       }}
     >
-      <Navbar />
       <main className="mx-auto w-full max-w-7xl px-4 py-6 space-y-4">
-        <div className="flex items-end justify-between border-b border-[#1f1f1f] pb-4">
+        <div className="flex items-end justify-between border-b border-[#2a2a2a] pb-4">
           <div>
             <div
-              className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.3em] text-[#6b6b6b] mb-1`}
+              className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.3em] text-[#a3a3a3] mb-1`}
             >
               ► FLUX // TERMINAL · {new Date().toLocaleDateString("de-CH", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase()}
             </div>
@@ -103,7 +101,7 @@ export default async function ActivitiesPage({
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6b6b6b] hover:text-white hover:border-[#4a4a4a]`}
+              className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
             >
               ← Dashboard
             </Link>
@@ -119,7 +117,7 @@ export default async function ActivitiesPage({
 
           <div className="min-w-0">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-[#6b6b6b]">
+              <div className="flex flex-col items-center justify-center py-20 text-[#a3a3a3]">
                 <Activity className="h-12 w-12 mb-4" />
                 <p
                   className={`${spaceMono.className} text-lg font-bold uppercase tracking-[0.14em]`}

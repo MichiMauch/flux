@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/app/components/navbar";
 import { WeeklySummary } from "@/app/components/weekly-summary";
 import { ActivityCalendar } from "@/app/components/activity-calendar";
 import { db } from "@/lib/db";
@@ -89,9 +88,7 @@ export default async function CalendarPage({
     today.getFullYear() === year && today.getMonth() === month;
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-4">
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-[-0.025em]">Kalender</h1>
         </div>
@@ -130,7 +127,6 @@ export default async function CalendarPage({
         </div>
 
         <ActivityCalendar year={year} month={month} byDay={byDay} />
-      </main>
-    </>
+    </main>
   );
 }

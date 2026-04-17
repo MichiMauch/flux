@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { Navbar } from "@/app/components/navbar";
 import { ProfileForm } from "./profile-form";
 import { PortraitUpload } from "./portrait-upload";
 import { computeLevel } from "@/lib/trophies-server";
@@ -25,9 +24,7 @@ export default async function ProfilePage() {
     : null;
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-6">
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Profil</h1>
           <Link
@@ -65,7 +62,6 @@ export default async function ProfilePage() {
             anaerobicThreshold: user.anaerobicThreshold ?? null,
           }}
         />
-      </main>
-    </>
+    </main>
   );
 }

@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/app/components/navbar";
 import {
   loadTrophyState,
   computeLevel,
@@ -59,9 +58,7 @@ export default async function TrophiesPage() {
   }
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-6">
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-[-0.025em]">Trophäen</h1>
           <div className="flex items-center gap-3">
@@ -202,7 +199,6 @@ export default async function TrophiesPage() {
             <p className="font-semibold">Noch keine Trophäen</p>
           </div>
         )}
-      </main>
-    </>
+    </main>
   );
 }

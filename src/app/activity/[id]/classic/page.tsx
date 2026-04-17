@@ -3,7 +3,6 @@ import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { activities, users, activityPhotos } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { Navbar } from "@/app/components/navbar";
 import { RouteAnalysis } from "@/app/components/route-analysis";
 import { ActivitySummary } from "@/app/components/activity-summary";
 import { SplitsTable } from "@/app/components/splits-table";
@@ -78,7 +77,6 @@ export default async function ActivityClassicPage({
 
   return (
     <>
-      <Navbar />
       <main className="mx-auto w-full max-w-5xl px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <Link

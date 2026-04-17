@@ -71,10 +71,10 @@ export async function BentoDashboardMonthlyChart({ userId }: { userId: string })
   for (let v = kmStep; v <= maxKm; v += kmStep) kmTicks.push(v);
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <BarChart3 className="h-3 w-3" style={{ color: NEON }} />
           Monat · {year}
@@ -133,7 +133,7 @@ export async function BentoDashboardMonthlyChart({ userId }: { userId: string })
                 y={kmY(v) + 3}
                 fontSize={10}
                 textAnchor="end"
-                fill="#6b6b6b"
+                fill="#a3a3a3"
                 fontFamily="var(--bento-mono), monospace"
               >
                 {v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
@@ -158,7 +158,7 @@ export async function BentoDashboardMonthlyChart({ userId }: { userId: string })
                 y={countY(v) + 3}
                 fontSize={10}
                 textAnchor="start"
-                fill="#6b6b6b"
+                fill="#a3a3a3"
                 fontFamily="var(--bento-mono), monospace"
               >
                 {v}
@@ -215,7 +215,7 @@ export async function BentoDashboardMonthlyChart({ userId }: { userId: string })
                   y={padT + plotH + 14}
                   fontSize={10}
                   textAnchor="middle"
-                  fill={isCurrent ? "#ffffff" : "#6b6b6b"}
+                  fill={isCurrent ? "#ffffff" : "#a3a3a3"}
                   fontFamily="var(--bento-mono), monospace"
                   fontWeight={isCurrent ? 700 : 400}
                 >

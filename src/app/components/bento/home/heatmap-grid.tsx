@@ -17,13 +17,19 @@ export function HeatmapGrid({
   weeks,
   bucketColors,
   cell = 11,
+  cellW,
+  cellH,
   gap = 2,
 }: {
   weeks: Day[][];
   bucketColors: string[];
   cell?: number;
+  cellW?: number;
+  cellH?: number;
   gap?: number;
 }) {
+  const w = cellW ?? cell;
+  const h = cellH ?? cell;
   const bucketColor = (b: number) => bucketColors[b] ?? bucketColors[0];
   const [hover, setHover] = useState<{
     day: Day;
@@ -45,8 +51,8 @@ export function HeatmapGrid({
                 key={day.key}
                 onMouseEnter={() => setHover({ day, col, row })}
                 style={{
-                  width: cell,
-                  height: cell,
+                  width: w,
+                  height: h,
                   borderRadius: 2,
                   background: bucketColor(day.bucket),
                   boxShadow:
@@ -71,8 +77,8 @@ export function HeatmapGrid({
         <div
           className={`absolute pointer-events-none ${spaceMono.className} px-2 py-1 rounded-md border text-[10px] tabular-nums whitespace-nowrap z-10`}
           style={{
-            left: hover.col * (cell + gap) + cell / 2,
-            top: hover.row * (cell + gap) + cell + 8,
+            left: hover.col * (w + gap) + w / 2,
+            top: hover.row * (h + gap) + h + 8,
             transform: "translateX(-50%)",
             borderColor: `${NEON}77`,
             background: "rgba(10,10,10,0.94)",
@@ -100,7 +106,7 @@ export function HeatmapGrid({
                 </span>
               </>
             ) : (
-              <span className="text-[#6b6b6b]">keine Aktivität</span>
+              <span className="text-[#a3a3a3]">keine Aktivität</span>
             )}
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { useHover } from "./hover-context";
 
-const NEON = "#FF6A00";
+const NEON = "var(--activity-color, #FF6A00)";
 
 interface RoutePoint {
   lat: number;
@@ -175,7 +175,7 @@ export function BentoElevationChart({
               y={y + 3}
               fontSize={10}
               textAnchor="end"
-              fill="#6b6b6b"
+              fill="#a3a3a3"
               fontFamily="var(--font-jetbrains), monospace"
             >
               {Math.round(v)} m
@@ -202,7 +202,7 @@ export function BentoElevationChart({
               y={padT + plotH + 14}
               fontSize={10}
               textAnchor="middle"
-              fill="#6b6b6b"
+              fill="#a3a3a3"
               fontFamily="var(--font-jetbrains), monospace"
             >
               {v % 1 === 0 ? v : v.toFixed(1)} km

@@ -49,15 +49,15 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
 
   if (!latest) {
     return (
-      <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-6 h-full flex flex-col items-center justify-center text-center gap-3">
-        <Activity className="h-10 w-10 text-[#6b6b6b]" />
+      <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-6 h-full flex flex-col items-center justify-center text-center gap-3">
+        <Activity className="h-10 w-10 text-[#a3a3a3]" />
         <div
           className={`${spaceMono.className} text-sm font-bold uppercase tracking-[0.14em] text-[#9ca3af]`}
         >
           Noch keine Aktivität
         </div>
         <div
-          className={`${spaceMono.className} text-xs text-[#6b6b6b] max-w-[280px]`}
+          className={`${spaceMono.className} text-xs text-[#a3a3a3] max-w-[280px]`}
         >
           Verbinde deinen Polar-Account und klicke oben auf „Sync", um die erste Aktivität zu laden.
         </div>
@@ -66,7 +66,6 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
   }
 
   const color = activityTypeColor(latest.type);
-  const TITLE = "#F5FF3C";
   const hasRoute =
     Array.isArray(latest.routeData) && (latest.routeData as unknown[]).length >= 2;
   const activeDuration = latest.movingTime ?? latest.duration;
@@ -83,10 +82,10 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
   return (
     <Link
       href={`/activity/${latest.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] transition-all hover:border-[#2a2a2a]"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] transition-all hover:border-[#4a4a4a]"
     >
       {hasRoute && (
-        <div className="border-b border-[#1f1f1f]">
+        <div className="border-b border-[#2a2a2a]">
           <RouteMapStatic route={latest.routeData} color={color} height={260} />
         </div>
       )}
@@ -94,7 +93,7 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span
-              className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.2em] text-[#6b6b6b]`}
+              className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.2em] text-[#a3a3a3]`}
             >
               ► Letzte Aktivität
             </span>
@@ -106,7 +105,7 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
             </span>
           </div>
           <span
-            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b6b6b]`}
+            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3]`}
           >
             {dateLabel} · {timeLabel}
           </span>
@@ -115,8 +114,8 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
           className={`${rajdhani.className} font-bold uppercase leading-tight tracking-[-0.01em]`}
           style={{
             fontSize: "clamp(22px, 2.4vw, 36px)",
-            color: TITLE,
-            textShadow: `0 0 14px ${TITLE}88, 0 0 28px ${TITLE}55`,
+            color,
+            textShadow: `0 0 14px ${color}88, 0 0 28px ${color}55`,
           }}
           title={latest.name}
         >
@@ -173,7 +172,7 @@ function Metric({
     <span className="inline-flex items-baseline gap-1.5 leading-none">
       <span
         className={`${spaceMono.className} text-[0.5em]`}
-        style={{ color: "#6b6b6b" }}
+        style={{ color: "#a3a3a3" }}
       >
         {icon}
       </span>

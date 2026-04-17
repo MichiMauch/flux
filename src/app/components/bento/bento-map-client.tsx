@@ -5,7 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Camera, CameraOff } from "lucide-react";
 
-const NEON = "#FF6A00";
+const DEFAULT_NEON = "#FF6A00";
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 interface PhotoMarker {
@@ -19,6 +19,7 @@ interface Props {
   photos?: PhotoMarker[];
   hoverIdx?: number | null;
   highlightRange?: [number, number] | null;
+  color?: string;
 }
 
 export default function BentoMapClient({
@@ -26,7 +27,9 @@ export default function BentoMapClient({
   photos = [],
   hoverIdx = null,
   highlightRange = null,
+  color = DEFAULT_NEON,
 }: Props) {
+  const NEON = color;
   const mapRef = useRef<L.Map | null>(null);
   const hoverMarkerRef = useRef<L.CircleMarker | null>(null);
   const highlightLineRef = useRef<L.Polyline | null>(null);
@@ -181,7 +184,7 @@ export default function BentoMapClient({
           className={`absolute top-2 right-2 z-[1000] inline-flex items-center gap-1 px-3 py-1.5 text-[11px] rounded-md border border-[#2a2a2a] [font-family:var(--bento-mono)] uppercase tracking-[0.12em] transition-colors ${
             showPhotos
               ? "bg-black text-white"
-              : "bg-[#0f0f0f] text-[#6b6b6b] hover:text-white"
+              : "bg-[#0f0f0f] text-[#a3a3a3] hover:text-white"
           }`}
           title={showPhotos ? "Fotos ausblenden" : "Fotos einblenden"}
         >

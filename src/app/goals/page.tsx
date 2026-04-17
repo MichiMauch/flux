@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/app/components/navbar";
 import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -28,9 +27,7 @@ export default async function GoalsPage() {
   );
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-3xl px-4 py-6 space-y-4">
+    <main className="mx-auto w-full max-w-3xl px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-[-0.025em]">Ziele</h1>
           <NewGoalButton />
@@ -51,7 +48,6 @@ export default async function GoalsPage() {
             ))}
           </div>
         )}
-      </main>
-    </>
+    </main>
   );
 }

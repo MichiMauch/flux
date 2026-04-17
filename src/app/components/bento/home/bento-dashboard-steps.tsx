@@ -32,17 +32,17 @@ export async function BentoDashboardSteps({ userId }: { userId: string }) {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
+      <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
         <div className="flex items-center gap-1.5 mb-3">
           <Footprints className="h-3 w-3" style={{ color: NEON }} />
           <span
-            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
           >
             Schritte
           </span>
         </div>
         <div
-          className={`flex-1 flex items-center justify-center ${spaceMono.className} text-xs text-[#6b6b6b]`}
+          className={`flex-1 flex items-center justify-center ${spaceMono.className} text-xs text-[#a3a3a3]`}
         >
           Keine Daten
         </div>
@@ -76,16 +76,16 @@ export async function BentoDashboardSteps({ userId }: { userId: string }) {
     : 0;
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 h-full flex flex-col">
+    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Footprints className="h-3 w-3" style={{ color: NEON }} />
           Schritte · 7 Tage
         </span>
         <span
-          className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b6b6b] tabular-nums`}
+          className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3] tabular-nums`}
         >
           Ø {avg.toLocaleString("de-CH")}
         </span>

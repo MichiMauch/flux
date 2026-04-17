@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "../components/navbar";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
 import { eq, sql, desc, and, gte } from "drizzle-orm";
@@ -90,9 +89,7 @@ export default async function StatsPage() {
     .orderBy(sql`to_char(${activities.startTime}, 'YYYY-MM')`);
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Statistiken</h1>
 
         {/* Year Summary */}
@@ -201,7 +198,6 @@ export default async function StatsPage() {
             />
           </div>
         </div>
-      </main>
-    </>
+    </main>
   );
 }

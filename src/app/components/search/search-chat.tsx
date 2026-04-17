@@ -1,19 +1,10 @@
 "use client";
 
-/**
- * Client component for the /search page.
- *
- * Uses Vercel AI SDK v6 useChat hook to stream responses from /api/chat.
- * Parses [activity:UUID] markers from the assistant's text and renders
- * ActivityFeedCard components for each referenced activity, using data
- * collected from tool-result parts (no extra API round-trip).
- */
-
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { Send } from "lucide-react";
-import { ActivityFeedCard } from "../components/activity-feed-card";
+import { ActivityFeedCard } from "../activity-feed-card";
 
 const SUGGESTED_QUESTIONS = [
   "Welche war die längste Aktivität?",
@@ -23,8 +14,6 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 const ACTIVITY_ID_RE = /\[activity:([a-f0-9-]{36})\]/g;
-
-// --- helpers ---------------------------------------------------------------
 
 interface ToolPart {
   type: string;
@@ -70,15 +59,10 @@ function getToolParts(m: UIMessage): ToolPart[] {
   ) as unknown as ToolPart[];
 }
 
-/**
- * Collects every activity ever returned by a tool call across all messages
- * so we can render cards for [activity:UUID] markers later on.
- */
 function collectActivities(messages: UIMessage[]): Map<string, CompactActivity> {
   const map = new Map<string, CompactActivity>();
   for (const m of messages) {
     for (const part of getToolParts(m)) {
-      // v6 uses 'output' for the result; also tolerate 'result' for safety
       const out = (part.output ?? part.result) as
         | { activities?: CompactActivity[]; activity?: FullActivity; found?: boolean }
         | undefined;
@@ -125,9 +109,7 @@ function stripActivityMarkers(text: string): string {
   return text.replace(ACTIVITY_ID_RE, "").replace(/ {2,}/g, " ").trim();
 }
 
-// --- component -------------------------------------------------------------
-
-export function SearchClient() {
+export function SearchChat() {
   const { sendMessage, messages, status } = useChat();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -155,26 +137,27 @@ export function SearchClient() {
   };
 
   return (
-    <main className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-3xl flex-col px-4 pb-[env(safe-area-inset-bottom)]">
-      <div
-        ref={scrollRef}
-        className="flex-1 space-y-4 overflow-y-auto py-6"
-      >
+    <div className="flex h-full flex-col">
+      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
         {messages.length === 0 && !isLoading && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <h1 className="text-2xl font-bold tracking-[-0.02em]">Suche</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h3 className="text-xl font-bold tracking-[-0.02em]">
+                Willkommen,
+                <br />
+                wie kann ich dir helfen?
+              </h3>
+              <p className="mt-2 text-sm text-foreground/70">
                 Stell eine Frage zu deinen Aktivitäten in natürlicher Sprache.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
                   key={q}
                   type="button"
                   onClick={() => send(q)}
-                  className="rounded-full border border-border bg-surface/60 px-3 py-1.5 text-sm text-foreground transition hover:bg-surface"
+                  className="rounded-lg border border-border bg-surface/40 px-3 py-3 text-left text-sm text-foreground transition hover:bg-surface"
                 >
                   {q}
                 </button>
@@ -184,17 +167,13 @@ export function SearchClient() {
         )}
 
         {messages.map((m) => (
-          <MessageBlock
-            key={m.id}
-            message={m}
-            activityCache={activityCache}
-          />
+          <MessageBlock key={m.id} message={m} activityCache={activityCache} />
         ))}
 
         {isLoading &&
           messages.length > 0 &&
           messages[messages.length - 1].role === "user" && (
-            <div className="flex items-center gap-2 text-sm italic text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm italic text-foreground/70">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-dark,currentColor)]" />
               Der Assistent durchsucht deine Aktivitäten …
             </div>
@@ -203,13 +182,13 @@ export function SearchClient() {
 
       <form
         onSubmit={handleSubmit}
-        className="sticky bottom-0 -mx-4 border-t border-border bg-background px-4 py-3"
+        className="border-t border-border bg-background px-4 py-3"
       >
         <div className="flex items-center gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Frag nach deinen Aktivitäten …"
+            placeholder="Frag, was du willst …"
             disabled={isLoading}
             className="flex-1 rounded-lg border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-foreground/40 disabled:opacity-60"
             aria-label="Suche"
@@ -224,7 +203,7 @@ export function SearchClient() {
           </button>
         </div>
       </form>
-    </main>
+    </div>
   );
 }
 
@@ -255,9 +234,8 @@ function MessageBlock({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* tool activity indicators while running */}
       {toolParts.length > 0 && !text && (
-        <div className="flex items-center gap-2 text-xs italic text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs italic text-foreground/70">
           <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
           {activeTool
             ? describeToolPart(activeTool)
@@ -276,7 +254,6 @@ function MessageBlock({
           {activityIds.map((id) => {
             const a = activityCache.get(id);
             if (!a) return null;
-            // Convert compact format back into ActivityFeedCard props
             return (
               <ActivityFeedCard
                 key={id}
@@ -300,9 +277,8 @@ function MessageBlock({
         </div>
       )}
 
-      {/* completed-tool trace when answer present */}
       {text && toolParts.length > 0 && (
-        <div className="text-[11px] text-muted-foreground/70 pl-1">
+        <div className="text-[11px] text-foreground/50 pl-1">
           {toolParts.length} Tool-Aufruf{toolParts.length === 1 ? "" : "e"}
         </div>
       )}
@@ -310,11 +286,6 @@ function MessageBlock({
   );
 }
 
-/**
- * Very lightweight "markdown" renderer: preserves line breaks and renders
- * **bold** / *italic* inline. We keep it small to avoid adding react-markdown
- * as a dependency just for the search page.
- */
 function SimpleMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
   return (
@@ -329,7 +300,6 @@ function SimpleMarkdown({ text }: { text: string }) {
 }
 
 function renderInline(line: string): React.ReactNode {
-  // Split on **bold** first, then *italic* inside each chunk
   const boldParts = line.split(/(\*\*[^*]+\*\*)/g);
   return boldParts.map((chunk, i) => {
     if (/^\*\*[^*]+\*\*$/.test(chunk)) {

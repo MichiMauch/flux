@@ -12,11 +12,11 @@ export async function BentoHomeLevel({ userId }: { userId: string }) {
   return (
     <Link
       href="/trophies"
-      className="flex h-full flex-col rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-4 hover:border-[#2a2a2a] transition-colors"
+      className="flex h-full flex-col rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 hover:border-[#4a4a4a] transition-colors"
     >
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Trophy className="h-3 w-3" style={{ color: NEON }} /> Level
         </span>
@@ -42,7 +42,7 @@ export async function BentoHomeLevel({ userId }: { userId: string }) {
         <div className="w-full">
           <div className="flex items-baseline justify-between mb-1.5">
             <span
-              className={`${spaceMono.className} text-[10px] font-bold text-[#6b6b6b] uppercase tracking-[0.12em]`}
+              className={`${spaceMono.className} text-[10px] font-bold text-[#a3a3a3] uppercase tracking-[0.12em]`}
             >
               XP
             </span>
@@ -53,7 +53,7 @@ export async function BentoHomeLevel({ userId }: { userId: string }) {
               {formatXp(level.totalXp)}
             </span>
           </div>
-          <div className="relative h-4 rounded-sm bg-[#0a0a0a] border border-[#1f1f1f] overflow-hidden">
+          <div className="relative h-4 rounded-sm bg-[#0a0a0a] border border-[#2a2a2a] overflow-hidden">
             <div
               className="absolute inset-y-0 left-0"
               style={{
@@ -64,7 +64,7 @@ export async function BentoHomeLevel({ userId }: { userId: string }) {
             />
           </div>
           <div
-            className={`${spaceMono.className} text-[10px] text-[#6b6b6b] mt-1.5 tabular-nums uppercase tracking-[0.1em] text-center`}
+            className={`${spaceMono.className} text-[10px] text-[#a3a3a3] mt-1.5 tabular-nums uppercase tracking-[0.1em] text-center`}
           >
             {Math.round(level.xpIntoLevel)} / {Math.round(level.xpForNextLevel)} → Lvl {level.level + 1}
           </div>

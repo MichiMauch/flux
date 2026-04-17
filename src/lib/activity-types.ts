@@ -9,9 +9,9 @@ export function activityTypeLabel(type: string): string {
 
 export function activityTypeColor(type: string): string {
   const t = type.toUpperCase();
-  if (t === "RUNNING") return "#FF5B3A";
-  if (t === "CYCLING") return "#3B82F6";
-  if (t === "WALKING") return "#78716C";
-  if (t === "HIKING") return "#16A34A";
-  return "#78716C";
+  if (t.includes("RUN") || t.includes("JOG")) return "#FF1493";
+  if (t.includes("CYCL") || t.includes("BIK") || t.includes("RIDE")) return "#00D4FF";
+  if (t.includes("HIK") || t.includes("TREK")) return "#39FF14";
+  if (t.includes("WALK")) return "#FFD700";
+  return "#B026FF";
 }

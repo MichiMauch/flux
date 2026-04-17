@@ -43,10 +43,10 @@ export async function BentoHomeGoals({ userId }: { userId: string }) {
   const visible = withProgress.slice(0, MAX_GOALS);
 
   return (
-    <div className="rounded-xl border border-[#1f1f1f] bg-[#0f0f0f] p-3">
+    <div className="flex h-full flex-col rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3">
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b6b6b]`}
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Target className="h-3 w-3" style={{ color: NEON }} /> Ziele
         </span>
@@ -72,10 +72,10 @@ export async function BentoHomeGoals({ userId }: { userId: string }) {
             <Link
               key={goal.id}
               href="/goals"
-              className="block rounded-lg border border-[#1f1f1f] bg-[#0a0a0a] p-2.5 hover:border-[#2a2a2a] transition-colors"
+              className="block rounded-lg border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 hover:border-[#4a4a4a] transition-colors"
             >
               <div
-                className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b6b6b] truncate`}
+                className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3] truncate`}
               >
                 {typeLabel}
               </div>
@@ -98,7 +98,7 @@ export async function BentoHomeGoals({ userId }: { userId: string }) {
                   {pct}%
                 </span>
               </div>
-              <div className="relative h-4 rounded-sm bg-[#0a0a0a] overflow-hidden mt-2 border border-[#1f1f1f]">
+              <div className="relative h-4 rounded-sm bg-[#0a0a0a] overflow-hidden mt-2 border border-[#2a2a2a]">
                 <div
                   className="absolute inset-y-0 left-0"
                   style={{
