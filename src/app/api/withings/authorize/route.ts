@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getAuthorizationUrl } from "@/lib/withings-client";
+import { generateOAuthState, setStateCookie } from "@/lib/oauth-state";
 
 export async function GET() {
   const session = await auth();
@@ -9,8 +10,10 @@ export async function GET() {
   }
 
   const callbackUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/withings/callback`;
-  const state = crypto.randomUUID();
+  const state = generateOAuthState();
   const authUrl = getAuthorizationUrl(callbackUrl, state);
 
-  return NextResponse.redirect(authUrl);
+  const res = NextResponse.redirect(authUrl);
+  setStateCookie(res, "oauth_state_withings", state);
+  return res;
 }

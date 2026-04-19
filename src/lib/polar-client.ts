@@ -63,11 +63,15 @@ export function parsePolarStartTime(
 
 // ── OAuth ──────────────────────────────────────────────────────────────────
 
-export function getAuthorizationUrl(callbackUrl: string): string {
+export function getAuthorizationUrl(
+  callbackUrl: string,
+  state: string
+): string {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: process.env.POLAR_CLIENT_ID!,
     redirect_uri: callbackUrl,
+    state,
   });
   return `${POLAR_AUTH_URL}?${params}`;
 }
