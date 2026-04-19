@@ -3,18 +3,12 @@ import { activities } from "@/lib/db/schema";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { currentWeekRange, isoWeek } from "@/lib/activity-week";
 import { Activity, Ruler, Zap } from "lucide-react";
+import {
+  formatDurationWords as formatDuration,
+  formatDistanceAuto,
+} from "@/lib/activity-format";
 
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${Math.round(meters)} m`;
-}
-
-function formatDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}h ${m}min`;
-  return `${m}min`;
-}
+const formatDistance = (m: number) => formatDistanceAuto(m, 1);
 
 export async function WeeklySummary({ userId }: { userId: string }) {
   const { from, to } = currentWeekRange();

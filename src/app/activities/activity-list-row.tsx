@@ -1,66 +1,29 @@
 import Link from "next/link";
 import {
-  Activity as ActivityIcon,
-  Bike,
   Clock,
-  Dumbbell,
-  Footprints,
   Heart,
   Image as ImageIcon,
-  Moon,
   Mountain,
-  MountainSnow,
   Ruler,
-  Snowflake,
-  Waves,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
+import {
+  formatDateLabel,
+  formatDistanceKm,
+  formatDurationShort,
+  formatTimeLabel,
+} from "@/lib/activity-format";
 import { RouteMapStatic } from "@/app/components/route-map-static";
+import { ActivityMetric } from "@/app/components/activity-metric";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
-import { SevenSegDisplay } from "@/app/components/bento/seven-seg";
 import type { ActivityFeedItem } from "./actions";
-
-const NEON = "#FF6A00";
-
-function formatDurationShort(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}`;
-  return `${m}`;
-}
-
-function formatDistanceKm(meters: number): string {
-  return (meters / 1000).toFixed(2);
-}
-
-function sportIcon(type: string): LucideIcon {
-  const t = type.toUpperCase();
-  if (t.includes("RUN") || t.includes("JOG")) return Footprints;
-  if (t.includes("WALK")) return Footprints;
-  if (t.includes("HIK") || t.includes("TREK")) return MountainSnow;
-  if (t.includes("CYCL") || t.includes("BIK") || t.includes("RIDE")) return Bike;
-  if (t.includes("STRENGTH") || t.includes("CORE")) return Dumbbell;
-  if (t.includes("SWIM")) return Waves;
-  if (t.includes("SKI") || t.includes("SNOW")) return Snowflake;
-  if (t.includes("SLEEP")) return Moon;
-  return ActivityIcon;
-}
+import { SportIconPlaceholder } from "./sport-icon-placeholder";
 
 export function ActivityListRow(a: ActivityFeedItem) {
   const color = activityTypeColor(a.type);
   const hasRoute =
     Array.isArray(a.routeData) && (a.routeData as unknown[]).length >= 2;
   const activeDuration = a.movingTime ?? a.duration;
-  const dateLabel = a.startTime.toLocaleDateString("de-CH", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
-  const timeLabel = a.startTime.toLocaleTimeString("de-CH", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
   return (
     <Link
@@ -91,7 +54,7 @@ export function ActivityListRow(a: ActivityFeedItem) {
           <span
             className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3]`}
           >
-            {dateLabel} · {timeLabel}
+            {formatDateLabel(a.startTime)} · {formatTimeLabel(a.startTime)}
           </span>
           {a.photoCount > 0 && (
             <span
@@ -118,28 +81,28 @@ export function ActivityListRow(a: ActivityFeedItem) {
           style={{ fontSize: "18px" }}
         >
           {a.distance != null && (
-            <Metric
+            <ActivityMetric
               icon={<Ruler className="h-3 w-3" />}
               value={formatDistanceKm(a.distance)}
               unit="km"
             />
           )}
           {activeDuration != null && activeDuration > 0 && (
-            <Metric
+            <ActivityMetric
               icon={<Clock className="h-3 w-3" />}
               value={formatDurationShort(activeDuration)}
               unit={activeDuration >= 3600 ? "h" : "min"}
             />
           )}
           {a.ascent != null && a.ascent > 0 && (
-            <Metric
+            <ActivityMetric
               icon={<Mountain className="h-3 w-3" />}
               value={String(Math.round(a.ascent))}
               unit="m"
             />
           )}
           {a.avgHeartRate != null && (
-            <Metric
+            <ActivityMetric
               icon={<Heart className="h-3 w-3" />}
               value={String(a.avgHeartRate)}
               unit="bpm"
@@ -148,66 +111,5 @@ export function ActivityListRow(a: ActivityFeedItem) {
         </div>
       </div>
     </Link>
-  );
-}
-
-function SportIconPlaceholder({
-  type,
-  color,
-}: {
-  type: string;
-  color: string;
-}) {
-  const Icon = sportIcon(type);
-  return (
-    <div
-      className="flex h-full w-full flex-col items-center justify-center gap-1.5"
-      style={{
-        background: `radial-gradient(circle at 50% 45%, ${color}22, transparent 70%), #0a0a0a`,
-      }}
-    >
-      <Icon
-        className="h-8 w-8 md:h-10 md:w-10"
-        style={{
-          color,
-          filter: `drop-shadow(0 0 8px ${color}aa) drop-shadow(0 0 16px ${color}66)`,
-        }}
-        strokeWidth={1.5}
-      />
-      <span
-        className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.18em]`}
-        style={{ color: `${color}cc` }}
-      >
-        {activityTypeLabel(type)}
-      </span>
-    </div>
-  );
-}
-
-function Metric({
-  icon,
-  value,
-  unit,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  unit: string;
-}) {
-  return (
-    <span className="inline-flex items-baseline gap-1 leading-none">
-      <span
-        className={`${spaceMono.className} text-[0.5em]`}
-        style={{ color: "#a3a3a3" }}
-      >
-        {icon}
-      </span>
-      <SevenSegDisplay value={value} />
-      <span
-        className={`${spaceMono.className} text-[0.4em] font-bold lowercase`}
-        style={{ color: NEON }}
-      >
-        {unit}
-      </span>
-    </span>
   );
 }

@@ -18,6 +18,7 @@ import { ActivityLottie } from "./activity-lottie";
 import { windDirection, wmoEmoji, type WeatherData } from "@/lib/weather";
 import { interpretTrimp } from "@/lib/trimp";
 import type { HrSample } from "@/lib/hr-zones";
+import { formatDurationHMS, formatDistanceValue } from "@/lib/activity-format";
 
 interface Photo {
   id: string;
@@ -65,18 +66,11 @@ interface ActivitySummaryProps {
 }
 
 function formatDuration(seconds: number | null): string {
-  if (!seconds) return "–";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return seconds ? formatDurationHMS(seconds) : "–";
 }
 
 function formatDistance(meters: number | null): string {
-  if (meters == null) return "–";
-  if (meters >= 1000) return `${(meters / 1000).toFixed(2)}`;
-  return `${Math.round(meters)}`;
+  return meters == null ? "–" : formatDistanceValue(meters, 2);
 }
 
 function formatPace(meters: number | null, seconds: number | null): string {

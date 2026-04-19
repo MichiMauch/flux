@@ -1,4 +1,5 @@
 import { computeSplits, type HrSample, type RoutePoint } from "@/lib/splits";
+import { formatDurationMMSS as formatDuration } from "@/lib/activity-format";
 
 interface SplitsTableProps {
   routeData: RoutePoint[];
@@ -7,16 +8,6 @@ interface SplitsTableProps {
   totalDistanceMeters?: number | null;
   totalAscent?: number | null;
   totalDescent?: number | null;
-}
-
-function formatDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.round(sec % 60);
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  }
-  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
 function formatPace(sec: number | null): string {

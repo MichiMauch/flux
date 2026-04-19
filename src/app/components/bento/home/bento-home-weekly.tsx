@@ -5,21 +5,17 @@ import { currentWeekRange, isoWeek } from "@/lib/activity-week";
 import { Activity, Ruler, Clock } from "lucide-react";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import {
+  formatDistanceKm as sharedFormatDistanceKm,
+  formatDurationHmSplit,
+} from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 const UP = "#39FF14";
 const DOWN = "#FF3B30";
 
-function formatDistanceKm(meters: number): string {
-  return (meters / 1000).toFixed(1);
-}
-
-function formatDurationHm(sec: number): { value: string; unit: string } {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return { value: `${h}:${String(m).padStart(2, "0")}`, unit: "h" };
-  return { value: String(m), unit: "m" };
-}
+const formatDistanceKm = (m: number) => sharedFormatDistanceKm(m, 1);
+const formatDurationHm = formatDurationHmSplit;
 
 function delta(current: number, previous: number): { sign: string; pct: number } | null {
   if (previous <= 0) return null;

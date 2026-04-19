@@ -7,19 +7,12 @@ import { activityTypeLabel, activityTypeColor } from "@/lib/activity-types";
 import { RouteMapStatic } from "@/app/components/route-map-static";
 import { rajdhani, spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import {
+  formatDurationShort,
+  formatDistanceKm,
+} from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
-
-function formatDurationShort(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}`;
-  return `${m}`;
-}
-
-function formatDistanceKm(meters: number): string {
-  return (meters / 1000).toFixed(2);
-}
 
 export async function BentoDashboardHero({ userId }: { userId: string }) {
   const photoCountSql = sql<number>`(

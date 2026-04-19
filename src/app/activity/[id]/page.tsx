@@ -19,6 +19,7 @@ import Link from "next/link";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
 import { SevenSegDisplay } from "@/app/components/bento/seven-seg";
 import { activityTypeColor } from "@/lib/activity-types";
+import { formatDurationHMS } from "@/lib/activity-format";
 
 const NEON = "var(--activity-color, #FF6A00)";
 const NEON_DIM = "var(--activity-color-dim, #b34600)";
@@ -35,14 +36,6 @@ function dimColor(hex: string): string {
 const NEON_ALPHA_66 = "color-mix(in srgb, var(--activity-color, #FF6A00) 40%, transparent)";
 const NEON_ALPHA_33 = "color-mix(in srgb, var(--activity-color, #FF6A00) 20%, transparent)";
 const NEON_ALPHA_99 = "color-mix(in srgb, var(--activity-color, #FF6A00) 60%, transparent)";
-
-function formatDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
 function fmt(n: number | null | undefined, digits = 0): string {
   if (n == null || !Number.isFinite(n)) return "–";
@@ -395,7 +388,7 @@ export default async function ActivityBentoPage({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
             <SevenSegTile
               icon={<Clock />}
-              value={duration > 0 ? formatDuration(duration) : "–"}
+              value={duration > 0 ? formatDurationHMS(duration) : "–"}
               label="Zeit"
             />
             <SevenSegTile icon={<Ruler />} value={distanceKm} suffix="km" label="Distanz" />

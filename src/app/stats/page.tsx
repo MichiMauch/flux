@@ -41,6 +41,7 @@ import {
   getDailyActivityData,
   pickBucket,
 } from "./data";
+import { formatDurationHmSuffix as formatDuration } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 const CYAN = "#00D4FF";
@@ -72,11 +73,6 @@ function sportColor(type: string, fallbackIdx = 0): string {
 
 function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(0)} km`;
-}
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h ${m.toString().padStart(2, "0")}m`;
 }
 
 function bucketLabel(raw: string, bucket: "daily" | "weekly" | "monthly"): string {

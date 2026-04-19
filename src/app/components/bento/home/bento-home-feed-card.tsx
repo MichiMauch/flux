@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { Clock, Heart, Mountain, Ruler, Image as ImageIcon } from "lucide-react";
 import { activityTypeLabel, activityTypeColor } from "@/lib/activity-types";
+import {
+  formatDateLabel,
+  formatDistanceKm,
+  formatDurationShort,
+  formatTimeLabel,
+} from "@/lib/activity-format";
 import { RouteMapStatic } from "@/app/components/route-map-static";
+import { ActivityMetric } from "@/app/components/activity-metric";
 import { rajdhani, spaceMono } from "../bento-fonts";
-import { SevenSegDisplay } from "../seven-seg";
 
 interface Props {
   id: string;
@@ -20,30 +26,12 @@ interface Props {
   hero?: boolean;
 }
 
-function formatDurationShort(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}`;
-  return `${m}`;
-}
-
-function formatDistanceKm(meters: number): string {
-  return (meters / 1000).toFixed(2);
-}
-
 export function BentoHomeFeedCard(a: Props) {
   const color = activityTypeColor(a.type);
   const hasRoute = Array.isArray(a.routeData) && (a.routeData as unknown[]).length >= 2;
   const activeDuration = a.movingTime ?? a.duration;
-  const dateLabel = a.startTime.toLocaleDateString("de-CH", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
-  const timeLabel = a.startTime.toLocaleTimeString("de-CH", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateLabel = formatDateLabel(a.startTime);
+  const timeLabel = formatTimeLabel(a.startTime);
 
   return (
     <Link
@@ -94,28 +82,28 @@ export function BentoHomeFeedCard(a: Props) {
           style={{ fontSize: a.hero ? "24px" : "20px" }}
         >
           {a.distance != null && (
-            <Metric
+            <ActivityMetric
               icon={<Ruler className="h-3 w-3" />}
               value={formatDistanceKm(a.distance)}
               unit="km"
             />
           )}
           {activeDuration != null && activeDuration > 0 && (
-            <Metric
+            <ActivityMetric
               icon={<Clock className="h-3 w-3" />}
               value={formatDurationShort(activeDuration)}
               unit={activeDuration >= 3600 ? "h" : "min"}
             />
           )}
           {a.ascent != null && a.ascent > 0 && (
-            <Metric
+            <ActivityMetric
               icon={<Mountain className="h-3 w-3" />}
               value={String(Math.round(a.ascent))}
               unit="m"
             />
           )}
           {a.avgHeartRate != null && (
-            <Metric
+            <ActivityMetric
               icon={<Heart className="h-3 w-3" />}
               value={String(a.avgHeartRate)}
               unit="bpm"
@@ -127,31 +115,3 @@ export function BentoHomeFeedCard(a: Props) {
   );
 }
 
-function Metric({
-  icon,
-  value,
-  unit,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  unit: string;
-}) {
-  const NEON = "#FF6A00";
-  return (
-    <span className="inline-flex items-baseline gap-1 leading-none">
-      <span
-        className={`${spaceMono.className} text-[0.5em]`}
-        style={{ color: "#a3a3a3" }}
-      >
-        {icon}
-      </span>
-      <SevenSegDisplay value={value} />
-      <span
-        className={`${spaceMono.className} text-[0.4em] font-bold lowercase`}
-        style={{ color: NEON }}
-      >
-        {unit}
-      </span>
-    </span>
-  );
-}

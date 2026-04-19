@@ -4,6 +4,10 @@ import { activities } from "@/lib/db/schema";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import {
+  formatDistanceKm as sharedFormatDistanceKm,
+  formatDurationHours,
+} from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 const UP = "#39FF14";
@@ -15,13 +19,8 @@ function monthRange(year: number, month: number): { from: Date; to: Date } {
   return { from, to };
 }
 
-function formatDistanceKm(meters: number): string {
-  return (meters / 1000).toFixed(0);
-}
-function formatDurationH(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  return String(h);
-}
+const formatDistanceKm = (m: number) => sharedFormatDistanceKm(m, 0);
+const formatDurationH = formatDurationHours;
 
 function delta(current: number, previous: number): { sign: string; pct: number } | null {
   if (previous <= 0) return null;

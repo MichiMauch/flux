@@ -1,4 +1,5 @@
 import { Activity, Flame, Footprints, Ruler, Target, Clock, Moon } from "lucide-react";
+import { formatDurationWordsSpaced, formatDistanceAuto } from "@/lib/activity-format";
 
 interface DailyRow {
   date: string;
@@ -18,17 +19,11 @@ interface DailyRow {
 }
 
 function formatDuration(sec: number | null): string {
-  if (sec == null || sec <= 0) return "–";
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h} h ${m.toString().padStart(2, "0")} min`;
-  return `${m} min`;
+  return sec == null || sec <= 0 ? "–" : formatDurationWordsSpaced(sec);
 }
 
 function formatDistance(meters: number | null): string {
-  if (meters == null || meters <= 0) return "–";
-  if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
-  return `${Math.round(meters)} m`;
+  return meters == null || meters <= 0 ? "–" : formatDistanceAuto(meters, 2);
 }
 
 function formatNumber(v: number | null): string {

@@ -3,6 +3,12 @@ import { Clock, Heart, Mountain, Ruler, Image as ImageIcon } from "lucide-react"
 import { ActivityLottie } from "./activity-lottie";
 import { RouteMapStatic } from "./route-map-static";
 import { activityTypeLabel, activityTypeColor } from "@/lib/activity-types";
+import {
+  formatDurationWords as formatDuration,
+  formatDistanceAuto,
+} from "@/lib/activity-format";
+
+const formatDistance = (m: number) => formatDistanceAuto(m, 1);
 
 interface ActivityFeedCardProps {
   id: string;
@@ -16,18 +22,6 @@ interface ActivityFeedCardProps {
   ascent: number | null;
   routeData?: unknown;
   photoCount: number;
-}
-
-function formatDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}h ${m}min`;
-  return `${m}min`;
-}
-
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${Math.round(meters)} m`;
 }
 
 export function ActivityFeedCard(a: ActivityFeedCardProps) {

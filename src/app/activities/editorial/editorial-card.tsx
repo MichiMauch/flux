@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
+import {
+  formatDistanceKm as sharedFormatDistanceKm,
+  formatDurationWordsPadded,
+} from "@/lib/activity-format";
 import { rajdhani, spaceMono } from "../../components/bento/bento-fonts";
 import { RouteSvg } from "./route-svg";
 import type { ActivityFeedItem } from "../actions";
@@ -18,16 +22,9 @@ interface Props {
   revealIndex: number;
 }
 
-function formatDistanceKm(meters: number): string {
-  return (meters / 1000).toFixed(meters >= 10000 ? 1 : 2);
-}
-
-function formatDurationShort(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}min`;
-  return `${m}min`;
-}
+const formatDistanceKm = (m: number) =>
+  sharedFormatDistanceKm(m, m >= 10000 ? 1 : 2);
+const formatDurationShort = formatDurationWordsPadded;
 
 function formatPaceMinPerKm(distM: number, timeS: number): string | null {
   if (!distM || !timeS) return null;
