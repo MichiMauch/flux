@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity as ActivityIcon } from "lucide-react";
 import Link from "next/link";
-import { BentoHomeFeedCard } from "../components/bento/home/bento-home-feed-card";
-import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
-import { activityTypeColor } from "@/lib/activity-types";
+import { spaceMono } from "../components/bento/bento-fonts";
 import { loadMoreActivities, type ActivityFeedItem } from "./actions";
-
-const NEON = "#FF6A00";
+import { ActivityListRow } from "./activity-list-row";
+import { ActivityMonthHeader } from "./activity-month-header";
 
 interface ActivitiesFeedProps {
   initial: ActivityFeedItem[];
@@ -18,33 +16,6 @@ interface ActivitiesFeedProps {
 
 function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-const MONTH_LABELS_DE = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-];
-
-function monthLabel(key: string): string {
-  const [y, m] = key.split("-");
-  return `${MONTH_LABELS_DE[parseInt(m, 10) - 1]} ${y}`;
-}
-
-function spanForIndex(index: number, hasRoute: boolean): string {
-  if (index === 0 && hasRoute) return "md:col-span-6 md:row-span-2";
-  if (index === 0 && !hasRoute) return "md:col-span-3";
-  if (hasRoute) return "md:col-span-3";
-  return "md:col-span-2";
 }
 
 export function ActivitiesFeed({
@@ -129,51 +100,35 @@ export function ActivitiesFeed({
   return (
     <>
       <style>{`
-        .activity-card-wrap { --sport-color: ${NEON}; }
-        .activity-card-wrap > a {
+        .activity-list-row {
           transition: border-color 160ms ease, box-shadow 200ms ease, transform 200ms ease;
         }
-        .activity-card-wrap:hover > a {
+        .activity-list-row:hover {
           border-color: var(--sport-color) !important;
           box-shadow:
-            0 0 18px color-mix(in srgb, var(--sport-color) 45%, transparent),
-            0 0 40px color-mix(in srgb, var(--sport-color) 22%, transparent);
+            0 0 18px color-mix(in srgb, var(--sport-color) 40%, transparent),
+            0 0 40px color-mix(in srgb, var(--sport-color) 18%, transparent);
           transform: translateY(-1px);
         }
       `}</style>
       <div className="space-y-8">
-        {grouped.map((group) => (
+        {grouped.map((group, gi) => (
           <section
             key={group.key}
             id={`month-${group.key}`}
             data-month-anchor={group.key}
             className="scroll-mt-24"
           >
-            <MonthHeader month={group.key} />
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
-              {group.items.map((a, i) => {
-                const hasRoute =
-                  Array.isArray(a.routeData) &&
-                  (a.routeData as unknown[]).length >= 2;
-                const spans = spanForIndex(i, hasRoute);
-                const color = activityTypeColor(a.type);
-                return (
-                  <div
-                    key={a.id}
-                    className={`activity-card-wrap ${spans}`}
-                    style={
-                      {
-                        ["--sport-color" as string]: color,
-                      } as React.CSSProperties
-                    }
-                  >
-                    <BentoHomeFeedCard
-                      {...a}
-                      hero={i === 0 && hasRoute}
-                    />
-                  </div>
-                );
-              })}
+            <ActivityMonthHeader
+              monthKey={group.key}
+              index={gi}
+              count={group.items.length}
+              variant="compact"
+            />
+            <div className="flex flex-col gap-2">
+              {group.items.map((a) => (
+                <ActivityListRow key={a.id} {...a} />
+              ))}
             </div>
           </section>
         ))}
@@ -190,19 +145,3 @@ export function ActivitiesFeed({
   );
 }
 
-function MonthHeader({ month }: { month: string }) {
-  return (
-    <div className="sticky top-0 z-10 -mx-1 mb-3 flex items-baseline gap-3 border-b border-[#2a2a2a] bg-black/85 px-1 pb-2 pt-1 backdrop-blur">
-      <h2
-        className={`${rajdhani.className} font-bold uppercase leading-none tracking-[-0.01em]`}
-        style={{
-          fontSize: "clamp(20px, 2.4vw, 32px)",
-          color: NEON,
-          textShadow: `0 0 12px ${NEON}66`,
-        }}
-      >
-        {monthLabel(month)}
-      </h2>
-    </div>
-  );
-}

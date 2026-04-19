@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Activity as ActivityIcon } from "lucide-react";
-import { rajdhani, spaceMono } from "../../components/bento/bento-fonts";
+import { spaceMono } from "../../components/bento/bento-fonts";
 import { loadMoreActivities, type ActivityFeedItem } from "../actions";
+import { ActivityMonthHeader } from "../activity-month-header";
 import { EditorialCard, type CardSize } from "./editorial-card";
 
 interface Props {
@@ -13,28 +14,8 @@ interface Props {
   sport: string | null;
 }
 
-const MONTH_LABELS_DE = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-];
-
 function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function monthLabel(key: string): { month: string; year: string } {
-  const [y, m] = key.split("-");
-  return { month: MONTH_LABELS_DE[parseInt(m, 10) - 1] ?? "", year: y };
 }
 
 function sizeFor(distance: number | null): CardSize {
@@ -129,7 +110,6 @@ export function EditorialFeed({ initial, initialHasMore, sport }: Props) {
 
       <div className="space-y-20">
         {grouped.map((group, gi) => {
-          const { month, year } = monthLabel(group.key);
           let idxInMonth = 0;
           return (
             <section
@@ -138,39 +118,12 @@ export function EditorialFeed({ initial, initialHasMore, sport }: Props) {
               data-month-anchor={group.key}
               className="scroll-mt-24"
             >
-              <header
-                className={`${rajdhani.className} relative mb-8 select-none`}
-                aria-label={`${month} ${year}`}
-              >
-                <div
-                  className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.32em]`}
-                  style={{ color: "#6a6a6a" }}
-                >
-                  <span style={{ color: "#FF6A00" }}>━━</span>{" "}
-                  {String(gi + 1).padStart(2, "0")} · {group.items.length}{" "}
-                  {group.items.length === 1 ? "EINTRAG" : "EINTRÄGE"}
-                </div>
-                <h2
-                  className="font-bold uppercase leading-[0.82] tracking-[-0.04em] mt-2"
-                  style={{
-                    fontSize: "clamp(64px, 14vw, 200px)",
-                    color: "#1f1f1f",
-                    WebkitTextStroke: "1px #3a3a3a",
-                  }}
-                >
-                  {month}
-                  <span
-                    className="ml-4 align-top"
-                    style={{
-                      fontSize: "0.35em",
-                      color: "#5a5a5a",
-                      WebkitTextStroke: "0",
-                    }}
-                  >
-                    {year}
-                  </span>
-                </h2>
-              </header>
+              <ActivityMonthHeader
+                monthKey={group.key}
+                index={gi}
+                count={group.items.length}
+                variant="editorial"
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6">
                 {group.items.map((a) => {

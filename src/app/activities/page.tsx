@@ -98,12 +98,16 @@ export default async function ActivitiesPage({
         }
       />
 
-      <div className="space-y-3">
-        <ActivitiesSportFilter
-          sport={sport}
-          availableSports={availableSports}
-        />
-        <ActivitiesTimelineRibbon months={monthRows} />
+      <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
+        <div className="min-w-0 md:max-w-[55%]">
+          <ActivitiesSportFilter
+            sport={sport}
+            availableSports={availableSports}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <ActivitiesTimelineRibbon months={monthRows} />
+        </div>
       </div>
 
       <ActivitiesFeed

@@ -28,12 +28,12 @@ export function ActivitiesSportFilter({
 }: ActivitiesSportFilterProps) {
   return (
     <div
-      className={`${spaceMono.className} flex flex-wrap items-center gap-2 text-[11px]`}
+      className={`${spaceMono.className} flex items-center gap-2 text-[11px] overflow-x-auto whitespace-nowrap -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
     >
-      <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#a3a3a3]">
+      <span className="shrink-0 text-[9px] font-bold uppercase tracking-[0.22em] text-[#a3a3a3]">
         Sportart
       </span>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex gap-1">
         <Chip
           href={buildHref(null)}
           active={sport === null}
@@ -87,7 +87,7 @@ function Chip({
     <Link
       href={href}
       prefetch={false}
-      className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] transition"
+      className="shrink-0 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] transition"
       style={
         active
           ? {

@@ -1,6 +1,6 @@
 import { Flame } from "lucide-react";
 import { db } from "@/lib/db";
-import { activities, dailyActivity } from "@/lib/db/schema";
+import { activities } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
@@ -11,37 +11,35 @@ function dayKey(d: Date): string {
   return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
 }
 
+function prevDayKey(key: string): string {
+  const [y, m, dd] = key.split("-").map(Number);
+  const d = new Date(y, m - 1, dd);
+  d.setDate(d.getDate() - 1);
+  return dayKey(d);
+}
+
 function currentStreak(activeDays: Set<string>): number {
-  let d = new Date();
-  // If today isn't active, start from yesterday (streak still alive for one "rest" night)
-  if (!activeDays.has(dayKey(d))) {
-    d.setDate(d.getDate() - 1);
-    if (!activeDays.has(dayKey(d))) return 0;
-  }
+  let key = dayKey(new Date());
+  // Heute zählt noch nicht als Streak-Bruch — die Serie lebt bis Mitternacht weiter.
+  if (!activeDays.has(key)) key = prevDayKey(key);
   let count = 0;
-  while (activeDays.has(dayKey(d))) {
+  while (activeDays.has(key)) {
     count += 1;
-    d.setDate(d.getDate() - 1);
+    key = prevDayKey(key);
   }
   return count;
 }
 
 function longestStreak(activeDays: Set<string>): number {
   if (activeDays.size === 0) return 0;
-  const sorted = Array.from(activeDays)
-    .map((k) => {
-      const [y, m, dd] = k.split("-").map(Number);
-      return new Date(y, m - 1, dd).getTime();
-    })
-    .sort((a, b) => a - b);
-  const DAY = 24 * 3600 * 1000;
+  const sorted = Array.from(activeDays).sort();
   let longest = 1;
   let cur = 1;
   for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i] - sorted[i - 1] === DAY) {
+    if (sorted[i - 1] === prevDayKey(sorted[i])) {
       cur += 1;
       if (cur > longest) longest = cur;
-    } else if (sorted[i] !== sorted[i - 1]) {
+    } else {
       cur = 1;
     }
   }
@@ -49,21 +47,14 @@ function longestStreak(activeDays: Set<string>): number {
 }
 
 export async function BentoDashboardStreak({ userId }: { userId: string }) {
-  const [acts, daily] = await Promise.all([
-    db
-      .select({ startTime: activities.startTime })
-      .from(activities)
-      .where(eq(activities.userId, userId))
-      .orderBy(desc(activities.startTime)),
-    db
-      .select({ date: dailyActivity.date, steps: dailyActivity.steps })
-      .from(dailyActivity)
-      .where(eq(dailyActivity.userId, userId)),
-  ]);
+  const acts = await db
+    .select({ startTime: activities.startTime })
+    .from(activities)
+    .where(eq(activities.userId, userId))
+    .orderBy(desc(activities.startTime));
 
   const activeDays = new Set<string>();
   for (const a of acts) activeDays.add(dayKey(a.startTime));
-  for (const d of daily) if ((d.steps ?? 0) >= 5000) activeDays.add(d.date);
 
   const current = currentStreak(activeDays);
   const longest = longestStreak(activeDays);
