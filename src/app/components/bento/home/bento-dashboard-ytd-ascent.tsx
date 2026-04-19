@@ -1,7 +1,7 @@
 import { Mountain } from "lucide-react";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 
@@ -17,22 +17,31 @@ export async function BentoDashboardYtdAscent({ userId }: { userId: string }) {
   const now = new Date();
   const { from, to } = ytdRange(now);
 
-  const rows = await db
-    .select({ ascent: activities.ascent })
-    .from(activities)
-    .where(
-      and(
-        eq(activities.userId, userId),
-        gte(activities.startTime, from),
-        lt(activities.startTime, to)
-      )
-    );
+  const [rows, latestRow] = await Promise.all([
+    db
+      .select({ ascent: activities.ascent })
+      .from(activities)
+      .where(
+        and(
+          eq(activities.userId, userId),
+          gte(activities.startTime, from),
+          lt(activities.startTime, to)
+        )
+      ),
+    db
+      .select({ ascent: activities.ascent })
+      .from(activities)
+      .where(and(eq(activities.userId, userId), gte(activities.startTime, from)))
+      .orderBy(desc(activities.startTime))
+      .limit(1),
+  ]);
 
   const totalMeters = Math.round(rows.reduce((s, r) => s + (r.ascent ?? 0), 0));
   const mountain = totalMeters >= EVEREST_M
     ? { label: "Everest", m: EVEREST_M }
     : { label: "Matterhorn", m: MATTERHORN_M };
   const mountainCount = totalMeters / mountain.m;
+  const lastAscent = latestRow[0]?.ascent != null ? Math.round(latestRow[0].ascent) : null;
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3 h-full flex flex-col">
@@ -56,6 +65,15 @@ export async function BentoDashboardYtdAscent({ userId }: { userId: string }) {
           </span>
         </div>
       </div>
+
+      {lastAscent != null && lastAscent > 0 && (
+        <div
+          className={`${spaceMono.className} text-[10px] font-bold tabular-nums text-center`}
+          style={{ color: NEON }}
+        >
+          + {lastAscent.toLocaleString("de-CH")} m
+        </div>
+      )}
 
       <div
         className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#a3a3a3] tabular-nums mt-1 text-center`}

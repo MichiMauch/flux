@@ -1,7 +1,7 @@
 import { Ruler } from "lucide-react";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 
@@ -37,15 +37,22 @@ export async function BentoDashboardYtdDistance({ userId }: { userId: string }) 
   const ytd = ytdRange(now);
   const lastYear = lastYearSameRange(now);
 
-  const [metersYtd, metersLastYear] = await Promise.all([
+  const [metersYtd, metersLastYear, latestRow] = await Promise.all([
     sumDistance(userId, ytd.from, ytd.to),
     sumDistance(userId, lastYear.from, lastYear.to),
+    db
+      .select({ distance: activities.distance })
+      .from(activities)
+      .where(and(eq(activities.userId, userId), gte(activities.startTime, ytd.from)))
+      .orderBy(desc(activities.startTime))
+      .limit(1),
   ]);
 
   const kmYtd = metersYtd / 1000;
   const kmLast = metersLastYear / 1000;
   const pctOfLast = kmLast > 0 ? (kmYtd / kmLast) * 100 : 0;
   const equatorPct = (kmYtd / EARTH_CIRCUMFERENCE_KM) * 100;
+  const lastKm = latestRow[0]?.distance != null ? latestRow[0].distance / 1000 : null;
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3 h-full flex flex-col">
@@ -69,6 +76,15 @@ export async function BentoDashboardYtdDistance({ userId }: { userId: string }) 
           </span>
         </div>
       </div>
+
+      {lastKm != null && lastKm > 0 && (
+        <div
+          className={`${spaceMono.className} text-[10px] font-bold tabular-nums text-center`}
+          style={{ color: NEON }}
+        >
+          + {lastKm.toFixed(1)} km
+        </div>
+      )}
 
       {kmLast > 0 && (
         <div className="relative h-1.5 rounded-sm bg-[#0a0a0a] border border-[#2a2a2a] overflow-hidden mt-1">

@@ -1,7 +1,7 @@
 import { Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 
@@ -36,14 +36,28 @@ export async function BentoDashboardYtdTime({ userId }: { userId: string }) {
   const ytd = ytdRange(now);
   const lastYear = lastYearSameRange(now);
 
-  const [secYtd, secLastYear] = await Promise.all([
+  const [secYtd, secLastYear, latestRow] = await Promise.all([
     sumDuration(userId, ytd.from, ytd.to),
     sumDuration(userId, lastYear.from, lastYear.to),
+    db
+      .select({ duration: activities.duration })
+      .from(activities)
+      .where(and(eq(activities.userId, userId), gte(activities.startTime, ytd.from)))
+      .orderBy(desc(activities.startTime))
+      .limit(1),
   ]);
 
   const hoursYtd = secYtd / 3600;
   const hoursLast = secLastYear / 3600;
   const lifeDays = hoursYtd / 24;
+  const lastSec = latestRow[0]?.duration ?? null;
+  const lastLabel = (() => {
+    if (lastSec == null || lastSec <= 0) return null;
+    const h = Math.floor(lastSec / 3600);
+    const m = Math.round((lastSec % 3600) / 60);
+    if (h === 0) return `${m} min`;
+    return `${h}h ${m.toString().padStart(2, "0")}min`;
+  })();
   const deltaPct = hoursLast > 0 ? ((hoursYtd - hoursLast) / hoursLast) * 100 : null;
   const deltaColor = deltaPct == null
     ? "#a3a3a3"
@@ -74,6 +88,15 @@ export async function BentoDashboardYtdTime({ userId }: { userId: string }) {
           </span>
         </div>
       </div>
+
+      {lastLabel && (
+        <div
+          className={`${spaceMono.className} text-[10px] font-bold tabular-nums text-center`}
+          style={{ color: NEON }}
+        >
+          + {lastLabel}
+        </div>
+      )}
 
       <div
         className={`${spaceMono.className} text-[9px] uppercase tracking-[0.1em] text-[#a3a3a3] tabular-nums mt-1 text-center`}
