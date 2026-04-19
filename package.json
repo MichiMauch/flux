@@ -16,7 +16,8 @@
     "test:sync": "npx tsx scripts/test-sync.ts",
     "release": "npx tsx scripts/release.ts",
     "release:dry": "npx tsx scripts/release.ts --dry",
-    "deploy": "npm run release && git push --follow-tags"
+    "deploy": "npm run release && git push --follow-tags",
+    "deploy:dry": "npm run release:dry"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.52",

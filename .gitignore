@@ -46,3 +46,6 @@ next-env.d.ts
 # mobile-audit runs
 /.mobile-audit/
 /mobile-audit.config.json
+
+# claude code
+/.claude/

@@ -136,12 +136,14 @@ function updatePackageVersion(version: string): void {
 }
 
 function assertCleanTree(): void {
-  const status = sh("git status --porcelain");
-  if (status) {
+  // Untracked Files sind OK — sie landen nicht im Tag.
+  // Nur tracked Modifications / staged Changes blockieren.
+  const tracked = sh("git status --porcelain --untracked-files=no");
+  if (tracked) {
     console.error(
-      "Working tree hat ungespeicherte Änderungen. Commit oder stash zuerst.",
+      "Working tree hat ungespeicherte Änderungen an tracked files. Commit oder stash zuerst.",
     );
-    console.error(status);
+    console.error(tracked);
     process.exit(1);
   }
 }
