@@ -14,6 +14,9 @@ import {
 } from "@/lib/photos";
 import { reverseGeocode } from "@/lib/geocode";
 
+const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
+const MAX_PHOTOS_PER_REQUEST = 20;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,6 +43,26 @@ export async function POST(
   const files = formData.getAll("files") as File[];
   if (files.length === 0) {
     return NextResponse.json({ error: "No files" }, { status: 400 });
+  }
+  if (files.length > MAX_PHOTOS_PER_REQUEST) {
+    return NextResponse.json(
+      { error: `Max ${MAX_PHOTOS_PER_REQUEST} Fotos pro Upload` },
+      { status: 400 }
+    );
+  }
+  for (const f of files) {
+    if (!f.type.startsWith("image/")) {
+      return NextResponse.json(
+        { error: "Nur Bilddateien erlaubt" },
+        { status: 400 }
+      );
+    }
+    if (f.size > MAX_PHOTO_SIZE) {
+      return NextResponse.json(
+        { error: "Datei zu gross (max 20 MB)" },
+        { status: 400 }
+      );
+    }
   }
 
   const dir = getPhotoDir(session.user.id, activityId);

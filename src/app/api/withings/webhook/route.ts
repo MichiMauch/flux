@@ -1,16 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 import { users, weightMeasurements } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getWeightMeasurements, refreshToken } from "@/lib/withings-client";
 
+function checkWebhookSecret(request: NextRequest): boolean {
+  const expected = process.env.WITHINGS_WEBHOOK_SECRET;
+  if (!expected) return false;
+  const provided =
+    request.nextUrl.searchParams.get("secret") ??
+    request.headers.get("x-webhook-secret") ??
+    "";
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 // Withings sends GET to verify webhook URL
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (!process.env.WITHINGS_WEBHOOK_SECRET) {
+    console.error("WITHINGS_WEBHOOK_SECRET not configured — rejecting webhook");
+    return NextResponse.json(
+      { error: "Webhook not configured" },
+      { status: 500 }
+    );
+  }
+  if (!checkWebhookSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   return NextResponse.json({ status: "ok" });
 }
 
 // Withings sends POST with notification data
 export async function POST(request: NextRequest) {
+  if (!process.env.WITHINGS_WEBHOOK_SECRET) {
+    console.error("WITHINGS_WEBHOOK_SECRET not configured — rejecting webhook");
+    return NextResponse.json(
+      { error: "Webhook not configured" },
+      { status: 500 }
+    );
+  }
+  if (!checkWebhookSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.text();
   console.log("Withings webhook received:", body);
 

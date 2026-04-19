@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 import { users, bloodPressureSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 // Webhook receives new BP measurement from blood-pressure-tracker
 export async function POST(request: NextRequest) {
-  // Validate API key
-  const apiKey = request.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!apiKey || apiKey !== process.env.BLOOD_PRESSURE_API_KEY) {
+  const expected = process.env.BLOOD_PRESSURE_API_KEY;
+  if (!expected) {
+    console.error("BLOOD_PRESSURE_API_KEY not configured — rejecting webhook");
+    return NextResponse.json(
+      { error: "Webhook not configured" },
+      { status: 500 }
+    );
+  }
+  const provided =
+    request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
