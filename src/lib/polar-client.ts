@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "crypto";
+
 const POLAR_API_BASE = "https://www.polaraccesslink.com";
 const POLAR_AUTH_URL = "https://flow.polar.com/oauth2/authorization";
 const POLAR_TOKEN_URL = "https://polarremote.com/v2/oauth2/token";
@@ -497,7 +499,13 @@ export async function validateWebhookSignature(
   );
 
   const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-  const computed = Buffer.from(sig).toString("hex");
-
-  return computed === signature;
+  const computed = Buffer.from(sig);
+  let received: Buffer;
+  try {
+    received = Buffer.from(signature, "hex");
+  } catch {
+    return false;
+  }
+  if (computed.length !== received.length) return false;
+  return timingSafeEqual(computed, received);
 }
