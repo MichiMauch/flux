@@ -92,12 +92,14 @@ export default async function ActivityBentoPage({
   const trimp = activity.trimp;
   const avgSpeed = activity.avgSpeed;
 
-  const dateLabel = activity.startTime.toLocaleDateString("de-CH", {
-    weekday: "long",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const dateLabel = activity.startTime
+    .toLocaleDateString("de-CH", {
+      weekday: "long",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+    .replace(/\s(\d{4})$/, "\u00a0$1");
 
   const color = activityTypeColor(activity.type);
   const colorDim = dimColor(color);
