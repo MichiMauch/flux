@@ -14,6 +14,7 @@ export function activityTypeLabel(type: string): string {
   if (t === "SKIING") return "Ski";
   if (t === "CROSS_COUNTRY_SKIING") return "Langlauf";
   if (t === "SNOWSHOE_TREKKING") return "Schneeschuh";
+  if (t === "BALANCE_BOARD") return "Balance Board";
   if (t === "OTHER_INDOOR") return "Indoor";
   if (t === "OTHER_OUTDOOR") return "Outdoor";
   return type;
@@ -34,6 +35,7 @@ export const ACTIVITY_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "SKIING", label: "Ski" },
   { value: "CROSS_COUNTRY_SKIING", label: "Langlauf" },
   { value: "SNOWSHOE_TREKKING", label: "Schneeschuh" },
+  { value: "BALANCE_BOARD", label: "Balance Board" },
   { value: "OTHER_OUTDOOR", label: "Outdoor (sonst.)" },
   { value: "OTHER_INDOOR", label: "Indoor (sonst.)" },
   { value: "OTHER", label: "Sonstiges" },
@@ -60,5 +62,7 @@ export function activityTypeColor(type: string): string {
   if (t.includes("CYCL") || t.includes("BIK") || t.includes("RIDE")) return "#00D4FF";
   if (t.includes("HIK") || t.includes("TREK")) return "#39FF14";
   if (t.includes("WALK")) return "#FFD700";
+  if (t.includes("SWIM") || t.includes("BALANCE")) return "#00A8FF"; // blue
+  if (t.includes("INDOOR") || t.includes("STRENGTH") || t.includes("CORE")) return "#FF4DD2"; // magenta
   return "#B026FF";
 }

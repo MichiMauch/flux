@@ -4,16 +4,26 @@ import { useEffect, useState } from "react";
 import Lottie from "lottie-react";
 import { hexToRgbNormalized, tintLottie } from "./lottie-utils";
 
-type LottieType = "hiking" | "walk" | "bicycle" | "running" | "wellbeing" | "yoga-pose";
+type LottieType =
+  | "hiking"
+  | "walk"
+  | "bicycle"
+  | "running"
+  | "outdoor"
+  | "yoga-pose"
+  | "indoor"
+  | "balance-board";
 
 function pickLottie(type: string, name?: string | null): LottieType {
   const t = `${type} ${name ?? ""}`.toUpperCase();
+  if (t.includes("BALANCE")) return "balance-board";
   if (t.includes("YOGA") || t.includes("PILATES")) return "yoga-pose";
   if (t.includes("CYCL") || t.includes("BIK") || t.includes("RIDE")) return "bicycle";
   if (t.includes("HIK") || t.includes("TREK") || t.includes("MOUNTAIN")) return "hiking";
   if (t.includes("RUN") || t.includes("JOG")) return "running";
   if (t.includes("WALK")) return "walk";
-  return "wellbeing";
+  if (t.includes("INDOOR") || t.includes("STRENGTH") || t.includes("CORE")) return "indoor";
+  return "outdoor";
 }
 
 export function ActivityLottie({

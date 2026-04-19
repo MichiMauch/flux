@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { WeeklySummary } from "@/app/components/weekly-summary";
 import { ActivityCalendar } from "@/app/components/activity-calendar";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
@@ -58,6 +57,7 @@ export default async function CalendarPage({
       name: activities.name,
       startTime: activities.startTime,
       distance: activities.distance,
+      duration: activities.duration,
     })
     .from(activities)
     .where(
@@ -70,7 +70,13 @@ export default async function CalendarPage({
 
   const byDay: Record<
     string,
-    { id: string; type: string; name: string; distanceKm: number | null }[]
+    {
+      id: string;
+      type: string;
+      name: string;
+      distanceKm: number | null;
+      durationSec: number | null;
+    }[]
   > = {};
   for (const r of rows) {
     const key = dayKey(r.startTime);
@@ -80,6 +86,7 @@ export default async function CalendarPage({
       type: r.type,
       name: r.name,
       distanceKm: r.distance != null ? r.distance / 1000 : null,
+      durationSec: r.duration ?? null,
     });
   }
 
@@ -95,15 +102,33 @@ export default async function CalendarPage({
 
       <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
         <div className="md:col-span-6">
-          <BentoTile label="Woche" title="Aktuelle Woche">
-            <WeeklySummary userId={session.user.id} />
-          </BentoTile>
-        </div>
-
-        <div className="md:col-span-6">
           <BentoTile
             label="Monat"
-            title={`${MONTH_LABELS[month]} ${year}`}
+            title={
+              <h2
+                className={`${rajdhani.className} font-bold uppercase leading-none tracking-[-0.02em]`}
+                style={{
+                  fontSize: "clamp(28px, 3.6vw, 52px)",
+                  color: "transparent",
+                  WebkitTextStroke: "1px #FF6A00",
+                  textShadow:
+                    "0 0 18px #FF6A0073, 0 0 40px #FF6A0038",
+                }}
+              >
+                {MONTH_LABELS[month]}
+                <span
+                  className="ml-3 align-top"
+                  style={{
+                    fontSize: "0.4em",
+                    color: "#FF6A008c",
+                    WebkitTextStroke: "0",
+                    textShadow: "none",
+                  }}
+                >
+                  {year}
+                </span>
+              </h2>
+            }
             right={
               <div className="flex items-center gap-2">
                 <Link

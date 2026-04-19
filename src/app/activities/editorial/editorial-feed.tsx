@@ -44,7 +44,7 @@ export function EditorialFeed({ initial, initialHasMore, sport }: Props) {
     return (
       <ActivitiesEmptyState
         sport={sport}
-        resetHref="/activities/editorial"
+        resetHref="/activities"
         showPolarHint={false}
         variant="editorial"
       />

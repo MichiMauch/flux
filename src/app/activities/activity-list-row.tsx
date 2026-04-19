@@ -6,7 +6,8 @@ import {
   Mountain,
   Ruler,
 } from "lucide-react";
-import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
+import { activityTypeColor } from "@/lib/activity-types";
+import { SportChip } from "@/app/components/sport-chip";
 import {
   formatDateLabel,
   formatDistanceKm,
@@ -45,12 +46,7 @@ export function ActivityListRow(a: ActivityFeedItem) {
       </div>
       <div className="min-w-0 flex flex-col justify-center gap-1.5">
         <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className={`${spaceMono.className} inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-[0.12em]`}
-            style={{ backgroundColor: `${color}1a`, color }}
-          >
-            {activityTypeLabel(a.type)}
-          </span>
+          <SportChip type={a.type} variant="mono" />
           <span
             className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3]`}
           >

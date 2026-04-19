@@ -3,8 +3,9 @@ import { Activity, Clock, Heart, Mountain, Ruler } from "lucide-react";
 import { db } from "@/lib/db";
 import { activities, activityPhotos } from "@/lib/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
-import { activityTypeLabel, activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor } from "@/lib/activity-types";
 import { RouteMapStatic } from "@/app/components/route-map-static";
+import { SportChip } from "@/app/components/sport-chip";
 import { rajdhani, spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import {
@@ -90,12 +91,7 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
             >
               ► Letzte Aktivität
             </span>
-            <span
-              className={`${spaceMono.className} inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-[0.12em]`}
-              style={{ backgroundColor: `${color}1a`, color }}
-            >
-              {activityTypeLabel(latest.type)}
-            </span>
+            <SportChip type={latest.type} variant="mono" />
           </div>
           <span
             className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3] whitespace-nowrap`}

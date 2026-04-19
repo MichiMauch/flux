@@ -2,11 +2,12 @@ import Link from "next/link";
 import { Clock, Heart, Mountain, Ruler, Image as ImageIcon } from "lucide-react";
 import { ActivityLottie } from "./activity-lottie";
 import { RouteMapStatic } from "./route-map-static";
-import { activityTypeLabel, activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor } from "@/lib/activity-types";
 import {
   formatDurationWords as formatDuration,
   formatDistanceAuto,
 } from "@/lib/activity-format";
+import { SportChip } from "./sport-chip";
 
 const formatDistance = (m: number) => formatDistanceAuto(m, 1);
 
@@ -55,15 +56,7 @@ export function ActivityFeedCard(a: ActivityFeedCardProps) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-[0.1em]"
-              style={{
-                backgroundColor: `${color}1a`,
-                color,
-              }}
-            >
-              {activityTypeLabel(a.type)}
-            </span>
+            <SportChip type={a.type} />
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               {dateLabel} · {timeLabel}
             </span>

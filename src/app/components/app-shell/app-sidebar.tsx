@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { NavLink } from "./nav-link";
 import { PRIMARY_ITEMS, SECONDARY_ITEMS } from "./nav-items";
+
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev";
 
 interface AppSidebarProps {
   collapsed: boolean;
@@ -53,6 +56,14 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
           ))}
         </div>
       </nav>
+      <Link
+        href="/changelog"
+        className={`border-t border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground ${
+          collapsed ? "text-center" : ""
+        }`}
+      >
+        v{APP_VERSION}
+      </Link>
     </aside>
   );
 }

@@ -13,18 +13,20 @@ const DIM = "#a3a3a3";
 interface ActivitiesSportFilterProps {
   sport: string | null;
   availableSports: string[];
+  basePath?: string;
 }
 
-function buildHref(sport: string | null): string {
-  if (!sport) return "/activities";
+function buildHref(basePath: string, sport: string | null): string {
+  if (!sport) return basePath;
   const p = new URLSearchParams();
   p.set("sport", sport);
-  return `/activities?${p.toString()}`;
+  return `${basePath}?${p.toString()}`;
 }
 
 export function ActivitiesSportFilter({
   sport,
   availableSports,
+  basePath = "/activities",
 }: ActivitiesSportFilterProps) {
   return (
     <div
@@ -35,7 +37,7 @@ export function ActivitiesSportFilter({
       </span>
       <div className="flex gap-1">
         <Chip
-          href={buildHref(null)}
+          href={buildHref(basePath, null)}
           active={sport === null}
           label="Alle"
           icon={
@@ -51,7 +53,7 @@ export function ActivitiesSportFilter({
           return (
             <Chip
               key={s}
-              href={buildHref(active ? null : s)}
+              href={buildHref(basePath, active ? null : s)}
               active={active}
               label={activityTypeLabel(s)}
               icon={

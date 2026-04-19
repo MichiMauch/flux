@@ -10,12 +10,12 @@ import { BentoSyncButton } from "../../components/bento/home/bento-sync-button";
 import { spaceMono } from "../../components/bento/bento-fonts";
 import { ActivitiesSportFilter } from "../activities-sport-filter";
 import { ActivitiesTimelineRibbon } from "../activities-timeline-ribbon";
+import { ActivitiesFeed } from "../activities-feed";
 import { parseSport } from "../filters";
-import { EditorialFeed } from "./editorial-feed";
 
 const INITIAL_PAGE_SIZE = 20;
 
-export default async function EditorialActivitiesPage({
+export default async function ActivitiesListPage({
   searchParams,
 }: {
   searchParams: Promise<{ sport?: string }>;
@@ -72,14 +72,12 @@ export default async function EditorialActivitiesPage({
   ]);
 
   const hasMore = initialRows.length > INITIAL_PAGE_SIZE;
-  const initial = hasMore
-    ? initialRows.slice(0, INITIAL_PAGE_SIZE)
-    : initialRows;
+  const initial = hasMore ? initialRows.slice(0, INITIAL_PAGE_SIZE) : initialRows;
 
   return (
     <BentoPageShell>
       <BentoPageHeader
-        section="Editorial"
+        section="Aktivitäten"
         title="Aktivitäten"
         right={
           <div className="flex items-center gap-3">
@@ -87,7 +85,7 @@ export default async function EditorialActivitiesPage({
               href="/activities"
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
             >
-              ▦ Bento
+              ❏ Editorial
             </Link>
             <Link
               href="/"
@@ -100,17 +98,20 @@ export default async function EditorialActivitiesPage({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <ActivitiesSportFilter
-          sport={sport}
-          availableSports={availableSports}
-        />
-        <div className="flex-1 min-w-0">
+      <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
+        <div className="min-w-0 md:max-w-[55%]">
+          <ActivitiesSportFilter
+            sport={sport}
+            availableSports={availableSports}
+            basePath="/activities/list"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
           <ActivitiesTimelineRibbon months={monthRows} />
         </div>
       </div>
 
-      <EditorialFeed
+      <ActivitiesFeed
         initial={initial}
         initialHasMore={hasMore}
         sport={sport}

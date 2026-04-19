@@ -3,7 +3,7 @@ import { spaceMono } from "./bento-fonts";
 
 interface BentoTileProps {
   label?: string;
-  title?: string;
+  title?: ReactNode;
   right?: ReactNode;
   children: ReactNode;
   className?: string;

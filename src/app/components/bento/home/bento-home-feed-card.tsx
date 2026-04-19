@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Clock, Heart, Mountain, Ruler, Image as ImageIcon } from "lucide-react";
-import { activityTypeLabel, activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor } from "@/lib/activity-types";
+import { SportChip } from "@/app/components/sport-chip";
 import {
   formatDateLabel,
   formatDistanceKm,
@@ -46,12 +47,7 @@ export function BentoHomeFeedCard(a: Props) {
       )}
       <div className="flex-1 p-3 flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <span
-            className={`${spaceMono.className} inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-[0.12em]`}
-            style={{ backgroundColor: `${color}1a`, color }}
-          >
-            {activityTypeLabel(a.type)}
-          </span>
+          <SportChip type={a.type} variant="mono" />
           <span
             className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3]`}
           >

@@ -42,3 +42,7 @@ next-env.d.ts
 
 # data archives
 /data/
+
+# mobile-audit runs
+/.mobile-audit/
+/mobile-audit.config.json

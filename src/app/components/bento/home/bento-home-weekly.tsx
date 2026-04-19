@@ -23,7 +23,13 @@ function delta(current: number, previous: number): { sign: string; pct: number }
   return { sign: pct >= 0 ? "+" : "", pct: Math.round(pct) };
 }
 
-export async function BentoHomeWeekly({ userId }: { userId: string }) {
+export async function BentoHomeWeekly({
+  userId,
+  layout = "grid",
+}: {
+  userId: string;
+  layout?: "grid" | "row";
+}) {
   const { from, to } = currentWeekRange();
   const prevFrom = new Date(from);
   prevFrom.setDate(prevFrom.getDate() - 7);
@@ -83,7 +89,13 @@ export async function BentoHomeWeekly({ userId }: { userId: string }) {
           KW {weekNo}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-3 flex-1 content-center">
+      <div
+        className={
+          layout === "row"
+            ? "grid grid-cols-3 gap-6 flex-1 content-center"
+            : "grid grid-cols-2 gap-3 flex-1 content-center"
+        }
+      >
         <Stat
           icon={<Activity className="h-3 w-3" />}
           label="Aktiv."

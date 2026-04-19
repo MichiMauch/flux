@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "./components/theme-provider";
 import { UnlockCelebration } from "./components/unlock-celebration";
 import { AppShell } from "./components/app-shell/app-shell";
+import { SwRegister } from "./components/pwa/sw-register";
+import { InstallPrompt } from "./components/pwa/install-prompt";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -19,6 +21,26 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Flux",
   description: "Deine private Fitness-App",
+  applicationName: "Flux",
+  appleWebApp: {
+    capable: true,
+    title: "Flux",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1C1917",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -41,6 +63,8 @@ export default function RootLayout({
         >
           <AppShell>{children}</AppShell>
           <UnlockCelebration />
+          <InstallPrompt />
+          <SwRegister />
         </ThemeProvider>
       </body>
     </html>
