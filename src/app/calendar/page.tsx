@@ -105,8 +105,8 @@ export default async function CalendarPage({
           <BentoTile
             label="Monat"
             title={
-              <h2
-                className={`${rajdhani.className} font-bold uppercase leading-none tracking-[-0.02em]`}
+              <span
+                className={`${rajdhani.className} block font-bold uppercase leading-none tracking-[-0.02em]`}
                 style={{
                   fontSize: "clamp(28px, 3.6vw, 52px)",
                   color: "transparent",
@@ -127,7 +127,7 @@ export default async function CalendarPage({
                 >
                   {year}
                 </span>
-              </h2>
+              </span>
             }
             right={
               <div className="flex items-center gap-2">
