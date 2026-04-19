@@ -95,7 +95,7 @@ export default async function ActivityBentoPage({
   const dateLabel = activity.startTime.toLocaleDateString("de-CH", {
     weekday: "long",
     day: "2-digit",
-    month: "long",
+    month: "short",
     year: "numeric",
   });
 
