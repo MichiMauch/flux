@@ -83,10 +83,10 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
         </div>
       )}
       <div className="flex-1 p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <div className="flex items-center gap-2">
             <span
-              className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.2em] text-[#a3a3a3]`}
+              className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.2em] text-[#a3a3a3] whitespace-nowrap`}
             >
               ► Letzte Aktivität
             </span>
@@ -98,7 +98,7 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
             </span>
           </div>
           <span
-            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3]`}
+            className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3] whitespace-nowrap`}
           >
             {dateLabel} · {timeLabel}
           </span>
