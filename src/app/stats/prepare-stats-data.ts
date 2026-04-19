@@ -20,7 +20,7 @@ import {
 } from "./bucket-utils";
 import {
   formatDistanceAuto,
-  formatDurationHmSuffix as formatDuration,
+  formatDurationHMS as formatDuration,
 } from "@/lib/activity-format";
 import {
   CYAN,

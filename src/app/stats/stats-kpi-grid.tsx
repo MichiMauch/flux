@@ -30,7 +30,11 @@ export function StatsKpiGrid({ kpis }: { kpis: StatsKpi[] }) {
               className="flex justify-center leading-none"
               style={{ fontSize: "1.6rem" }}
             >
-              <LedValue value={m.value} color={m.color} />
+              <LedValue
+                value={m.value}
+                color="#ffffff"
+                textColor="#FF6A00"
+              />
             </div>
             <div
               className={`${spaceMono.className} mt-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3]`}
