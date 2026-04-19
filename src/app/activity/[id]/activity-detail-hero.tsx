@@ -46,9 +46,10 @@ export function ActivityDetailHero({
       <Tile className="relative overflow-hidden">
         <TileLabel>Aktivität · {dateLabel}</TileLabel>
         <h1
-          className={`${rajdhani.className} font-bold uppercase leading-[0.95] tracking-[-0.01em] break-words pr-10`}
+          lang="de"
+          className={`${rajdhani.className} font-bold uppercase leading-[0.95] tracking-[-0.01em] hyphens-auto break-words pr-10`}
           style={{
-            fontSize: "clamp(48px, 8vw, 100px)",
+            fontSize: "clamp(36px, 8vw, 100px)",
             color: NEON,
             textShadow: `0 0 18px ${NEON_ALPHA_66}, 0 0 36px ${NEON_ALPHA_33}`,
           }}
