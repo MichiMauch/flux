@@ -101,6 +101,17 @@ export function formatDurationHmSplit(sec: number): {
   return { value: String(m), unit: "m" };
 }
 
+// ----- Pace -------------------------------------------------------------
+
+/** "5:30" pace per km, or "–" if inputs missing. */
+export function formatPace(meters: number | null, seconds: number | null): string {
+  if (!meters || !seconds) return "–";
+  const paceSeconds = seconds / (meters / 1000);
+  const m = Math.floor(paceSeconds / 60);
+  const s = Math.round(paceSeconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 // ----- Date / time ------------------------------------------------------
 
 export function formatDateLabel(date: Date): string {
