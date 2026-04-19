@@ -26,11 +26,11 @@ export function BentoPageHeader({
 
   const fontSize =
     titleScale === "compact"
-      ? "clamp(36px, 5vw, 64px)"
-      : "clamp(48px, 7vw, 96px)";
+      ? "clamp(32px, 5vw, 64px)"
+      : "clamp(40px, 7vw, 96px)";
 
   return (
-    <div className="flex items-end justify-between border-b border-[#2a2a2a] pb-4 gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between border-b border-[#2a2a2a] pb-4 gap-3 sm:gap-4">
       <div className="min-w-0">
         <div
           className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.3em] text-[#a3a3a3] mb-1`}
