@@ -16,4 +16,4 @@ else
 fi
 
 # Dev-Server starten
-exec next dev -p 3002
+exec npx next dev -p 3002
