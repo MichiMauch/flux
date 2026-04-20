@@ -35,6 +35,8 @@ export const users = pgTable("user", {
   restHeartRate: integer("rest_heart_rate"),
   aerobicThreshold: integer("aerobic_threshold"),
   anaerobicThreshold: integer("anaerobic_threshold"),
+  partnerId: text("partner_id"),
+  partnerPushEnabled: boolean("partner_push_enabled").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

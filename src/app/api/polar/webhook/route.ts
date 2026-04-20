@@ -10,26 +10,9 @@ import { evaluateTrophies } from "@/lib/trophies-server";
 import { TROPHIES } from "@/lib/trophies";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
-import { sendPushToUser } from "@/lib/push";
+import { sendPushToUser, sendActivityPushes } from "@/lib/push";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-
-function formatActivityPush(a: {
-  name: string;
-  distance: number | null;
-  durationSec: number;
-}): string {
-  const parts: string[] = [];
-  if (a.distance != null && a.distance > 0) {
-    parts.push(`${(a.distance / 1000).toFixed(1)} km`);
-  }
-  if (a.durationSec > 0) {
-    const h = Math.floor(a.durationSec / 3600);
-    const m = Math.round((a.durationSec % 3600) / 60);
-    parts.push(h > 0 ? `${h} h ${m} min` : `${m} min`);
-  }
-  return parts.length ? `${a.name} · ${parts.join(" · ")}` : a.name;
-}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -208,19 +191,21 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
 
     synced++;
 
-    try {
-      await sendPushToUser(user.id, {
-        title: "Neue Aktivität",
-        body: formatActivityPush({
-          name: aiName,
-          distance: exercise.distance ?? null,
-          durationSec: durationSeconds,
-        }),
-        url: inserted ? `/activity/${inserted.id}` : "/activities",
-        tag: `activity-${exercise.id}`,
-      });
-    } catch (e) {
-      console.error("[push] activity notification failed:", e);
+    if (inserted) {
+      try {
+        await sendActivityPushes(
+          { id: user.id, name: user.name, partnerId: user.partnerId },
+          {
+            activityId: inserted.id,
+            polarId: exercise.id,
+            name: aiName,
+            distance: exercise.distance ?? null,
+            durationSec: durationSeconds,
+          }
+        );
+      } catch (e) {
+        console.error("[push] activity notification failed:", e);
+      }
     }
   }
 

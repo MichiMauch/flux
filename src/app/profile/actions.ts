@@ -46,3 +46,16 @@ export async function updateProfile(formData: FormData): Promise<{ ok?: boolean;
   revalidatePath("/profile");
   return { ok: true };
 }
+
+export async function setPartnerPushEnabled(enabled: boolean): Promise<{ ok?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Nicht angemeldet" };
+
+  await db
+    .update(users)
+    .set({ partnerPushEnabled: enabled })
+    .where(eq(users.id, session.user.id));
+
+  revalidatePath("/profile");
+  return { ok: true };
+}

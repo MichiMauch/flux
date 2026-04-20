@@ -1,7 +1,7 @@
 import "server-only";
 import webpush, { type PushSubscription as WebPushSubscription } from "web-push";
 import { db } from "@/lib/db";
-import { pushSubscriptions } from "@/lib/db/schema";
+import { pushSubscriptions, users } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 
 let vapidConfigured = false;
@@ -95,4 +95,70 @@ export async function deleteSubscription(userId: string, endpoint: string): Prom
     .where(
       and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint))
     );
+}
+
+function formatActivityDetails(a: {
+  distance: number | null;
+  durationSec: number;
+}): string {
+  const parts: string[] = [];
+  if (a.distance != null && a.distance > 0) {
+    parts.push(`${(a.distance / 1000).toFixed(1)} km`);
+  }
+  if (a.durationSec > 0) {
+    const h = Math.floor(a.durationSec / 3600);
+    const m = Math.round((a.durationSec % 3600) / 60);
+    parts.push(h > 0 ? `${h} h ${m} min` : `${m} min`);
+  }
+  return parts.join(" · ");
+}
+
+export interface ActivityPushInput {
+  activityId: string;
+  polarId: string;
+  name: string;
+  distance: number | null;
+  durationSec: number;
+}
+
+export async function sendActivityPushes(
+  uploader: { id: string; name: string | null; partnerId: string | null },
+  activity: ActivityPushInput
+): Promise<void> {
+  const details = formatActivityDetails({
+    distance: activity.distance,
+    durationSec: activity.durationSec,
+  });
+  const suffix = details ? ` (${details})` : "";
+  const url = `/activity/${activity.activityId}`;
+  const tag = `activity-${activity.polarId}`;
+
+  await sendPushToUser(uploader.id, {
+    title: "Neue Aktivität erstellt",
+    body: `Toll, deine Aktivität „${activity.name}"${suffix} ist in Flux. Schau sie dir direkt an.`,
+    url,
+    tag,
+  });
+
+  if (!uploader.partnerId) return;
+
+  const [partner] = await db
+    .select({
+      id: users.id,
+      partnerPushEnabled: users.partnerPushEnabled,
+    })
+    .from(users)
+    .where(eq(users.id, uploader.partnerId))
+    .limit(1);
+
+  if (!partner || !partner.partnerPushEnabled) return;
+
+  const uploaderName = uploader.name?.trim() || "Dein Partner";
+
+  await sendPushToUser(partner.id, {
+    title: `${uploaderName} war unterwegs`,
+    body: `${uploaderName} hat folgende Aktivität hochgeladen: „${activity.name}"${suffix}. Schaue sie dir gleich an.`,
+    url,
+    tag: `${tag}-partner`,
+  });
 }

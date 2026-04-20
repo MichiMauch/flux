@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { ProfileForm } from "./profile-form";
 import { PortraitUpload } from "./portrait-upload";
 import { PushNotificationsToggle } from "./push-notifications-toggle";
+import { PartnerPushToggle } from "./partner-push-toggle";
 import { computeLevel } from "@/lib/trophies-server";
 import { formatXp } from "@/lib/trophies";
 import { Trophy } from "lucide-react";
@@ -85,6 +86,10 @@ export default async function ProfilePage() {
         <div className="md:col-span-6">
           <BentoTile label="Benachrichtigungen" title="Push-Benachrichtigungen">
             <PushNotificationsToggle />
+            <PartnerPushToggle
+              initialEnabled={user.partnerPushEnabled}
+              hasPartner={!!user.partnerId}
+            />
           </BentoTile>
         </div>
       </div>

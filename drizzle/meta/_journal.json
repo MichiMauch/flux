@@ -120,6 +120,13 @@
       "when": 1776707907713,
       "tag": "0016_redundant_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1776709945603,
+      "tag": "0017_open_sandman",
+      "breakpoints": true
     }
   ]
 }
