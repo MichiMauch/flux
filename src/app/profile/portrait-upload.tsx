@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Camera, Loader2, Trash2 } from "lucide-react";
@@ -20,10 +20,12 @@ export function PortraitUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cacheBust, setCacheBust] = useState<number>(() =>
-    hasPortrait ? Date.now() : 0
-  );
+  const [cacheBust, setCacheBust] = useState<number>(0);
   const [showPortrait, setShowPortrait] = useState(hasPortrait);
+
+  useEffect(() => {
+    if (hasPortrait) setCacheBust(Date.now());
+  }, [hasPortrait]);
 
   async function handleFile(file: File) {
     setError(null);
