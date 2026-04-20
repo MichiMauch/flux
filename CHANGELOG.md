@@ -3,6 +3,12 @@
 Alle nennenswerten Änderungen an Flux werden hier dokumentiert.
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionierung: [SemVer](https://semver.org).
 
+## [0.5.0] - 2026-04-20
+
+### Added
+
+- **withings:** Auto-Sync des Gewichts via Webhook [1c9877b]
+
 ## [0.4.0] - 2026-04-20
 
 ### Added
