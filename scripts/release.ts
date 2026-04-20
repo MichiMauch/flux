@@ -86,7 +86,8 @@ function bumpVersion(version: string, level: BumpLevel): string {
 
 function formatScope(c: ParsedCommit): string {
   const scope = c.scope ? `**${c.scope}:** ` : "";
-  return `- ${scope}${c.subject}`;
+  const short = c.hash.slice(0, 7);
+  return `- ${scope}${c.subject} [${short}]`;
 }
 
 function categorize(commits: ParsedCommit[]): Record<string, string[]> {

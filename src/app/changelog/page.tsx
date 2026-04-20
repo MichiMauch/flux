@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parseChangelog, type Release } from "./parse-changelog";
+import {
+  parseChangelog,
+  type ChangelogItem,
+  type Release,
+} from "./parse-changelog";
+
+const REPO_URL = "https://github.com/MichiMauch/flux";
 
 export const metadata = {
   title: "Changelog — Flux",
@@ -51,16 +57,35 @@ function ReleaseBlock({ release }: { release: Release }) {
           </h3>
           <ul className="space-y-1.5">
             {cat.items.map((item, i) => (
-              <li
-                key={i}
-                className="text-sm leading-relaxed [&_strong]:font-semibold [&_strong]:text-foreground text-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: renderMarkdownInline(item) }}
-              />
+              <Item key={i} item={item} />
             ))}
           </ul>
         </div>
       ))}
     </section>
+  );
+}
+
+function Item({ item }: { item: ChangelogItem }) {
+  return (
+    <li className="text-sm leading-relaxed text-muted-foreground [&_strong]:font-semibold [&_strong]:text-foreground">
+      <span dangerouslySetInnerHTML={{ __html: renderMarkdownInline(item.text) }} />
+      {item.hashes.length > 0 && (
+        <span className="ml-2 inline-flex flex-wrap items-baseline gap-1.5 align-baseline">
+          {item.hashes.map((hash) => (
+            <a
+              key={hash}
+              href={`${REPO_URL}/commit/${hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground/70 hover:text-brand"
+            >
+              {hash.slice(0, 7)}
+            </a>
+          ))}
+        </span>
+      )}
+    </li>
   );
 }
 

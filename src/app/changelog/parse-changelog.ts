@@ -1,6 +1,11 @@
+export interface ChangelogItem {
+  text: string;
+  hashes: string[];
+}
+
 export interface Category {
   name: string;
-  items: string[];
+  items: ChangelogItem[];
 }
 
 export interface Release {
@@ -9,9 +14,21 @@ export interface Release {
   categories: Category[];
 }
 
+const TRAILING_HASHES = /\s*\[([0-9a-f]{6,40}(?:\s*,\s*[0-9a-f]{6,40})*)\]\s*$/i;
+
+function splitItem(raw: string): ChangelogItem {
+  const match = TRAILING_HASHES.exec(raw);
+  if (!match) return { text: raw, hashes: [] };
+  return {
+    text: raw.slice(0, match.index).trimEnd(),
+    hashes: match[1].split(/\s*,\s*/).map((h) => h.toLowerCase()),
+  };
+}
+
 /**
  * Parst eine CHANGELOG.md im Keep-a-Changelog-Format.
  * Erwartet Releases als `## [version] - date` und Kategorien als `### Name`.
+ * Optionale `[hash]` am Zeilenende werden als Commit-Referenzen extrahiert.
  */
 export function parseChangelog(raw: string): Release[] {
   const lines = raw.split("\n");
@@ -41,7 +58,7 @@ export function parseChangelog(raw: string): Release[] {
 
     const itemMatch = /^-\s+(.+)$/.exec(line);
     if (itemMatch && currentCategory) {
-      currentCategory.items.push(itemMatch[1].trim());
+      currentCategory.items.push(splitItem(itemMatch[1].trim()));
     }
   }
 
