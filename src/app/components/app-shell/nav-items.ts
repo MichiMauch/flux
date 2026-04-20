@@ -27,7 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/activities", label: "Aktivitäten", icon: Activity, lottieFile: "activity-feed", group: "primary" },
   { href: "/calendar", label: "Kalender", icon: Calendar, lottieFile: "calendar", group: "primary" },
   { href: "/stats", label: "Statistiken", icon: BarChart3, lottieFile: "stats", group: "primary" },
-  { href: "/training-load", label: "Form", icon: TrendingUp, group: "primary" },
+  { href: "/training-load", label: "Form", icon: TrendingUp, lottieFile: "energy", group: "primary" },
   { href: "/daily", label: "Tag", icon: Sun, lottieFile: "daily", group: "secondary" },
   { href: "/goals", label: "Ziele", icon: Target, lottieFile: "goals", group: "secondary" },
   { href: "/trophies", label: "Trophäen", icon: Trophy, lottieFile: "trophy", group: "secondary" },
