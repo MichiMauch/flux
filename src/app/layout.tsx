@@ -5,6 +5,7 @@ import { UnlockCelebration } from "./components/unlock-celebration";
 import { AppShell } from "./components/app-shell/app-shell";
 import { SwRegister } from "./components/pwa/sw-register";
 import { InstallPrompt } from "./components/pwa/install-prompt";
+import { WeeklyBriefingModalHost } from "./components/coach/weekly-briefing-modal-host";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -66,6 +67,7 @@ export default function RootLayout({
           <UnlockCelebration />
           <InstallPrompt />
           <SwRegister />
+          <WeeklyBriefingModalHost />
         </ThemeProvider>
       </body>
     </html>

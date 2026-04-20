@@ -7,6 +7,7 @@ import {
   json,
   primaryKey,
   boolean,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -353,3 +354,45 @@ export const bloodPressureSessions = pgTable("blood_pressure_sessions", {
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ── Coach Suggestions (AI-generated training recommendations) ─────────────
+
+export const coachSuggestions = pgTable("coach_suggestions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  contextHash: text("context_hash").notNull(),
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  model: text("model").notNull(),
+  context: json("context").notNull(),
+  suggestions: json("suggestions").notNull(),
+});
+
+// ── Weekly Briefings (AI-generated weekly recap + next-week plan) ─────────
+
+export const weeklyBriefings = pgTable(
+  "weekly_briefings",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    isoWeek: text("iso_week").notNull(), // YYYY-WW, references the recapped (completed) week
+    weekStart: text("week_start").notNull(), // YYYY-MM-DD (Monday of recapped week)
+    weekEnd: text("week_end").notNull(), // YYYY-MM-DD (Sunday of recapped week)
+    generatedAt: timestamp("generated_at").defaultNow().notNull(),
+    model: text("model").notNull(),
+    recap: json("recap").notNull(),
+    summary: text("summary").notNull(),
+    highlights: json("highlights").notNull(),
+    warnings: json("warnings").notNull(),
+    suggestions: json("suggestions").notNull(),
+    seenAt: timestamp("seen_at"),
+  },
+  (t) => [uniqueIndex("weekly_briefings_user_iso_week_idx").on(t.userId, t.isoWeek)]
+);

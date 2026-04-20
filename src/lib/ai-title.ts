@@ -1,7 +1,6 @@
-import OpenAI from "openai";
 import { reverseGeocode } from "./geocode";
+import { DEFAULT_MODEL, getOpenAIClient } from "./openai";
 
-const MODEL = "gpt-4o-mini";
 const LOOP_THRESHOLD_M = 200;
 
 export interface RoutePoint {
@@ -142,10 +141,10 @@ export async function generateActivityTitle(
       wochentag: WEEKDAYS[ctx.startTime.getDay()],
     };
 
-    const openai = new OpenAI({ apiKey });
+    const openai = getOpenAIClient();
 
     const response = await openai.chat.completions.create({
-      model: MODEL,
+      model: DEFAULT_MODEL,
       temperature: 0.7,
       max_tokens: 40,
       messages: [
@@ -165,7 +164,7 @@ export async function generateActivityTitle(
     const title = response.choices?.[0]?.message?.content?.trim();
     if (!title) {
       console.warn("[ai-title] Empty response from OpenAI", {
-        model: MODEL,
+        model: DEFAULT_MODEL,
         finishReason: response.choices?.[0]?.finish_reason,
       });
       return ctx.fallbackTitle;
@@ -181,7 +180,7 @@ export async function generateActivityTitle(
   } catch (e) {
     const err = e as { status?: number; message?: string; code?: string };
     console.warn("[ai-title] OpenAI call failed", {
-      model: MODEL,
+      model: DEFAULT_MODEL,
       status: err?.status,
       code: err?.code,
       message: err?.message,

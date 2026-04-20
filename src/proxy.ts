@@ -8,6 +8,7 @@ const publicRoutes = [
   "/api/polar/webhook",
   "/api/withings/webhook",
   "/api/bloodpressure/webhook",
+  "/api/cron",
 ];
 
 export async function proxy(request: NextRequest) {

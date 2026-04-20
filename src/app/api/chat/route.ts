@@ -1,15 +1,15 @@
 /**
  * POST /api/chat — streaming chat endpoint for the natural-language search.
  *
- * Uses Vercel AI SDK v6 streamText with OpenAI gpt-4o-mini and up to 5 tool
- * steps. All tools are scoped to the authenticated user's ID.
+ * Uses Vercel AI SDK v6 streamText with the shared OpenAI client and model
+ * (see `src/lib/openai.ts`). Up to 5 tool steps, all scoped to the authenticated user.
  */
 
 import { streamText, stepCountIs, convertToModelMessages } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { getSearchTools } from "@/lib/search-tools";
+import { DEFAULT_MODEL, getAiSdkClient } from "@/lib/openai";
 
 export const runtime = "nodejs";
 
@@ -54,12 +54,12 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = getAiSdkClient();
 
   const modelMessages = await convertToModelMessages(messages);
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: openai(DEFAULT_MODEL),
     system: SYSTEM_PROMPT,
     messages: modelMessages,
     tools: getSearchTools(session.user.id),

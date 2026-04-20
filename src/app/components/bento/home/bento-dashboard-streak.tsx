@@ -4,47 +4,9 @@ import { activities } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import { currentStreak, dayKey, longestStreak } from "@/lib/streak";
 
 const NEON = "#FF6A00";
-
-function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-}
-
-function prevDayKey(key: string): string {
-  const [y, m, dd] = key.split("-").map(Number);
-  const d = new Date(y, m - 1, dd);
-  d.setDate(d.getDate() - 1);
-  return dayKey(d);
-}
-
-function currentStreak(activeDays: Set<string>): number {
-  let key = dayKey(new Date());
-  // Heute zählt noch nicht als Streak-Bruch — die Serie lebt bis Mitternacht weiter.
-  if (!activeDays.has(key)) key = prevDayKey(key);
-  let count = 0;
-  while (activeDays.has(key)) {
-    count += 1;
-    key = prevDayKey(key);
-  }
-  return count;
-}
-
-function longestStreak(activeDays: Set<string>): number {
-  if (activeDays.size === 0) return 0;
-  const sorted = Array.from(activeDays).sort();
-  let longest = 1;
-  let cur = 1;
-  for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i - 1] === prevDayKey(sorted[i])) {
-      cur += 1;
-      if (cur > longest) longest = cur;
-    } else {
-      cur = 1;
-    }
-  }
-  return longest;
-}
 
 export async function BentoDashboardStreak({ userId }: { userId: string }) {
   const acts = await db

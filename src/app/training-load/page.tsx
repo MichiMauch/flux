@@ -13,6 +13,8 @@ import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoTile } from "../components/bento/bento-tile";
 import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
 import { TrainingLoadChart } from "../components/training-load-chart";
+import { CoachSuggestionsSection } from "../components/coach/coach-suggestions-section";
+import { WeeklyBriefingSection } from "../components/coach/weekly-briefing-section";
 import { getDailyTrimp } from "@/lib/training-load-query";
 import {
   computeReadiness,
@@ -189,6 +191,16 @@ export default async function TrainingLoadPage({ searchParams }: PageProps) {
               <span style={{ color: "#F97316" }}>orange Bereich</span> belastet.
             </p>
           </BentoTile>
+        </div>
+
+        {/* Weekly Briefing */}
+        <div className="md:col-span-6">
+          <WeeklyBriefingSection userId={session.user.id} />
+        </div>
+
+        {/* Coach */}
+        <div className="md:col-span-6">
+          <CoachSuggestionsSection userId={session.user.id} />
         </div>
       </div>
     </BentoPageShell>
