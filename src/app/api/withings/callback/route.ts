@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { exchangeToken } from "@/lib/withings-client";
+import { exchangeToken, subscribeNotification } from "@/lib/withings-client";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -44,6 +44,16 @@ export async function GET(request: NextRequest) {
         withingsTokenExpiry: new Date(Date.now() + tokenData.expires_in * 1000),
       })
       .where(eq(users.id, session.user.id));
+
+    const secret = process.env.WITHINGS_WEBHOOK_SECRET;
+    if (secret && baseUrl.startsWith("https://")) {
+      const callbackUrl = `${baseUrl}/api/withings/webhook?secret=${encodeURIComponent(secret)}`;
+      try {
+        await subscribeNotification(tokenData.access_token, callbackUrl, 1, "flux-weight");
+      } catch (e) {
+        console.error("Withings webhook subscribe failed:", e);
+      }
+    }
 
     const res = NextResponse.redirect(
       new URL("/health?withings=connected", baseUrl)

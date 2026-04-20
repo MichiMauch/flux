@@ -4,6 +4,7 @@ const WITHINGS_AUTH_URL = "https://account.withings.com/oauth2_user/authorize2";
 const WITHINGS_API_URL = "https://wbsapi.withings.net/v2/oauth2";
 const WITHINGS_SIGNATURE_URL = "https://wbsapi.withings.net/v2/signature";
 const WITHINGS_MEASURE_URL = "https://wbsapi.withings.net/measure";
+const WITHINGS_NOTIFY_URL = "https://wbsapi.withings.net/notify";
 
 function sign(
   params: Record<string, string>,
@@ -216,4 +217,77 @@ export async function getWeightMeasurements(
       bmi: getValue(11), // 11 = BMI
     };
   });
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────
+// appli codes: 1 = new weight measurement, 4 = new activity, 44 = sleep
+
+async function notifyRequest(
+  accessToken: string,
+  params: Record<string, string>
+): Promise<{ status: number; body?: unknown; error?: string }> {
+  const res = await fetch(WITHINGS_NOTIFY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: new URLSearchParams(params),
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function subscribeNotification(
+  accessToken: string,
+  callbackUrl: string,
+  appli: number,
+  comment?: string
+): Promise<void> {
+  const data = await notifyRequest(accessToken, {
+    action: "subscribe",
+    callbackurl: callbackUrl,
+    appli: String(appli),
+    ...(comment ? { comment } : {}),
+  });
+  if (data.status !== 0) {
+    throw new Error(`Withings subscribe failed: ${JSON.stringify(data)}`);
+  }
+}
+
+export async function listNotifications(
+  accessToken: string,
+  appli?: number
+): Promise<
+  { callbackurl: string; appli: number; comment: string | null; expires: number }[]
+> {
+  const data = await notifyRequest(accessToken, {
+    action: "list",
+    ...(appli ? { appli: String(appli) } : {}),
+  });
+  if (data.status !== 0) {
+    throw new Error(`Withings list failed: ${JSON.stringify(data)}`);
+  }
+  const body = data.body as { profiles?: unknown[] } | undefined;
+  return (body?.profiles ?? []) as {
+    callbackurl: string;
+    appli: number;
+    comment: string | null;
+    expires: number;
+  }[];
+}
+
+export async function revokeNotification(
+  accessToken: string,
+  callbackUrl: string,
+  appli: number
+): Promise<void> {
+  const data = await notifyRequest(accessToken, {
+    action: "revoke",
+    callbackurl: callbackUrl,
+    appli: String(appli),
+  });
+  if (data.status !== 0) {
+    throw new Error(`Withings revoke failed: ${JSON.stringify(data)}`);
+  }
 }
