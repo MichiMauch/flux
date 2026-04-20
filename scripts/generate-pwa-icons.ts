@@ -5,10 +5,15 @@ import { join } from "node:path";
 
 const PUBLIC_DIR = join(process.cwd(), "public");
 const SOURCE_SVG = join(PUBLIC_DIR, "icon.svg");
+const BADGE_SVG = join(PUBLIC_DIR, "badge.svg");
 const BG_DARK = "#1C1917";
 
 async function loadSourceSvg(): Promise<string> {
   return readFile(SOURCE_SVG, "utf8");
+}
+
+async function loadBadgeSvg(): Promise<string> {
+  return readFile(BADGE_SVG, "utf8");
 }
 
 function maskableSvg(source: string, size: number): string {
@@ -35,6 +40,12 @@ async function main() {
   await writePng("icon-512.png", 512, source);
   await writePng("icon-maskable-512.png", 512, maskableSvg(source, 512));
   await writePng("apple-touch-icon.png", 180, source);
+
+  // Android notification badge: monochrome silhouette on transparent bg.
+  // Android ignores colors and applies only the alpha channel, so a fully
+  // opaque colored PNG would render as a plain white square.
+  const badge = await loadBadgeSvg();
+  await writePng("badge-96.png", 96, badge);
 }
 
 main().catch((err) => {
