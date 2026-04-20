@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
-import { Activity, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -47,9 +48,15 @@ export function AppTopBar({
           <Menu className="h-4 w-4" />
         </button>
 
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Activity className="h-5 w-5 text-[color:var(--brand)]" />
-          <span>Flux</span>
+        <Link href="/" className="flex items-center" aria-label="Flux Home">
+          <Image
+            src="/icon-192.png"
+            alt="Flux"
+            width={40}
+            height={40}
+            className="h-10 w-10"
+            priority
+          />
         </Link>
 
         <div className="flex-1" />
