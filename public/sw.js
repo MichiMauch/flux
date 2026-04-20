@@ -1,10 +1,12 @@
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE = `flux-${VERSION}`;
 const PRECACHE = [
   "/",
   "/manifest.webmanifest",
   "/icon-192.png",
   "/icon-512.png",
+  "/icon-maskable-512.png",
+  "/apple-touch-icon.png",
   "/badge-96.png",
 ];
 
@@ -66,7 +68,7 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Flux";
   const options = {
     body: data.body || "",
-    icon: data.icon || "/icon-192.png?v=3",
+    icon: data.icon || "/icon-192.png?v=4",
     badge: "/badge-96.png",
     data: { url: data.url || "/" },
     tag: data.tag,
