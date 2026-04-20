@@ -1,37 +1,40 @@
 import sharp from "sharp";
+import { readFile } from "node:fs/promises";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 const PUBLIC_DIR = join(process.cwd(), "public");
-const BRAND = "#FF5B3A";
+const SOURCE_SVG = join(PUBLIC_DIR, "icon.svg");
 const BG_DARK = "#1C1917";
 
-function iconSvg(size: number, opts: { maskable?: boolean } = {}) {
-  const padding = opts.maskable ? Math.round(size * 0.18) : Math.round(size * 0.12);
-  const inner = size - padding * 2;
-  const stroke = Math.max(2, Math.round(inner * 0.09));
-  const radius = opts.maskable ? 0 : Math.round(size * 0.22);
+async function loadSourceSvg(): Promise<string> {
+  return readFile(SOURCE_SVG, "utf8");
+}
+
+function maskableSvg(source: string, size: number): string {
+  // Maskable icons need a safe-zone padding (~10% on each side) and a
+  // full-bleed background so platforms can crop them into any shape.
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="${BG_DARK}"/>
-  <g transform="translate(${padding} ${padding}) scale(${inner / 24})" fill="none" stroke="${BRAND}" stroke-width="${(stroke / inner) * 24}" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+  <rect width="${size}" height="${size}" fill="${BG_DARK}"/>
+  <g transform="translate(${size * 0.1} ${size * 0.1}) scale(${(size * 0.8) / size})">
+    ${source}
   </g>
 </svg>`;
 }
 
-async function writePng(name: string, size: number, maskable = false) {
-  const svg = Buffer.from(iconSvg(size, { maskable }));
-  await sharp(svg).png().toFile(join(PUBLIC_DIR, name));
+async function writePng(name: string, size: number, svg: string) {
+  await sharp(Buffer.from(svg)).resize(size, size).png().toFile(join(PUBLIC_DIR, name));
   console.log(`wrote public/${name}`);
 }
 
 async function main() {
   await mkdir(PUBLIC_DIR, { recursive: true });
-  await writePng("icon-192.png", 192);
-  await writePng("icon-512.png", 512);
-  await writePng("icon-maskable-512.png", 512, true);
-  await writePng("apple-touch-icon.png", 180);
+  const source = await loadSourceSvg();
+  await writePng("icon-192.png", 192, source);
+  await writePng("icon-512.png", 512, source);
+  await writePng("icon-maskable-512.png", 512, maskableSvg(source, 512));
+  await writePng("apple-touch-icon.png", 180, source);
 }
 
 main().catch((err) => {
