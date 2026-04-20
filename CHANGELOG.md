@@ -3,6 +3,13 @@
 Alle nennenswerten Änderungen an Flux werden hier dokumentiert.
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionierung: [SemVer](https://semver.org).
 
+## [0.3.0] - 2026-04-20
+
+### Added
+
+- **push:** web push notifications for activities, trophies, step goal
+- **branding:** swap PWA icons + favicon to training-schedule motif
+
 ## [0.2.1] - 2026-04-19
 
 ### Fixed
