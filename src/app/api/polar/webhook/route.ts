@@ -7,10 +7,29 @@ import { db } from "@/lib/db";
 import { users, activities, deletedPolarActivities } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { evaluateTrophies } from "@/lib/trophies-server";
+import { TROPHIES } from "@/lib/trophies";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
+import { sendPushToUser } from "@/lib/push";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+
+function formatActivityPush(a: {
+  name: string;
+  distance: number | null;
+  durationSec: number;
+}): string {
+  const parts: string[] = [];
+  if (a.distance != null && a.distance > 0) {
+    parts.push(`${(a.distance / 1000).toFixed(1)} km`);
+  }
+  if (a.durationSec > 0) {
+    const h = Math.floor(a.durationSec / 3600);
+    const m = Math.round((a.durationSec % 3600) / 60);
+    parts.push(h > 0 ? `${h} h ${m} min` : `${m} min`);
+  }
+  return parts.length ? `${a.name} · ${parts.join(" · ")}` : a.name;
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -150,40 +169,59 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
       fallbackTitle: fallbackName,
     });
 
-    await db.insert(activities).values({
-      polarId: exercise.id,
-      userId: user.id,
-      name: aiName,
-      type: normalizedType,
-      startTime,
-      duration: durationSeconds,
-      movingTime: fitSession?.movingTime ?? null,
-      distance: exercise.distance,
-      calories: exercise.calories,
-      avgHeartRate: avgHr,
-      maxHeartRate: maxHr,
-      ascent: fitSession?.totalAscent ?? null,
-      descent: fitSession?.totalDescent ?? null,
-      routeData,
-      heartRateData,
-      speedData,
-      minAltitude: fitSession?.minAltitude ?? null,
-      maxAltitude: fitSession?.maxAltitude ?? null,
-      avgCadence: fitSession?.avgCadence ?? null,
-      maxCadence: fitSession?.maxCadence ?? null,
-      totalSteps: fitSession?.totalSteps ?? null,
-      avgSpeed: fitSession?.avgSpeed ?? null,
-      maxSpeed: fitSession?.maxSpeed ?? null,
-      fatPercentage: exercise.fat_percentage ?? null,
-      carbPercentage: exercise.carbohydrate_percentage ?? null,
-      proteinPercentage: exercise.protein_percentage ?? null,
-      cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
-      cardioLoadInterpretation: exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
-      trimp,
-      device: exercise.device ?? null,
-      fitFilePath,
-    });
+    const [inserted] = await db
+      .insert(activities)
+      .values({
+        polarId: exercise.id,
+        userId: user.id,
+        name: aiName,
+        type: normalizedType,
+        startTime,
+        duration: durationSeconds,
+        movingTime: fitSession?.movingTime ?? null,
+        distance: exercise.distance,
+        calories: exercise.calories,
+        avgHeartRate: avgHr,
+        maxHeartRate: maxHr,
+        ascent: fitSession?.totalAscent ?? null,
+        descent: fitSession?.totalDescent ?? null,
+        routeData,
+        heartRateData,
+        speedData,
+        minAltitude: fitSession?.minAltitude ?? null,
+        maxAltitude: fitSession?.maxAltitude ?? null,
+        avgCadence: fitSession?.avgCadence ?? null,
+        maxCadence: fitSession?.maxCadence ?? null,
+        totalSteps: fitSession?.totalSteps ?? null,
+        avgSpeed: fitSession?.avgSpeed ?? null,
+        maxSpeed: fitSession?.maxSpeed ?? null,
+        fatPercentage: exercise.fat_percentage ?? null,
+        carbPercentage: exercise.carbohydrate_percentage ?? null,
+        proteinPercentage: exercise.protein_percentage ?? null,
+        cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
+        cardioLoadInterpretation: exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
+        trimp,
+        device: exercise.device ?? null,
+        fitFilePath,
+      })
+      .returning({ id: activities.id });
+
     synced++;
+
+    try {
+      await sendPushToUser(user.id, {
+        title: "Neue Aktivität",
+        body: formatActivityPush({
+          name: aiName,
+          distance: exercise.distance ?? null,
+          durationSec: durationSeconds,
+        }),
+        url: inserted ? `/activity/${inserted.id}` : "/activities",
+        tag: `activity-${exercise.id}`,
+      });
+    } catch (e) {
+      console.error("[push] activity notification failed:", e);
+    }
   }
 
   if (synced > 0) {
@@ -193,6 +231,20 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
         console.log(
           `Unlocked trophies for user ${user.name}: ${unlocked.join(", ")}`
         );
+        for (const code of unlocked) {
+          const def = TROPHIES.find((t) => t.code === code);
+          if (!def) continue;
+          try {
+            await sendPushToUser(user.id, {
+              title: "Trophy freigeschaltet",
+              body: `${def.title} — ${def.description}`,
+              url: "/trophies",
+              tag: `trophy-${code}`,
+            });
+          } catch (e) {
+            console.error("[push] trophy notification failed:", e);
+          }
+        }
       }
     } catch (e) {
       console.error("Trophy evaluation error:", e);

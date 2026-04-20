@@ -11,6 +11,13 @@ import {
   parseIsoDuration,
   type PolarDailyActivity,
 } from "@/lib/polar-client";
+import { sendPushToUser } from "@/lib/push";
+
+const STEP_GOAL = 10_000;
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export async function POST() {
   const session = await auth();
@@ -128,5 +135,24 @@ export async function upsertDailyActivity(
       .where(eq(dailyActivity.id, existing.id));
   } else {
     await db.insert(dailyActivity).values(values);
+  }
+
+  const newlyReached =
+    date === todayIso() &&
+    stepsTotal != null &&
+    stepsTotal >= STEP_GOAL &&
+    (existing?.steps ?? 0) < STEP_GOAL;
+
+  if (newlyReached) {
+    try {
+      await sendPushToUser(userId, {
+        title: "Schrittziel erreicht",
+        body: `${stepsTotal!.toLocaleString("de-CH")} Schritte heute — weiter so!`,
+        url: "/daily",
+        tag: `steps-${date}`,
+      });
+    } catch (e) {
+      console.error("[push] step goal notification failed:", e);
+    }
   }
 }

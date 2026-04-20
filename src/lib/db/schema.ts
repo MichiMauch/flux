@@ -317,6 +317,23 @@ export const nightlyRecharge = pgTable("nightly_recharge", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ── Push Subscriptions (Web Push / VAPID) ─────────────────────────────────
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+});
+
 // ── Blood Pressure (from blood-pressure-tracker) ───────────────────────────
 
 export const bloodPressureSessions = pgTable("blood_pressure_sessions", {

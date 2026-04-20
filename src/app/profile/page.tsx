@@ -5,6 +5,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { ProfileForm } from "./profile-form";
 import { PortraitUpload } from "./portrait-upload";
+import { PushNotificationsToggle } from "./push-notifications-toggle";
 import { computeLevel } from "@/lib/trophies-server";
 import { formatXp } from "@/lib/trophies";
 import { Trophy } from "lucide-react";
@@ -78,6 +79,12 @@ export default async function ProfilePage() {
                 anaerobicThreshold: user.anaerobicThreshold ?? null,
               }}
             />
+          </BentoTile>
+        </div>
+
+        <div className="md:col-span-6">
+          <BentoTile label="Benachrichtigungen" title="Push-Benachrichtigungen">
+            <PushNotificationsToggle />
           </BentoTile>
         </div>
       </div>
