@@ -126,7 +126,7 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
           />
           <Stat
             icon={<Moon />}
-            label="Inaktivitätsstempel"
+            label="Inaktivität"
             value={inactivity.length > 0 ? String(inactivity.length) : "–"}
           />
         </div>
