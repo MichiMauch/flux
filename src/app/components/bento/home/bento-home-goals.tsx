@@ -58,7 +58,7 @@ export async function BentoHomeGoals({ userId }: { userId: string }) {
           Alle →
         </Link>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {visible.map(({ goal, progress }, i) => {
           const title = goal.title ?? defaultTitle(goal);
           const typeLabel = goal.activityType
