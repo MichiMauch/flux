@@ -35,8 +35,8 @@ export function WeightChart({ data }: WeightChartProps) {
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
-          width={35}
-          tickFormatter={(v) => `${v}`}
+          width={42}
+          tickFormatter={(v) => Number(v).toFixed(1)}
         />
         <Tooltip
           contentStyle={{ fontSize: 12, borderRadius: 8 }}
