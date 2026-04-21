@@ -48,7 +48,7 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
   return (
     <div className="rounded-lg border border-[#2a2a2a] bg-black/40 overflow-hidden">
       {/* Weekday header */}
-      <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.6fr)] border-b border-[#2a2a2a] bg-black/60">
+      <div className="grid grid-cols-7 sm:grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.6fr)] border-b border-[#2a2a2a] bg-black/60">
         {WEEKDAYS.map((w) => (
           <div
             key={w}
@@ -57,31 +57,33 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
             {w}
           </div>
         ))}
-        <div className="text-center text-[10px] font-bold uppercase tracking-[0.18em] text-[#FF6A00] py-2 border-l border-[#2a2a2a]">
+        <div className="hidden sm:block text-center text-[10px] font-bold uppercase tracking-[0.18em] text-[#FF6A00] py-2 border-l border-[#2a2a2a]">
           Σ Woche
         </div>
       </div>
 
-      {/* Days */}
-      <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.6fr)]">
-        {weeks.map((days, wIdx) => {
-          const isLastRow = wIdx === WEEKS - 1;
-          let count = 0;
-          let distanceKm = 0;
-          let durationSec = 0;
-          for (const d of days) {
-            const entries = byDay[dayKey(d)] ?? [];
-            for (const e of entries) {
-              count += 1;
-              distanceKm += e.distanceKm ?? 0;
-              durationSec += e.durationSec ?? 0;
-            }
+      {/* Days — pro Woche eigener Grid, damit die Σ-Spalte auf schmalen
+          Viewports unter die 7 Tage als Bar rutschen kann statt den
+          Kalender horizontal zu sprengen. */}
+      {weeks.map((days, wIdx) => {
+        const isLastRow = wIdx === WEEKS - 1;
+        let count = 0;
+        let distanceKm = 0;
+        let durationSec = 0;
+        for (const d of days) {
+          const entries = byDay[dayKey(d)] ?? [];
+          for (const e of entries) {
+            count += 1;
+            distanceKm += e.distanceKm ?? 0;
+            durationSec += e.durationSec ?? 0;
           }
-          const dur = durationSec > 0 ? formatDurationHmSplit(durationSec) : null;
+        }
+        const dur = durationSec > 0 ? formatDurationHmSplit(durationSec) : null;
 
-          return (
-            <div key={wIdx} className="contents">
-              {days.map((d, i) => {
+        return (
+          <div key={wIdx}>
+            <div className="grid grid-cols-7 sm:grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.6fr)]">
+              {days.map((d) => {
                 const key = dayKey(d);
                 const entries = byDay[key] ?? [];
                 const inMonth = d.getMonth() === month;
@@ -146,9 +148,9 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                 );
               })}
 
-              {/* Weekly totals column */}
+              {/* Weekly totals — Desktop: als 8. Spalte rechts */}
               <div
-                className={`min-h-[84px] sm:min-h-[104px] px-3 py-2 flex flex-col justify-center gap-2 bg-black/60 ${
+                className={`hidden sm:flex min-h-[84px] sm:min-h-[104px] px-3 py-2 flex-col justify-center gap-2 bg-black/60 ${
                   isLastRow ? "" : "border-b border-[#2a2a2a]"
                 }`}
               >
@@ -173,9 +175,34 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                 )}
               </div>
             </div>
-          );
-        })}
-      </div>
+
+            {/* Weekly totals — Mobile: als horizontaler Summen-Bar unter der
+                Wochen-Zeile, nur wenn es überhaupt Aktivitäten gab. */}
+            {count > 0 && (
+              <div
+                className={`sm:hidden flex items-baseline justify-end gap-4 px-3 py-1.5 bg-black/60 ${
+                  isLastRow ? "" : "border-b border-[#2a2a2a]"
+                }`}
+              >
+                <span
+                  className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.18em] text-[#FF6A00] mr-auto`}
+                >
+                  Σ Woche
+                </span>
+                <SumStat value={String(count)} unit="Akt." />
+                <SumStat
+                  value={distanceKm > 0 ? distanceKm.toFixed(1) : "-"}
+                  unit="km"
+                />
+                <SumStat
+                  value={dur ? dur.value : "-"}
+                  unit={dur ? dur.unit : ""}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
