@@ -99,12 +99,23 @@ export function ActivitiesTimelineRibbon({
 
   return (
     <div
-      className="relative border border-[#2a2a2a] bg-[#0a0a0a] rounded-lg"
+      className="relative border border-[#2a2a2a] bg-[#0a0a0a] rounded-lg overflow-hidden"
       style={{
         backgroundImage:
           "linear-gradient(90deg, transparent 0%, rgba(255,106,0,0.02) 50%, transparent 100%)",
       }}
     >
+      {/* Fade-Gradients zeigen an, dass die Chip-Leiste horizontal scrollt —
+          sonst sieht man die angeschnittenen Monats-Chips am Rand nicht als
+          Overflow-Hinweis. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 w-8 z-10 bg-gradient-to-r from-[#0a0a0a] to-transparent"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-8 z-10 bg-gradient-to-l from-[#0a0a0a] to-transparent"
+      />
       <div
         ref={scrollerRef}
         className="flex gap-1 overflow-x-auto px-2 py-2 scrollbar-none"
