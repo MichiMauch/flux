@@ -61,7 +61,10 @@ function fmtHours(sec: number | null | undefined): string {
   if (sec == null) return "–";
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  return `${h}h ${m.toString().padStart(2, "0")}m`;
+  // Format wie auf Aktivitäts-Detailseite: "5:07 h" / "30 min" — Unit wird
+  // vom LedValue-Parser als txt-Token erkannt und orange gerendert.
+  if (h > 0) return `${h}:${m.toString().padStart(2, "0")} h`;
+  return `${m} min`;
 }
 
 function fmtTime(d: Date | null | undefined): string {
@@ -145,7 +148,7 @@ export default async function SleepPage({
       className="rounded-lg border border-[#2a2a2a] bg-black/40 p-3 text-center flex flex-col items-center gap-1.5"
     >
       <div style={{ fontSize: "22px" }}>
-        <LedValue value={value} />
+        <LedValue value={value} textColor="#FF6A00" />
       </div>
       <div
         className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3]`}
