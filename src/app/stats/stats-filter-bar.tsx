@@ -63,27 +63,27 @@ export function StatsFilterBar({
             />
           ))}
         </div>
-        {availableYears.length > 0 && (
-          <>
-            <span className="ml-2 text-[9px] font-bold uppercase tracking-[0.22em] text-[#a3a3a3]">
-              Jahr
-            </span>
-            <div className="flex flex-wrap gap-1">
-              {availableYears.map((y) => {
-                const value: TimeRange = `year:${y}`;
-                return (
-                  <Chip
-                    key={y}
-                    href={buildHref(value, sport)}
-                    active={range === value}
-                    label={String(y)}
-                  />
-                );
-              })}
-            </div>
-          </>
-        )}
       </div>
+      {availableYears.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#a3a3a3]">
+            Jahr
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {availableYears.map((y) => {
+              const value: TimeRange = `year:${y}`;
+              return (
+                <Chip
+                  key={y}
+                  href={buildHref(value, sport)}
+                  active={range === value}
+                  label={String(y)}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#a3a3a3]">
