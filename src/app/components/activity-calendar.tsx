@@ -88,62 +88,90 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                 const entries = byDay[key] ?? [];
                 const inMonth = d.getMonth() === month;
                 const isToday = d.getTime() === today.getTime();
-                return (
-                  <div
-                    key={key}
-                    className={`min-h-[84px] sm:min-h-[104px] p-1.5 border-r border-[#2a2a2a] flex flex-col gap-1 ${
-                      isLastRow ? "" : "border-b"
-                    } ${inMonth ? "bg-[#0f0f0f]" : "bg-black/80"}`}
-                  >
-                    <div
-                      className={`text-[11px] font-semibold tabular-nums leading-none ${
-                        !inMonth
-                          ? "text-[#5a5149]"
-                          : isToday
-                            ? "text-[#FF6A00]"
-                            : "text-white"
-                      }`}
-                    >
-                      {isToday ? (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#FF6A00] text-black font-bold">
-                          {d.getDate()}
-                        </span>
-                      ) : (
-                        d.getDate()
-                      )}
-                    </div>
 
-                    <div className="flex flex-col gap-1 min-w-0">
-                      {entries.map((e) => {
-                        const color = activityTypeColor(e.type);
-                        return (
+                const cellClasses = `min-h-[84px] sm:min-h-[104px] p-1.5 border-r border-[#2a2a2a] flex flex-col gap-1 ${
+                  isLastRow ? "" : "border-b"
+                } ${inMonth ? "bg-[#0f0f0f]" : "bg-black/80"}`;
+
+                const dayNumber = (
+                  <div
+                    className={`text-[11px] font-semibold tabular-nums leading-none ${
+                      !inMonth
+                        ? "text-[#5a5149]"
+                        : isToday
+                          ? "text-[#FF6A00]"
+                          : "text-white"
+                    }`}
+                  >
+                    {isToday ? (
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#FF6A00] text-black font-bold">
+                        {d.getDate()}
+                      </span>
+                    ) : (
+                      d.getDate()
+                    )}
+                  </div>
+                );
+
+                const renderEntryContent = (e: CalendarEntry) => {
+                  const color = activityTypeColor(e.type);
+                  return (
+                    <>
+                      <span
+                        className="w-1 h-4 rounded-sm flex-shrink-0"
+                        style={{ background: color }}
+                      />
+                      <span className="flex-shrink-0 w-6 h-6 -ml-0.5">
+                        <ActivityLottie
+                          activityType={e.type}
+                          activityName={e.name}
+                          size={24}
+                          tint={color}
+                        />
+                      </span>
+                      {e.distanceKm != null && e.distanceKm > 0 && (
+                        <span className="hidden sm:inline text-[10px] font-semibold tabular-nums truncate text-white">
+                          {e.distanceKm.toFixed(1)}
+                          <span className="text-[#9ca3af] font-normal ml-0.5">km</span>
+                        </span>
+                      )}
+                    </>
+                  );
+                };
+
+                // Einzige Aktivität → ganze Zelle ist der Link (Tap-Area ≥44×44)
+                if (entries.length === 1) {
+                  const e = entries[0];
+                  return (
+                    <Link
+                      key={key}
+                      href={`/activity/${e.id}`}
+                      className={`${cellClasses} hover:bg-black/40 transition-colors`}
+                    >
+                      {dayNumber}
+                      <div className="flex items-center gap-1 min-w-0">
+                        {renderEntryContent(e)}
+                      </div>
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div key={key} className={cellClasses}>
+                    {dayNumber}
+                    {entries.length > 0 && (
+                      <div className="flex flex-col gap-1 min-w-0">
+                        {entries.map((e) => (
                           <Link
                             key={e.id}
                             href={`/activity/${e.id}`}
                             className="flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-black/60 min-w-0"
                           >
-                            <span
-                              className="w-1 h-4 rounded-sm flex-shrink-0"
-                              style={{ background: color }}
-                            />
-                            <span className="flex-shrink-0 w-6 h-6 -ml-0.5">
-                              <ActivityLottie
-                                activityType={e.type}
-                                activityName={e.name}
-                                size={24}
-                                tint={color}
-                              />
-                            </span>
-                            {e.distanceKm != null && e.distanceKm > 0 && (
-                              <span className="hidden sm:inline text-[10px] font-semibold tabular-nums truncate text-white">
-                                {e.distanceKm.toFixed(1)}
-                                <span className="text-[#9ca3af] font-normal ml-0.5">km</span>
-                              </span>
-                            )}
+                            {renderEntryContent(e)}
                           </Link>
-                        );
-                      })}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
