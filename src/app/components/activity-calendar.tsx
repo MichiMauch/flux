@@ -135,7 +135,7 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                               />
                             </span>
                             {e.distanceKm != null && e.distanceKm > 0 && (
-                              <span className="text-[10px] font-semibold tabular-nums truncate text-white">
+                              <span className="hidden sm:inline text-[10px] font-semibold tabular-nums truncate text-white">
                                 {e.distanceKm.toFixed(1)}
                                 <span className="text-[#9ca3af] font-normal ml-0.5">km</span>
                               </span>
