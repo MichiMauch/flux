@@ -165,36 +165,31 @@ export default async function SleepPage({
       <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:auto-rows-min md:[grid-auto-flow:row_dense]">
         {/* Datum + Nav */}
         <div className="md:col-span-6">
-          <BentoTile
-            label="Nacht"
-            title={formatNight(date)}
-            right={
-              <div className="flex items-center gap-2">
+          <BentoTile label="Nacht" title={formatNight(date)}>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Link
+                href={`/sleep?date=${prevDate}`}
+                className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                {formatLongDate(prevDate).split(",")[0]}
+              </Link>
+              {!isToday && (
                 <Link
-                  href={`/sleep?date=${prevDate}`}
-                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
+                  href="/sleep"
+                  className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#FF6A00]/40 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#FF6A00] hover:bg-[#FF6A00]/10 transition-colors`}
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  {formatLongDate(prevDate).split(",")[0]}
+                  Heute
                 </Link>
-                {!isToday && (
-                  <Link
-                    href="/sleep"
-                    className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#FF6A00]/40 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#FF6A00] hover:bg-[#FF6A00]/10 transition-colors`}
-                  >
-                    Heute
-                  </Link>
-                )}
-                <Link
-                  href={`/sleep?date=${nextDate}`}
-                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
-                >
-                  {formatLongDate(nextDate).split(",")[0]}
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            }
-          >
+              )}
+              <Link
+                href={`/sleep?date=${nextDate}`}
+                className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9ca3af] hover:text-white hover:border-[#4a4a4a] transition-colors`}
+              >
+                {formatLongDate(nextDate).split(",")[0]}
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
             {!sleep && !night && (
               <div className="rounded-lg border border-dashed border-[#2a2a2a] bg-black/40 p-10 text-center">
                 <p className="font-semibold text-white">
