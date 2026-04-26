@@ -69,7 +69,11 @@ function fmtHours(sec: number | null | undefined): string {
 
 function fmtTime(d: Date | null | undefined): string {
   if (!d) return "–";
-  return d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("de-CH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Zurich",
+  });
 }
 
 function pct(part: number | null, total: number | null): string {
