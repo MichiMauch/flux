@@ -46,6 +46,12 @@ next-env.d.ts
 # mobile-audit runs
 /.mobile-audit/
 /mobile-audit.config.json
+/auth.json
 
 # claude code
 /.claude/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

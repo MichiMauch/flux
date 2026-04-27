@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "flux",
+  "project_id": "433ffd0c-c51c-4321-b15b-dfac0f10df9c"
+}
