@@ -106,7 +106,17 @@ export function BentoRouteInteractive({
   const MAP_HEIGHT = 520;
 
   return (
-    <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] overflow-hidden">
+    <div
+      className="rounded-xl border overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(135deg, #0f0f0f 0%, color-mix(in srgb, var(--activity-color, #FF6A00) 10%, #0f0f0f) 45%, color-mix(in srgb, var(--activity-color, #FF6A00) 22%, #0f0f0f) 100%)",
+        borderColor:
+          "color-mix(in srgb, var(--activity-color, #FF6A00) 40%, #2a2a2a)",
+        boxShadow:
+          "0 0 24px color-mix(in srgb, var(--activity-color, #FF6A00) 18%, transparent)",
+      }}
+    >
       <div className="grid md:grid-cols-[200px_1fr]">
         <aside
           className="border-b md:border-b-0 md:border-r border-[#2a2a2a] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
