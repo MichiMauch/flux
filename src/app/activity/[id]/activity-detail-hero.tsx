@@ -3,14 +3,15 @@ import { ActivityActionsMenu } from "@/app/components/activity-actions-menu";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
 import { formatDurationHMS } from "@/lib/activity-format";
 import { fmt } from "./helpers";
-import { SevenSegTile, Tile } from "./tiles";
+import { SevenSegTile } from "./tiles";
 
+const NEON = "var(--activity-color, #FF6A00)";
 const TITLE_TEXT_SHADOW =
-  "0 2px 8px rgba(0,0,0,0.45), 0 0 24px color-mix(in srgb, var(--activity-color, #FF6A00) 35%, transparent)";
+  "0 2px 6px rgba(0,0,0,0.55), 0 0 18px color-mix(in srgb, var(--activity-color, #FF6A00) 55%, transparent), 0 0 36px color-mix(in srgb, var(--activity-color, #FF6A00) 30%, transparent)";
 const HERO_BG =
-  "linear-gradient(135deg, color-mix(in srgb, var(--activity-color, #FF6A00) 28%, #0f0f0f) 0%, color-mix(in srgb, var(--activity-color, #FF6A00) 12%, #0f0f0f) 60%, #0f0f0f 100%)";
+  "linear-gradient(135deg, #0f0f0f 0%, color-mix(in srgb, var(--activity-color, #FF6A00) 10%, #0f0f0f) 45%, color-mix(in srgb, var(--activity-color, #FF6A00) 22%, #0f0f0f) 100%)";
 const HERO_BORDER =
-  "color-mix(in srgb, var(--activity-color, #FF6A00) 45%, #2a2a2a)";
+  "color-mix(in srgb, var(--activity-color, #FF6A00) 40%, #2a2a2a)";
 
 interface Props {
   dateLabel: string;
@@ -52,8 +53,7 @@ export function ActivityDetailHero({
         }}
       >
         <div
-          className={`${spaceMono.className} [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] mb-2`}
-          style={{ color: "rgba(255,255,255,0.85)" }}
+          className={`${spaceMono.className} [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] mb-2`}
         >
           Aktivität · {dateLabel}
         </div>
@@ -62,7 +62,7 @@ export function ActivityDetailHero({
           className={`${rajdhani.className} font-bold uppercase leading-[0.95] tracking-[-0.01em] hyphens-auto break-words pr-10`}
           style={{
             fontSize: "clamp(36px, 8vw, 100px)",
-            color: "#ffffff",
+            color: NEON,
             textShadow: TITLE_TEXT_SHADOW,
           }}
         >
@@ -78,7 +78,13 @@ export function ActivityDetailHero({
         )}
       </div>
 
-      <Tile>
+      <div
+        className="relative overflow-hidden rounded-xl border p-4"
+        style={{
+          background: HERO_BG,
+          borderColor: HERO_BORDER,
+        }}
+      >
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
           <SevenSegTile
             icon={<Clock />}
@@ -104,7 +110,7 @@ export function ActivityDetailHero({
             label="Kalorien"
           />
         </div>
-      </Tile>
+      </div>
     </>
   );
 }
