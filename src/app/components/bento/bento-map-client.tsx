@@ -78,7 +78,7 @@ export default function BentoMapClient({
     }
 
     L.tileLayer(
-      `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
+      `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
       {
         maxZoom: 20,
         attribution: "© Mapbox © OpenStreetMap",
