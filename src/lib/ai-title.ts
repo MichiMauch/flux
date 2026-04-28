@@ -145,8 +145,7 @@ export async function generateActivityTitle(
 
     const response = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
-      temperature: 0.7,
-      max_tokens: 40,
+      max_completion_tokens: 200,
       messages: [
         {
           role: "system",
@@ -229,10 +228,7 @@ export function isGenericTitle(name: string, type: string): boolean {
   const upper = trimmed.toUpperCase();
   const typeUpper = type.trim().toUpperCase();
   if (upper === typeUpper) return true;
-  if (upper === "WALKING") return true;
-  if (upper === "HIKING") return true;
-  if (upper === "RUNNING") return true;
-  if (upper === "CYCLING") return true;
+  if (KNOWN_DETAILED_SPORTS.includes(upper)) return true;
   if (upper === "OTHER") return true;
   if (upper === "OTHER_OUTDOOR") return true;
   if (upper === "TRAINING") return true;
