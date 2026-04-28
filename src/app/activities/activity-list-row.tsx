@@ -20,18 +20,19 @@ import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
 import type { ActivityFeedItem } from "./actions";
 import { SportIconPlaceholder } from "./sport-icon-placeholder";
 
-export function ActivityListRow(a: ActivityFeedItem) {
+export function ActivityListRow(
+  a: ActivityFeedItem & { asStatic?: boolean }
+) {
   const color = activityTypeColor(a.type);
   const hasRoute =
     Array.isArray(a.routeData) && (a.routeData as unknown[]).length >= 2;
   const activeDuration = a.movingTime ?? a.duration;
+  const className =
+    "activity-list-row group grid grid-cols-[140px_1fr] md:grid-cols-[220px_1fr] gap-3 md:gap-4 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-2 transition-all";
+  const style = { ["--sport-color" as string]: color } as React.CSSProperties;
 
-  return (
-    <Link
-      href={`/activity/${a.id}`}
-      className="activity-list-row group grid grid-cols-[140px_1fr] md:grid-cols-[220px_1fr] gap-3 md:gap-4 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-2 transition-all"
-      style={{ ["--sport-color" as string]: color } as React.CSSProperties}
-    >
+  const inner = (
+    <>
       <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-[#1f1f1f] bg-[#050505]">
         {hasRoute ? (
           <RouteMapStatic
@@ -106,6 +107,20 @@ export function ActivityListRow(a: ActivityFeedItem) {
           )}
         </div>
       </div>
+    </>
+  );
+
+  if (a.asStatic) {
+    return (
+      <div className={className} style={style}>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/activity/${a.id}`} className={className} style={style}>
+      {inner}
     </Link>
   );
 }

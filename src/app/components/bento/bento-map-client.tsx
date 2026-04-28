@@ -47,6 +47,36 @@ export default function BentoMapClient({
     });
     mapRef.current = map;
 
+    // Mobile: 1-finger swipe scrolls the page, only 2 fingers pan/zoom the map
+    let cleanupTouch: (() => void) | null = null;
+    if (L.Browser.mobile) {
+      const container = containerRef.current;
+      container.style.touchAction = "pan-y";
+      map.dragging.disable();
+      (map as L.Map & { tap?: { disable: () => void } }).tap?.disable();
+
+      const onTouchStart = (e: TouchEvent) => {
+        if (e.touches.length >= 2) {
+          map.dragging.enable();
+          container.style.touchAction = "none";
+        }
+      };
+      const onTouchEnd = (e: TouchEvent) => {
+        if (e.touches.length < 2) {
+          map.dragging.disable();
+          container.style.touchAction = "pan-y";
+        }
+      };
+      container.addEventListener("touchstart", onTouchStart, { passive: true });
+      container.addEventListener("touchend", onTouchEnd, { passive: true });
+      container.addEventListener("touchcancel", onTouchEnd, { passive: true });
+      cleanupTouch = () => {
+        container.removeEventListener("touchstart", onTouchStart);
+        container.removeEventListener("touchend", onTouchEnd);
+        container.removeEventListener("touchcancel", onTouchEnd);
+      };
+    }
+
     L.tileLayer(
       `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
       {
@@ -95,6 +125,7 @@ export default function BentoMapClient({
     map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
 
     return () => {
+      cleanupTouch?.();
       map.remove();
       mapRef.current = null;
     };
