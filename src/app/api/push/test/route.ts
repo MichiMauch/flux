@@ -13,6 +13,7 @@ export async function POST() {
     body: "Test-Benachrichtigung — alles funktioniert.",
     url: "/",
     tag: "test",
+    kind: "test",
   });
 
   return NextResponse.json({ ok: true });

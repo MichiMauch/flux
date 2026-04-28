@@ -15,6 +15,7 @@ import { LogoutMenuItem } from "../logout-menu-item";
 import { NavLottie } from "./nav-lottie";
 import { DropdownSyncItem } from "./dropdown-sync-item";
 import { DropdownProfileItem } from "./dropdown-profile-item";
+import { NotificationBell, type NotificationItem } from "./notification-bell";
 
 interface AppTopBarProps {
   userName: string;
@@ -22,6 +23,8 @@ interface AppTopBarProps {
   portraitUrl: string | null;
   initials: string;
   logoutAction: () => void;
+  initialNotifications: NotificationItem[];
+  initialUnreadNotifications: number;
   onToggleSidebar: () => void;
   onOpenSearch: () => void;
 }
@@ -32,6 +35,8 @@ export function AppTopBar({
   portraitUrl,
   initials,
   logoutAction,
+  initialNotifications,
+  initialUnreadNotifications,
   onToggleSidebar,
   onOpenSearch,
 }: AppTopBarProps) {
@@ -71,6 +76,11 @@ export function AppTopBar({
         >
           <NavLottie file="search" size={34} playing={searchHover} />
         </button>
+
+        <NotificationBell
+          initialItems={initialNotifications}
+          initialUnread={initialUnreadNotifications}
+        />
 
         <DropdownMenu>
           <DropdownMenuTrigger className="relative h-8 w-8 rounded-full focus:outline-none">

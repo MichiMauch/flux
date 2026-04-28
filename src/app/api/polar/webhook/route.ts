@@ -225,6 +225,7 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
               body: `${def.title} — ${def.description}`,
               url: "/trophies",
               tag: `trophy-${code}`,
+              kind: "trophy",
             });
           } catch (e) {
             console.error("[push] trophy notification failed:", e);

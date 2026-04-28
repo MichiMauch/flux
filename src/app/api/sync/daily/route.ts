@@ -150,6 +150,7 @@ export async function upsertDailyActivity(
         body: `${stepsTotal!.toLocaleString("de-CH")} Schritte heute — weiter so!`,
         url: "/daily",
         tag: `steps-${date}`,
+        kind: "steps_goal",
       });
     } catch (e) {
       console.error("[push] step goal notification failed:", e);

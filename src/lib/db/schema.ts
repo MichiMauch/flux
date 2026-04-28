@@ -398,3 +398,21 @@ export const weeklyBriefings = pgTable(
   },
   (t) => [uniqueIndex("weekly_briefings_user_iso_week_idx").on(t.userId, t.isoWeek)]
 );
+
+// ── In-App Notifications (mirror of Web-Push pushes) ──────────────────────
+
+export const notifications = pgTable("notifications", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  url: text("url").notNull().default("/"),
+  kind: text("kind"),
+  tag: text("tag"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

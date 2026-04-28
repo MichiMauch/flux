@@ -46,6 +46,7 @@ const pushSender: PushSender = async (userId, record) => {
       body: "Rückblick auf die Woche und dein Plan für die nächsten 7 Tage.",
       url: "/training-load",
       tag: `weekly-briefing-${record.isoWeek}`,
+      kind: "weekly_briefing",
     });
     return true;
   } catch (err) {

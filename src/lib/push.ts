@@ -1,7 +1,7 @@
 import "server-only";
 import webpush, { type PushSubscription as WebPushSubscription } from "web-push";
 import { db } from "@/lib/db";
-import { pushSubscriptions, users } from "@/lib/db/schema";
+import { notifications, pushSubscriptions, users } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 
 let vapidConfigured = false;
@@ -30,12 +30,29 @@ export interface PushPayload {
   url?: string;
   tag?: string;
   icon?: string;
+  kind?: string;
 }
 
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+  // Always persist an in-app notification, even if Web-Push isn't configured
+  // or the user has no subscriptions — the bell in the top bar is the
+  // canonical inbox.
+  try {
+    await db.insert(notifications).values({
+      userId,
+      title: payload.title,
+      body: payload.body,
+      url: payload.url ?? "/",
+      kind: payload.kind ?? null,
+      tag: payload.tag ?? null,
+    });
+  } catch (err) {
+    console.error("[push] failed to persist notification:", err);
+  }
+
   const cfg = configureVapid();
   if (!cfg) {
-    console.warn("[push] VAPID keys not configured — skipping");
+    console.warn("[push] VAPID keys not configured — skipping web-push");
     return;
   }
 
@@ -138,6 +155,7 @@ export async function sendActivityPushes(
     body: `Toll, deine Aktivität „${activity.name}"${suffix} ist in Flux. Schau sie dir direkt an.`,
     url,
     tag,
+    kind: "activity",
   });
 
   if (!uploader.partnerId) return;
@@ -160,5 +178,6 @@ export async function sendActivityPushes(
     body: `${uploaderName} hat folgende Aktivität hochgeladen: „${activity.name}"${suffix}. Schaue sie dir gleich an.`,
     url,
     tag: `${tag}-partner`,
+    kind: "partner_activity",
   });
 }

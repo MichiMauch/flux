@@ -6,6 +6,7 @@ import { AppSidebar } from "./app-sidebar";
 import { AppBottomNav } from "./app-bottom-nav";
 import { MoreSheet } from "./more-sheet";
 import { SearchPanel } from "../search/search-panel";
+import type { NotificationItem } from "./notification-bell";
 
 const STORAGE_KEY = "flux.sidebar";
 
@@ -15,6 +16,8 @@ interface AppShellClientProps {
   portraitUrl: string | null;
   initials: string;
   logoutAction: () => void;
+  initialNotifications: NotificationItem[];
+  initialUnreadNotifications: number;
   children: React.ReactNode;
 }
 
@@ -24,6 +27,8 @@ export function AppShellClient({
   portraitUrl,
   initials,
   logoutAction,
+  initialNotifications,
+  initialUnreadNotifications,
   children,
 }: AppShellClientProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -57,6 +62,8 @@ export function AppShellClient({
         portraitUrl={portraitUrl}
         initials={initials}
         logoutAction={logoutAction}
+        initialNotifications={initialNotifications}
+        initialUnreadNotifications={initialUnreadNotifications}
         onToggleSidebar={toggleSidebar}
         onOpenSearch={() => setSearchOpen(true)}
       />
