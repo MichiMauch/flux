@@ -15,7 +15,6 @@ import type { HrSample, RoutePoint } from "@/lib/splits";
 import { dimColor, km } from "./helpers";
 import { ActivityDetailBody } from "./activity-detail-body";
 import { ActivityDetailHero } from "./activity-detail-hero";
-import { ActivityListRow } from "@/app/activities/activity-list-row";
 
 export default async function ActivityBentoPage({
   params,
@@ -131,21 +130,6 @@ export default async function ActivityBentoPage({
             Klassische Ansicht
           </Link>
         </div>
-
-        <ActivityListRow
-          asStatic
-          id={activity.id}
-          name={activity.name}
-          type={activity.type}
-          startTime={activity.startTime}
-          distance={activity.distance}
-          duration={activity.duration}
-          movingTime={activity.movingTime}
-          avgHeartRate={activity.avgHeartRate}
-          ascent={activity.ascent}
-          routeData={activity.routeData}
-          photoCount={photos.length}
-        />
 
         <ActivityDetailHero
           dateLabel={dateLabel}

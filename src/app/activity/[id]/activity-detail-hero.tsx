@@ -1,15 +1,16 @@
 import { Clock, Flame, Mountain, Ruler } from "lucide-react";
 import { ActivityActionsMenu } from "@/app/components/activity-actions-menu";
-import { rajdhani } from "@/app/components/bento/bento-fonts";
+import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
 import { formatDurationHMS } from "@/lib/activity-format";
 import { fmt } from "./helpers";
-import { SevenSegTile, Tile, TileLabel } from "./tiles";
+import { SevenSegTile, Tile } from "./tiles";
 
-const NEON = "var(--activity-color, #FF6A00)";
-const NEON_ALPHA_66 =
-  "color-mix(in srgb, var(--activity-color, #FF6A00) 40%, transparent)";
-const NEON_ALPHA_33 =
-  "color-mix(in srgb, var(--activity-color, #FF6A00) 20%, transparent)";
+const TITLE_TEXT_SHADOW =
+  "0 2px 8px rgba(0,0,0,0.45), 0 0 24px color-mix(in srgb, var(--activity-color, #FF6A00) 35%, transparent)";
+const HERO_BG =
+  "linear-gradient(135deg, color-mix(in srgb, var(--activity-color, #FF6A00) 28%, #0f0f0f) 0%, color-mix(in srgb, var(--activity-color, #FF6A00) 12%, #0f0f0f) 60%, #0f0f0f 100%)";
+const HERO_BORDER =
+  "color-mix(in srgb, var(--activity-color, #FF6A00) 45%, #2a2a2a)";
 
 interface Props {
   dateLabel: string;
@@ -43,15 +44,26 @@ export function ActivityDetailHero({
 }: Props) {
   return (
     <>
-      <Tile className="relative overflow-hidden">
-        <TileLabel>Aktivität · {dateLabel}</TileLabel>
+      <div
+        className="relative overflow-hidden rounded-xl border p-4"
+        style={{
+          background: HERO_BG,
+          borderColor: HERO_BORDER,
+        }}
+      >
+        <div
+          className={`${spaceMono.className} [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] mb-2`}
+          style={{ color: "rgba(255,255,255,0.85)" }}
+        >
+          Aktivität · {dateLabel}
+        </div>
         <h1
           lang="de"
           className={`${rajdhani.className} font-bold uppercase leading-[0.95] tracking-[-0.01em] hyphens-auto break-words pr-10`}
           style={{
             fontSize: "clamp(36px, 8vw, 100px)",
-            color: NEON,
-            textShadow: `0 0 18px ${NEON_ALPHA_66}, 0 0 36px ${NEON_ALPHA_33}`,
+            color: "#ffffff",
+            textShadow: TITLE_TEXT_SHADOW,
           }}
         >
           {name}
@@ -64,7 +76,7 @@ export function ActivityDetailHero({
             />
           </div>
         )}
-      </Tile>
+      </div>
 
       <Tile>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
