@@ -96,19 +96,6 @@ function uniqueChain(items: (string | null)[]): string[] {
   return out;
 }
 
-function typeLabel(type: string, subType?: string | null): string {
-  const t = `${type} ${subType ?? ""}`.toUpperCase();
-  if (t.includes("ROAD") && (t.includes("CYCL") || t.includes("BIK"))) return "Rennrad";
-  if (t.includes("MOUNTAIN") && (t.includes("CYCL") || t.includes("BIK"))) return "Mountainbike";
-  if (t.includes("CYCL") || t.includes("BIK") || t.includes("RIDE")) return "Velo";
-  if (t.includes("TREK")) return "Wanderung";
-  if (t === "HIKING" || t.includes("HIK")) return "Wanderung";
-  if (t.includes("WALK")) return "Spaziergang";
-  if (t.includes("RUN") || t.includes("JOG")) return "Lauf";
-  if (t.includes("SWIM")) return "Schwimmen";
-  return "Training";
-}
-
 export async function generateActivityTitle(
   ctx: ActivityTitleContext
 ): Promise<string> {
@@ -139,7 +126,6 @@ export async function generateActivityTitle(
     }
 
     const prompt = {
-      typ: typeLabel(ctx.type, ctx.subType),
       orte_kette: chain,
       start: startFull,
       ende: loop ? null : endFull,
@@ -168,15 +154,18 @@ export async function generateActivityTitle(
           role: "system",
           content:
             "Du bist ein Titel-Generator für Fitness-Aktivitäten. " +
-            "Erzeuge einen kurzen, einprägsamen deutschen Titel (max 60 Zeichen) basierend auf den JSON-Daten. " +
+            "Erzeuge einen kurzen deutschen Titel (max 60 Zeichen), der ausschliesslich auf Ortsnamen basiert. " +
+            "Die Sportart wird in der UI über Icon/Farbe angezeigt — daher KEINE Sportart im Titel nennen. " +
             "Regeln: " +
-            "(1) Verwende vorrangig die Ortsnamen aus 'orte_kette'. " +
-            "(2) Bei Point-to-Point oder mehreren Orten: baue eine Kette 'Ort1–Ort2–Ort3' (mit Halbgeviertstrich –, max 4 Orte, kürze sinnvoll wenn nötig). " +
-            "(3) Bei Loop und nur einem Ort: 'Typ in/durch/um <Ort>'. " +
-            "(4) NIEMALS Tageszeit-Wörter verwenden (kein 'Morgen', 'Mittag', 'Nachmittag', 'Abend', 'Nacht', 'morgendlich', 'abendlich', 'Frühlauf' etc.). " +
-            "(5) Kein Wochentag, kein Datum, keine Anführungszeichen, keine Emojis. " +
-            "(6) Wenn 'orte_kette' leer ist, erlaube generischen Titel ohne Zeitbezug (z. B. 'Lauf ohne GPS'). " +
-            "Beispiele: 'Spaziergang in Muhen' — 'Rennrad-Tour Muhen–Williberg–Reitnau' — 'Wanderung Brienz–Rothorn' — 'Lauf durch Aarau'.",
+            "(1) Verwende ausschliesslich Ortsnamen aus 'orte_kette'. " +
+            "(2) Bei mehreren Orten: Kette 'Ort1–Ort2–Ort3' mit Halbgeviertstrich – (max 4 Orte, kürze sinnvoll). " +
+            "(3) Bei Loop und nur einem Ort: 'Runde um <Ort>' oder einfach '<Ort>'. " +
+            "(4) Bei Point-to-Point: 'Start–Ziel'. " +
+            "(5) NIEMALS Sportart-Wörter wie 'Velo', 'Rennrad', 'Mountainbike', 'Lauf', 'Wanderung', 'Spaziergang', 'Schwimmen', 'Tour', 'Training', 'Runde' (ausser Regel 3). " +
+            "(6) NIEMALS Tageszeit-Wörter ('Morgen', 'Mittag', 'Abend', 'Nacht', 'morgendlich' etc.). " +
+            "(7) Kein Wochentag, kein Datum, keine Anführungszeichen, keine Emojis. " +
+            "(8) Wenn 'orte_kette' leer ist: gib einen leeren String zurück. " +
+            "Beispiele: 'Muhen–Williberg–Reitnau' — 'Brienz–Rothorn' — 'Runde um Muhen' — 'Aarau'.",
         },
         { role: "user", content: JSON.stringify(prompt) },
       ],
