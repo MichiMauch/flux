@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { spaceMono } from "../components/bento/bento-fonts";
+import { SCROLL_TO_MONTH_EVENT } from "./use-infinite-activities";
 
 const NEON = "#FF6A00";
 const DIM = "#a3a3a3";
@@ -41,17 +42,12 @@ export function ActivitiesTimelineRibbon({
   const chipRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   useEffect(() => {
-    const anchors = new Map<string, HTMLElement>();
-    for (const key of months) {
-      const el = document.querySelector<HTMLElement>(
-        `[data-month-anchor="${key}"]`
-      );
-      if (el) anchors.set(key, el);
-    }
-    if (anchors.size === 0) return;
+    if (months.length === 0) return;
 
     const visible = new Set<string>();
-    const obs = new IntersectionObserver(
+    const observed = new WeakSet<Element>();
+
+    const intersect = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
           const key = (e.target as HTMLElement).dataset.monthAnchor;
@@ -66,8 +62,29 @@ export function ActivitiesTimelineRibbon({
       },
       { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
     );
-    for (const el of anchors.values()) obs.observe(el);
-    return () => obs.disconnect();
+
+    // Sections are rendered lazily as the user scrolls (or via jump-to-month),
+    // so re-scan whenever the DOM changes and observe newly added anchors.
+    const scan = () => {
+      for (const key of months) {
+        const el = document.querySelector<HTMLElement>(
+          `[data-month-anchor="${key}"]`
+        );
+        if (el && !observed.has(el)) {
+          observed.add(el);
+          intersect.observe(el);
+        }
+      }
+    };
+    scan();
+
+    const mut = new MutationObserver(scan);
+    mut.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      intersect.disconnect();
+      mut.disconnect();
+    };
   }, [months]);
 
   useEffect(() => {
@@ -90,11 +107,10 @@ export function ActivitiesTimelineRibbon({
   if (months.length === 0) return null;
 
   const handleClick = (key: string) => {
-    const el = document.querySelector<HTMLElement>(
-      `[data-month-anchor="${key}"]`
+    setActive(key);
+    window.dispatchEvent(
+      new CustomEvent(SCROLL_TO_MONTH_EVENT, { detail: key })
     );
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
