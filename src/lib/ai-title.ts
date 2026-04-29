@@ -1,7 +1,19 @@
+import OpenAI from "openai";
 import { reverseGeocode } from "./geocode";
-import { DEFAULT_MODEL, getOpenAIClient } from "./openai";
+
+// Inlined to avoid pulling in `server-only` (which Next.js bundles but tsx
+// scripts can't resolve). Keep model in sync with src/lib/openai.ts.
+const DEFAULT_MODEL = "gpt-5.4-mini";
+let openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
 
 const LOOP_THRESHOLD_M = 200;
+const WAYPOINT_SAMPLES = 6;
 
 export interface RoutePoint {
   lat: number;
@@ -38,40 +50,51 @@ function detectLoop(route: RoutePoint[]): boolean {
   return d < LOOP_THRESHOLD_M;
 }
 
-function farthestPoint(route: RoutePoint[]): RoutePoint | null {
-  if (route.length < 2) return null;
-  const start = route[0];
-  let maxD = 0;
-  let far: RoutePoint | null = null;
-  for (const p of route) {
-    const d = haversine(start, p);
-    if (d > maxD) {
-      maxD = d;
-      far = p;
-    }
+/**
+ * Sample N points evenly distributed by cumulative travel distance, including
+ * first and last points. Returns up to N entries; fewer if route is short.
+ */
+function sampleByDistance(route: RoutePoint[], n: number): RoutePoint[] {
+  if (route.length <= n) return [...route];
+
+  const cum: number[] = [0];
+  for (let i = 1; i < route.length; i++) {
+    cum.push(cum[i - 1] + haversine(route[i - 1], route[i]));
   }
-  return maxD > 500 ? far : null;
+  const total = cum[cum.length - 1];
+  if (total < 100) return [route[0], route[route.length - 1]];
+
+  const out: RoutePoint[] = [];
+  for (let s = 0; s < n; s++) {
+    const target = (s / (n - 1)) * total;
+    // binary search for first index with cum >= target
+    let lo = 0;
+    let hi = cum.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (cum[mid] < target) lo = mid + 1;
+      else hi = mid;
+    }
+    out.push(route[lo]);
+  }
+  return out;
 }
 
-function timeOfDay(date: Date): string {
-  const h = date.getHours();
-  if (h >= 5 && h < 10) return "Morgen";
-  if (h >= 10 && h < 12) return "Vormittag";
-  if (h >= 12 && h < 14) return "Mittag";
-  if (h >= 14 && h < 18) return "Nachmittag";
-  if (h >= 18 && h < 22) return "Abend";
-  return "Nacht";
+/** Strip the ", Region/Country" suffix added by reverseGeocode for chain display. */
+function placeOnly(loc: string | null | undefined): string | null {
+  if (!loc) return null;
+  return loc.split(",")[0].trim();
 }
 
-const WEEKDAYS = [
-  "Sonntag",
-  "Montag",
-  "Dienstag",
-  "Mittwoch",
-  "Donnerstag",
-  "Freitag",
-  "Samstag",
-];
+/** Deduplicate consecutive identical place names. */
+function uniqueChain(items: (string | null)[]): string[] {
+  const out: string[] = [];
+  for (const x of items) {
+    if (!x) continue;
+    if (out.length === 0 || out[out.length - 1] !== x) out.push(x);
+  }
+  return out;
+}
 
 function typeLabel(type: string, subType?: string | null): string {
   const t = `${type} ${subType ?? ""}`.toUpperCase();
@@ -96,34 +119,30 @@ export async function generateActivityTitle(
   }
 
   try {
-    const route = ctx.routeData ?? [];
-    const validRoute = route.filter((p) => p.lat != null && p.lng != null);
+    const route = (ctx.routeData ?? []).filter(
+      (p) => p.lat != null && p.lng != null
+    );
+    const loop = detectLoop(route);
 
-    let startLoc: string | null = null;
-    let endLoc: string | null = null;
-    let farLoc: string | null = null;
-    let loop = false;
+    let chain: string[] = [];
+    let startFull: string | null = null;
+    let endFull: string | null = null;
 
-    if (validRoute.length >= 2) {
-      loop = detectLoop(validRoute);
-      startLoc = await reverseGeocode(validRoute[0].lat, validRoute[0].lng);
-      if (!loop) {
-        const last = validRoute[validRoute.length - 1];
-        endLoc = await reverseGeocode(last.lat, last.lng);
-      }
-      const far = farthestPoint(validRoute);
-      if (far && !loop) {
-        farLoc = await reverseGeocode(far.lat, far.lng);
-      } else if (far && loop) {
-        farLoc = await reverseGeocode(far.lat, far.lng);
-      }
+    if (route.length >= 2) {
+      const samples = sampleByDistance(route, WAYPOINT_SAMPLES);
+      const geocoded = await Promise.all(
+        samples.map((p) => reverseGeocode(p.lat, p.lng))
+      );
+      startFull = geocoded[0];
+      endFull = geocoded[geocoded.length - 1];
+      chain = uniqueChain(geocoded.map(placeOnly));
     }
 
     const prompt = {
       typ: typeLabel(ctx.type, ctx.subType),
-      start: startLoc,
-      ende: loop ? null : endLoc,
-      entferntester_ort: farLoc && farLoc !== startLoc && farLoc !== endLoc ? farLoc : null,
+      orte_kette: chain,
+      start: startFull,
+      ende: loop ? null : endFull,
       ist_loop: loop,
       distanz_km:
         ctx.distanceMeters != null
@@ -137,8 +156,6 @@ export async function generateActivityTitle(
         ctx.ascentMeters != null && ctx.ascentMeters > 0
           ? Math.round(ctx.ascentMeters)
           : null,
-      tageszeit: timeOfDay(ctx.startTime),
-      wochentag: WEEKDAYS[ctx.startTime.getDay()],
     };
 
     const openai = getOpenAIClient();
@@ -150,11 +167,16 @@ export async function generateActivityTitle(
         {
           role: "system",
           content:
-            'Du bist ein kreativer Titel-Generator für Fitness-Aktivitäten. ' +
-            'Erzeuge einen kurzen, einprägsamen deutschen Titel (max 60 Zeichen) basierend auf den JSON-Daten. ' +
-            'Nutze, wenn sinnvoll, Ortsnamen. Bei Loop nur den Startort. Bei Point-to-Point "Start–Ziel". ' +
-            'Keine Anführungszeichen, keine Emojis, kein Datum. ' +
-            'Beispiele: "Spaziergang in Muhen" — "Rennrad-Tour Muhen–Williberg–Reitnau" — "Morgenlauf durch den Wald" — "Abendliche Wanderung auf dem Aargauer Weg".',
+            "Du bist ein Titel-Generator für Fitness-Aktivitäten. " +
+            "Erzeuge einen kurzen, einprägsamen deutschen Titel (max 60 Zeichen) basierend auf den JSON-Daten. " +
+            "Regeln: " +
+            "(1) Verwende vorrangig die Ortsnamen aus 'orte_kette'. " +
+            "(2) Bei Point-to-Point oder mehreren Orten: baue eine Kette 'Ort1–Ort2–Ort3' (mit Halbgeviertstrich –, max 4 Orte, kürze sinnvoll wenn nötig). " +
+            "(3) Bei Loop und nur einem Ort: 'Typ in/durch/um <Ort>'. " +
+            "(4) NIEMALS Tageszeit-Wörter verwenden (kein 'Morgen', 'Mittag', 'Nachmittag', 'Abend', 'Nacht', 'morgendlich', 'abendlich', 'Frühlauf' etc.). " +
+            "(5) Kein Wochentag, kein Datum, keine Anführungszeichen, keine Emojis. " +
+            "(6) Wenn 'orte_kette' leer ist, erlaube generischen Titel ohne Zeitbezug (z. B. 'Lauf ohne GPS'). " +
+            "Beispiele: 'Spaziergang in Muhen' — 'Rennrad-Tour Muhen–Williberg–Reitnau' — 'Wanderung Brienz–Rothorn' — 'Lauf durch Aarau'.",
         },
         { role: "user", content: JSON.stringify(prompt) },
       ],
@@ -169,7 +191,6 @@ export async function generateActivityTitle(
       return ctx.fallbackTitle;
     }
 
-    // Strip surrounding quotes if the model added them
     const cleaned = title.replace(/^["'«»]+|["'«»]+$/g, "").trim();
     if (cleaned.length === 0 || cleaned.length > 80) {
       console.warn("[ai-title] Cleaned title invalid", { raw: title, cleaned });
@@ -215,13 +236,15 @@ export function normalizePolarType(
   const d = (detailed ?? "").toUpperCase().trim();
   if (s && s !== "OTHER") return s;
   if (d && KNOWN_DETAILED_SPORTS.includes(d)) return d;
-  // Fuzzy match on detailed
   if (d.includes("WALK")) return "WALKING";
   if (d.includes("HIK") || d.includes("TREK")) return "HIKING";
   if (d.includes("RUN") || d.includes("JOG")) return "RUNNING";
   if (d.includes("CYCL") || d.includes("BIK")) return "CYCLING";
   return s || "OTHER";
 }
+
+const TIME_OF_DAY_RE =
+  /\b(morgen|mittag|nachmittag|abend|nacht|morgendlich|abendlich|nächtlich|frühlauf|frühtour|abendtour|morgentour|mittagstour|nachmittags|abends|morgens|mittags)\b/i;
 
 export function isGenericTitle(name: string, type: string): boolean {
   const trimmed = name.trim();
@@ -232,9 +255,9 @@ export function isGenericTitle(name: string, type: string): boolean {
   if (upper === "OTHER") return true;
   if (upper === "OTHER_OUTDOOR") return true;
   if (upper === "TRAINING") return true;
-  // Sport-Info-Style wie "CYCLING (road)"
   if (/^[A-Z_]+ \([a-z_]+\)$/.test(trimmed)) return true;
-  // Ältere AI-Fallback-Titel mit "Training"
   if (/training/i.test(trimmed)) return true;
+  // Treat any title with time-of-day phrases as generic so backfill rewrites it.
+  if (TIME_OF_DAY_RE.test(trimmed)) return true;
   return false;
 }
