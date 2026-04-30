@@ -62,7 +62,15 @@ export function usePhotoUpload(activityId: string) {
           });
           if (!res.ok) throw new Error(await res.text());
           const data = await res.json();
-          const uploaded = (data?.uploaded?.[0] ?? null) as UploadedPhoto | null;
+          const uploaded = (data?.uploaded?.[0] ?? null) as
+            | (UploadedPhoto & { diagnostics?: unknown })
+            | null;
+          if (uploaded) {
+            console.info(
+              `[photo-upload] server response for ${file.name}:`,
+              uploaded,
+            );
+          }
           if (uploaded?.id) {
             results.push(uploaded);
             didSucceed = true;

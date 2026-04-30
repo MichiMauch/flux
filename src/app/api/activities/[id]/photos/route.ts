@@ -234,23 +234,28 @@ export async function POST(
       if (!Number.isNaN(d.getTime())) takenAt = d;
     }
 
+    const refToString = (v: unknown) =>
+      typeof v === "string"
+        ? JSON.stringify(v)
+        : v == null
+          ? "null"
+          : typeof v;
     console.info(
-      `[photos POST] ${file.name} (${file.size}B, ${file.type}) — buffer EXIF`,
-      {
-        parsedLat,
-        parsedLng,
-        gpsLat,
-        gpsLng,
-        dmsLat,
-        dmsLng,
-        piexifLat,
-        piexifLng,
-        piexifLatRefRaw,
-        piexifLngRefRaw,
-        chosenLat: lat,
-        chosenLng: lng,
-      },
+      `[photos POST] ${file.name} EXTRACTION: ` +
+        `size=${file.size} ` +
+        `parsedLat=${parsedLat} parsedLng=${parsedLng} ` +
+        `gpsLat=${gpsLat} gpsLng=${gpsLng} ` +
+        `dmsLat=${dmsLat} dmsLng=${dmsLng} ` +
+        `piexifLat=${piexifLat} piexifLng=${piexifLng} ` +
+        `piexifLatRef=${refToString(piexifLatRefRaw)} ` +
+        `piexifLngRef=${refToString(piexifLngRefRaw)} ` +
+        `chosenLat=${lat} chosenLng=${lng}`,
     );
+    if (lat == null && lng == null) {
+      console.warn(
+        `[photos POST] ${file.name} NO_GPS — file appears to have no readable GPS EXIF (mobile browser may have stripped metadata)`,
+      );
+    }
 
     // Client-supplied overrides take precedence (image was re-encoded
     // and EXIF in the buffer is missing/incomplete). Only accept finite
@@ -320,7 +325,38 @@ export async function POST(
       height: meta.height ?? null,
     });
 
-    uploaded.push({ id: photoId, lat, lng, location });
+    uploaded.push({
+      id: photoId,
+      lat,
+      lng,
+      location,
+      // Diagnostics — exposed in the upload response so the client can
+      // surface "no GPS extracted" to the user without server-log access.
+      diagnostics: {
+        parsedLat: Number.isFinite(parsedLat) ? parsedLat : null,
+        parsedLng: Number.isFinite(parsedLng) ? parsedLng : null,
+        gpsLat: Number.isFinite(gpsLat) ? gpsLat : null,
+        gpsLng: Number.isFinite(gpsLng) ? gpsLng : null,
+        dmsLat,
+        dmsLng,
+        piexifLat,
+        piexifLng,
+        piexifLatRef:
+          typeof piexifLatRefRaw === "string"
+            ? piexifLatRefRaw
+            : piexifLatRefRaw == null
+              ? null
+              : typeof piexifLatRefRaw,
+        piexifLngRef:
+          typeof piexifLngRefRaw === "string"
+            ? piexifLngRefRaw
+            : piexifLngRefRaw == null
+              ? null
+              : typeof piexifLngRefRaw,
+        fileSize: file.size,
+        fileType: file.type,
+      },
+    });
   }
 
   return NextResponse.json({ uploaded });
