@@ -9,6 +9,7 @@ import {
 import { BentoElevationChart } from "@/app/components/bento/bento-elevation-chart";
 import { BentoGpxTile } from "@/app/components/bento/bento-gpx-tile";
 import { BentoNotesTile } from "@/app/components/bento/bento-notes-tile";
+import { BentoPhotosTile } from "@/app/components/bento/bento-photos-tile";
 import { BentoRouteInteractive } from "@/app/components/bento/bento-route-interactive";
 import { BentoWeatherTile } from "@/app/components/bento/bento-weather-tile";
 import { HoverProvider } from "@/app/components/bento/hover-context";
@@ -37,7 +38,13 @@ export interface ActivityDetailBodyProps {
   hrZones: HrZone[] | null;
   weather: WeatherData | null;
   notes: string | null;
-  photos: { id: string; lat: number | null; lng: number | null }[];
+  isOwner: boolean;
+  photos: {
+    id: string;
+    lat: number | null;
+    lng: number | null;
+    takenAt: Date | null;
+  }[];
 }
 
 export function ActivityDetailBody({
@@ -58,6 +65,7 @@ export function ActivityDetailBody({
   hrZones,
   weather,
   notes,
+  isOwner,
   photos,
 }: ActivityDetailBodyProps) {
   return (
@@ -89,6 +97,13 @@ export function ActivityDetailBody({
             </Tile>
           )}
           <BentoNotesTile notes={notes} />
+          {(isOwner || photos.length > 0) && (
+            <BentoPhotosTile
+              activityId={activityId}
+              photos={photos}
+              isOwner={isOwner}
+            />
+          )}
           <BentoWeatherTile weather={weather} />
         </div>
 

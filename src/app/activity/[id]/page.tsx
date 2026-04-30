@@ -168,6 +168,7 @@ export default async function ActivityBentoPage({
           hrZones={hrZones ? hrZones.zones : null}
           weather={weather}
           notes={activity.notes}
+          isOwner={isOwner}
           photos={photos}
         />
 

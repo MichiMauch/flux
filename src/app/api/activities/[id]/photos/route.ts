@@ -44,6 +44,24 @@ export async function POST(
   if (files.length === 0) {
     return NextResponse.json({ error: "No files" }, { status: 400 });
   }
+
+  // Optional client-supplied EXIF overrides (preserved when files are
+  // re-encoded client-side and would otherwise lose EXIF tags).
+  type ExifOverride = {
+    lat?: number | null;
+    lng?: number | null;
+    takenAt?: string | null;
+  };
+  const exifRaw = formData.get("exif");
+  let exifOverrides: ExifOverride[] = [];
+  if (typeof exifRaw === "string") {
+    try {
+      const parsed = JSON.parse(exifRaw);
+      if (Array.isArray(parsed)) exifOverrides = parsed;
+    } catch {
+      // ignore malformed override
+    }
+  }
   if (files.length > MAX_PHOTOS_PER_REQUEST) {
     return NextResponse.json(
       { error: `Max ${MAX_PHOTOS_PER_REQUEST} Fotos pro Upload` },
@@ -70,7 +88,8 @@ export async function POST(
 
   const uploaded = [];
 
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     const buffer = Buffer.from(await file.arrayBuffer());
     const photoId = crypto.randomUUID();
 
@@ -89,6 +108,18 @@ export async function POST(
       }
     } catch (e) {
       console.warn("EXIF parse failed:", e);
+    }
+
+    // Client-supplied overrides take precedence (image was re-encoded
+    // and EXIF in the buffer is missing/incomplete).
+    const override = exifOverrides[i];
+    if (override) {
+      if (typeof override.lat === "number") lat = override.lat;
+      if (typeof override.lng === "number") lng = override.lng;
+      if (typeof override.takenAt === "string") {
+        const d = new Date(override.takenAt);
+        if (!Number.isNaN(d.getTime())) takenAt = d;
+      }
     }
 
     // Web-optimized: max 2048px longest side, WebP quality 82

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Plus, X, Trash2, Loader2 } from "lucide-react";
 import { BottomSheet } from "./bottom-sheet";
 import { ACTIVITY_TYPE_OPTIONS } from "@/lib/activity-types";
+import { preparePhoto } from "@/lib/photo-compress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,8 +92,16 @@ export function ActivityEditSheet({
       const tempId = `tmp-${crypto.randomUUID()}`;
       setPhotos((prev) => [...prev, { id: tempId, uploading: true, tempFile: file }]);
       try {
+        const prepared = await preparePhoto(file);
         const fd = new FormData();
-        fd.append("files", file);
+        fd.append("files", prepared.file);
+        if (
+          prepared.exif.lat != null ||
+          prepared.exif.lng != null ||
+          prepared.exif.takenAt != null
+        ) {
+          fd.append("exif", JSON.stringify([prepared.exif]));
+        }
         const res = await fetch(`/api/activities/${activity.id}/photos`, {
           method: "POST",
           body: fd,
