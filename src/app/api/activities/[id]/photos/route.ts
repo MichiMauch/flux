@@ -93,37 +93,60 @@ export async function POST(
     const buffer = Buffer.from(await file.arrayBuffer());
     const photoId = crypto.randomUUID();
 
-    // Extract EXIF GPS + timestamp
+    // Extract EXIF GPS + timestamp — try two strategies for robustness:
+    // (1) full exifr.parse with gps:true returns flattened latitude/longitude
+    // (2) exifr.gps() shortcut, sometimes more reliable across formats.
     let lat: number | null = null;
     let lng: number | null = null;
     let takenAt: Date | null = null;
+
+    type LooseExif = Record<string, unknown> | null | undefined;
+    let parsed: LooseExif = null;
     try {
-      const exif = await exifr.parse(buffer, { gps: true });
-      if (
-        Number.isFinite(exif?.latitude) &&
-        Number.isFinite(exif?.longitude)
-      ) {
-        lat = exif.latitude;
-        lng = exif.longitude;
-      }
-      if (exif?.DateTimeOriginal) {
-        takenAt =
-          exif.DateTimeOriginal instanceof Date
-            ? exif.DateTimeOriginal
-            : new Date(exif.DateTimeOriginal);
-      }
-      console.info(
-        `[photos POST] ${file.name} (${file.size}B, ${file.type}) — buffer EXIF:`,
-        {
-          lat,
-          lng,
-          takenAt: takenAt?.toISOString() ?? null,
-          rawKeys: exif ? Object.keys(exif) : [],
-        },
-      );
+      parsed = (await exifr.parse(buffer, { gps: true })) as LooseExif;
     } catch (e) {
-      console.warn(`[photos POST] ${file.name} — EXIF parse failed:`, e);
+      console.warn(`[photos POST] ${file.name} — exifr.parse failed:`, e);
     }
+
+    let gpsOnly: { latitude?: unknown; longitude?: unknown } | null = null;
+    try {
+      const result = await exifr.gps(buffer);
+      gpsOnly = result as { latitude?: unknown; longitude?: unknown } | null;
+    } catch (e) {
+      console.warn(`[photos POST] ${file.name} — exifr.gps failed:`, e);
+    }
+
+    const parsedLat = parsed?.latitude;
+    const parsedLng = parsed?.longitude;
+    const gpsLat = gpsOnly?.latitude;
+    const gpsLng = gpsOnly?.longitude;
+
+    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
+      lat = parsedLat as number;
+      lng = parsedLng as number;
+    } else if (Number.isFinite(gpsLat) && Number.isFinite(gpsLng)) {
+      lat = gpsLat as number;
+      lng = gpsLng as number;
+    }
+
+    const dto = parsed?.DateTimeOriginal;
+    if (dto instanceof Date) {
+      takenAt = dto;
+    } else if (typeof dto === "string") {
+      const d = new Date(dto);
+      if (!Number.isNaN(d.getTime())) takenAt = d;
+    }
+
+    console.info(
+      `[photos POST] ${file.name} (${file.size}B, ${file.type}) — buffer EXIF`,
+      {
+        parsedLat,
+        parsedLng,
+        gpsLat,
+        gpsLng,
+        rawKeys: parsed ? Object.keys(parsed) : [],
+      },
+    );
 
     // Client-supplied overrides take precedence (image was re-encoded
     // and EXIF in the buffer is missing/incomplete). Only accept finite
