@@ -194,6 +194,8 @@ export async function POST(
     let piexifLng: number | null = null;
     let piexifLatRefRaw: unknown = undefined;
     let piexifLngRefRaw: unknown = undefined;
+    let rawDateTimeOriginal: unknown = undefined;
+    let rawOffsetTimeOriginal: unknown = undefined;
     try {
       const binStr = buffer.toString("binary");
       const exifObj = piexif.load(binStr);
@@ -207,6 +209,13 @@ export async function POST(
         piexifLngRefRaw = lngRef;
         piexifLat = rationalDmsToDecimal(latRaw, latRef);
         piexifLng = rationalDmsToDecimal(lngRaw, lngRef);
+      }
+      const exifSection = exifObj.Exif;
+      if (exifSection) {
+        rawDateTimeOriginal =
+          exifSection[piexif.TagValues.ExifIFD.DateTimeOriginal];
+        rawOffsetTimeOriginal =
+          exifSection[piexif.TagValues.ExifIFD.OffsetTimeOriginal];
       }
     } catch (e) {
       console.warn(`[photos POST] ${file.name} — piexif failed:`, e);
@@ -226,15 +235,49 @@ export async function POST(
       lng = piexifLng;
     }
 
-    const dto2 = parsed?.DateTimeOriginal;
-    let photoTakenAt: Date | null = null;
-    if (dto2 instanceof Date) {
-      photoTakenAt = dto2;
-    } else if (typeof dto2 === "string") {
-      const d = new Date(dto2);
-      if (!Number.isNaN(d.getTime())) photoTakenAt = d;
+    // Reconstruct the photo's actual UTC timestamp from raw EXIF strings.
+    // exifr's auto-conversion of DateTimeOriginal is unreliable when
+    // OffsetTimeOriginal is present (server vs. browser disagree by the
+    // offset amount). The raw EXIF format is always:
+    //   DateTimeOriginal: "YYYY:MM:DD HH:MM:SS" (camera-local naive time)
+    //   OffsetTimeOriginal: "+HH:MM" or "-HH:MM" (camera TZ at capture)
+    // → assemble a real ISO-8601 string with the offset and let the JS
+    //   Date constructor do the UTC math.
+    function parseExifDateTimeUTC(
+      dt: unknown,
+      offset: unknown,
+    ): Date | null {
+      if (typeof dt !== "string") return null;
+      const cleanDt = dt.replace(/[ \s]+$/, "");
+      const m = cleanDt.match(
+        /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
+      );
+      if (!m) return null;
+      const [, y, mo, d, h, mi, s] = m;
+      let tz = "Z";
+      if (typeof offset === "string") {
+        const cleanOff = offset.replace(/[ \s]+$/, "");
+        if (/^[+-]\d{2}:\d{2}$/.test(cleanOff)) tz = cleanOff;
+      }
+      const iso = `${y}-${mo}-${d}T${h}:${mi}:${s}${tz}`;
+      const parsedDate = new Date(iso);
+      return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
     }
-    // Read timestamp from override if EXIF didn't have one
+
+    let photoTakenAt: Date | null = parseExifDateTimeUTC(
+      rawDateTimeOriginal,
+      rawOffsetTimeOriginal,
+    );
+    // Fallback chain if raw piexif didn't have it
+    if (photoTakenAt == null) {
+      const dto2 = parsed?.DateTimeOriginal;
+      if (dto2 instanceof Date) {
+        photoTakenAt = dto2;
+      } else if (typeof dto2 === "string") {
+        const d = new Date(dto2);
+        if (!Number.isNaN(d.getTime())) photoTakenAt = d;
+      }
+    }
     if (photoTakenAt == null) {
       const ovDto = exifOverrides[i]?.takenAt;
       if (typeof ovDto === "string") {
@@ -299,15 +342,12 @@ export async function POST(
                 : "null"
             }`,
         );
-        // The owner deliberately attached this photo to *this* activity,
-        // so any track point is preferable to a missing marker. We always
-        // pick the closest one, even if the timestamp delta is large
-        // (e.g. due to camera-clock TZ drift, EXIF OffsetTimeOriginal
-        // confusion, or photos taken just before/after the recording).
-        // Only skip if delta is absurdly large (> 24 h), which would
-        // mean the photo isn't from that day at all.
-        const ABSURD_DELTA_MS = 24 * 60 * 60 * 1000;
-        if (bestPoint && bestDelta <= ABSURD_DELTA_MS) {
+        // With correct UTC parsing of DateTimeOriginal + OffsetTimeOriginal
+        // the photo timestamp matches the GPS-track timestamp on the
+        // second. A 5-minute tolerance still leaves room for camera-clock
+        // drift but rejects photos that are clearly not from this activity.
+        const TOLERANCE_MS = 5 * 60 * 1000;
+        if (bestPoint && bestDelta <= TOLERANCE_MS) {
           routeMatchLat = bestPoint.lat;
           routeMatchLng = bestPoint.lng;
           routeMatchDeltaSec = Math.round(bestDelta / 1000);
@@ -336,6 +376,9 @@ export async function POST(
         `piexifLat=${piexifLat} piexifLng=${piexifLng} ` +
         `piexifLatRef=${refToString(piexifLatRefRaw)} ` +
         `piexifLngRef=${refToString(piexifLngRefRaw)} ` +
+        `rawDateTimeOriginal=${refToString(rawDateTimeOriginal)} ` +
+        `rawOffsetTimeOriginal=${refToString(rawOffsetTimeOriginal)} ` +
+        `photoTakenAt=${photoTakenAt?.toISOString() ?? "null"} ` +
         `routeMatchLat=${routeMatchLat} routeMatchLng=${routeMatchLng} ` +
         `routeMatchDeltaSec=${routeMatchDeltaSec} ` +
         `routeDataLen=${routeDataLen} routeBestDeltaSec=${routeBestDeltaSec} ` +
