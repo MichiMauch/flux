@@ -226,13 +226,73 @@ export async function POST(
       lng = piexifLng;
     }
 
-    const dto = parsed?.DateTimeOriginal;
-    if (dto instanceof Date) {
-      takenAt = dto;
-    } else if (typeof dto === "string") {
-      const d = new Date(dto);
-      if (!Number.isNaN(d.getTime())) takenAt = d;
+    const dto2 = parsed?.DateTimeOriginal;
+    let photoTakenAt: Date | null = null;
+    if (dto2 instanceof Date) {
+      photoTakenAt = dto2;
+    } else if (typeof dto2 === "string") {
+      const d = new Date(dto2);
+      if (!Number.isNaN(d.getTime())) photoTakenAt = d;
     }
+    // Read timestamp from override if EXIF didn't have one
+    if (photoTakenAt == null) {
+      const ovDto = exifOverrides[i]?.takenAt;
+      if (typeof ovDto === "string") {
+        const d = new Date(ovDto);
+        if (!Number.isNaN(d.getTime())) photoTakenAt = d;
+      }
+    }
+
+    // Strategy 5: route-point match. If the photo has no GPS in EXIF
+    // (e.g. mobile browser stripped it) but we know when the photo was
+    // taken AND the activity has a GPS track with timestamps — match
+    // the photo's takenAt against the closest track point. This is
+    // often more accurate than phone-EXIF-GPS during sport activities
+    // anyway (sport-watch GPS is cleaner than phone-GPS while moving).
+    let routeMatchLat: number | null = null;
+    let routeMatchLng: number | null = null;
+    let routeMatchDeltaSec: number | null = null;
+    if ((lat == null || lng == null) && photoTakenAt != null) {
+      const routeData = activity.routeData as
+        | Array<{ lat: number; lng: number; time?: string }>
+        | null;
+      if (Array.isArray(routeData) && routeData.length > 0) {
+        const photoMs = photoTakenAt.getTime();
+        let bestDelta = Infinity;
+        let bestPoint: { lat: number; lng: number; time?: string } | null = null;
+        for (const p of routeData) {
+          if (
+            !Number.isFinite(p.lat) ||
+            !Number.isFinite(p.lng) ||
+            typeof p.time !== "string"
+          ) {
+            continue;
+          }
+          const t = new Date(p.time).getTime();
+          if (Number.isNaN(t)) continue;
+          const delta = Math.abs(t - photoMs);
+          if (delta < bestDelta) {
+            bestDelta = delta;
+            bestPoint = p;
+          }
+        }
+        // Only use the route match if the closest point is within 30 min
+        // of the photo's timestamp — otherwise the photo was likely not
+        // taken during this activity at all.
+        const TOLERANCE_MS = 30 * 60 * 1000;
+        if (bestPoint && bestDelta <= TOLERANCE_MS) {
+          routeMatchLat = bestPoint.lat;
+          routeMatchLng = bestPoint.lng;
+          routeMatchDeltaSec = Math.round(bestDelta / 1000);
+          if (lat == null || lng == null) {
+            lat = routeMatchLat;
+            lng = routeMatchLng;
+          }
+        }
+      }
+    }
+
+    if (photoTakenAt != null) takenAt = photoTakenAt;
 
     const refToString = (v: unknown) =>
       typeof v === "string"
@@ -249,6 +309,8 @@ export async function POST(
         `piexifLat=${piexifLat} piexifLng=${piexifLng} ` +
         `piexifLatRef=${refToString(piexifLatRefRaw)} ` +
         `piexifLngRef=${refToString(piexifLngRefRaw)} ` +
+        `routeMatchLat=${routeMatchLat} routeMatchLng=${routeMatchLng} ` +
+        `routeMatchDeltaSec=${routeMatchDeltaSec} ` +
         `chosenLat=${lat} chosenLng=${lng}`,
     );
     if (lat == null && lng == null) {
@@ -341,18 +403,9 @@ export async function POST(
         dmsLng,
         piexifLat,
         piexifLng,
-        piexifLatRef:
-          typeof piexifLatRefRaw === "string"
-            ? piexifLatRefRaw
-            : piexifLatRefRaw == null
-              ? null
-              : typeof piexifLatRefRaw,
-        piexifLngRef:
-          typeof piexifLngRefRaw === "string"
-            ? piexifLngRefRaw
-            : piexifLngRefRaw == null
-              ? null
-              : typeof piexifLngRefRaw,
+        routeMatchLat,
+        routeMatchLng,
+        routeMatchDeltaSec,
         fileSize: file.size,
         fileType: file.type,
       },
