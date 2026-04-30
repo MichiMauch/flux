@@ -16,10 +16,33 @@ const SKIP_COMPRESS_BELOW = 1.5 * 1024 * 1024;
 
 async function parseExif(file: File): Promise<PhotoExif> {
   try {
-    const data = await exifr.parse(file, { gps: true });
+    const data = await exifr.parse(file, {
+      gps: true,
+      pick: [
+        "latitude",
+        "longitude",
+        "GPSLatitude",
+        "GPSLongitude",
+        "GPSLatitudeRef",
+        "GPSLongitudeRef",
+        "DateTimeOriginal",
+      ],
+    });
     if (!data) return EMPTY_EXIF;
-    const lat = typeof data.latitude === "number" ? data.latitude : null;
-    const lng = typeof data.longitude === "number" ? data.longitude : null;
+    const gps = (data as { gps?: { latitude?: unknown; longitude?: unknown } })
+      .gps;
+    const lat =
+      typeof data.latitude === "number"
+        ? data.latitude
+        : typeof gps?.latitude === "number"
+          ? gps.latitude
+          : null;
+    const lng =
+      typeof data.longitude === "number"
+        ? data.longitude
+        : typeof gps?.longitude === "number"
+          ? gps.longitude
+          : null;
     const taken =
       data.DateTimeOriginal instanceof Date ? data.DateTimeOriginal : null;
     return { lat, lng, takenAt: taken ? taken.toISOString() : null };
@@ -74,6 +97,16 @@ export async function preparePhoto(
   }
   const exif = await parseExif(file);
   if (file.size < SKIP_COMPRESS_BELOW) {
+    return { file, exif };
+  }
+
+  // If client-side EXIF parsing returned nothing useful, the original file
+  // may still contain GPS/timestamp data that we'd silently strip by
+  // re-encoding. Skip compression and let the server read EXIF from the
+  // raw buffer instead — bandwidth cost beats losing the map marker.
+  const hasUsefulExif =
+    exif.lat != null || exif.lng != null || exif.takenAt != null;
+  if (!hasUsefulExif) {
     return { file, exif };
   }
 
