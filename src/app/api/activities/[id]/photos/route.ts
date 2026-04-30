@@ -99,21 +99,40 @@ export async function POST(
     let takenAt: Date | null = null;
     try {
       const exif = await exifr.parse(buffer, { gps: true });
-      if (exif?.latitude && exif?.longitude) {
+      if (
+        typeof exif?.latitude === "number" &&
+        typeof exif?.longitude === "number"
+      ) {
         lat = exif.latitude;
         lng = exif.longitude;
       }
       if (exif?.DateTimeOriginal) {
-        takenAt = new Date(exif.DateTimeOriginal);
+        takenAt =
+          exif.DateTimeOriginal instanceof Date
+            ? exif.DateTimeOriginal
+            : new Date(exif.DateTimeOriginal);
       }
+      console.info(
+        `[photos POST] ${file.name} (${file.size}B, ${file.type}) — buffer EXIF:`,
+        {
+          lat,
+          lng,
+          takenAt: takenAt?.toISOString() ?? null,
+          rawKeys: exif ? Object.keys(exif) : [],
+        },
+      );
     } catch (e) {
-      console.warn("EXIF parse failed:", e);
+      console.warn(`[photos POST] ${file.name} — EXIF parse failed:`, e);
     }
 
     // Client-supplied overrides take precedence (image was re-encoded
     // and EXIF in the buffer is missing/incomplete).
     const override = exifOverrides[i];
     if (override) {
+      console.info(
+        `[photos POST] ${file.name} — client override:`,
+        override,
+      );
       if (typeof override.lat === "number") lat = override.lat;
       if (typeof override.lng === "number") lng = override.lng;
       if (typeof override.takenAt === "string") {
@@ -121,6 +140,9 @@ export async function POST(
         if (!Number.isNaN(d.getTime())) takenAt = d;
       }
     }
+    console.info(
+      `[photos POST] ${file.name} — final lat=${lat} lng=${lng} takenAt=${takenAt?.toISOString() ?? null}`,
+    );
 
     // Web-optimized: max 2048px longest side, WebP quality 82
     const filename = getPhotoFilename(photoId, "webp");

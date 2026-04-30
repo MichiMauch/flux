@@ -15,40 +15,54 @@ const EMPTY_EXIF: PhotoExif = { lat: null, lng: null, takenAt: null };
 const SKIP_COMPRESS_BELOW = 1.5 * 1024 * 1024;
 
 async function parseExif(file: File): Promise<PhotoExif> {
+  let lat: number | null = null;
+  let lng: number | null = null;
+  let takenAt: string | null = null;
+
   try {
-    const data = await exifr.parse(file, {
-      gps: true,
-      pick: [
-        "latitude",
-        "longitude",
-        "GPSLatitude",
-        "GPSLongitude",
-        "GPSLatitudeRef",
-        "GPSLongitudeRef",
-        "DateTimeOriginal",
-      ],
-    });
-    if (!data) return EMPTY_EXIF;
-    const gps = (data as { gps?: { latitude?: unknown; longitude?: unknown } })
-      .gps;
-    const lat =
-      typeof data.latitude === "number"
-        ? data.latitude
-        : typeof gps?.latitude === "number"
-          ? gps.latitude
-          : null;
-    const lng =
-      typeof data.longitude === "number"
-        ? data.longitude
-        : typeof gps?.longitude === "number"
-          ? gps.longitude
-          : null;
-    const taken =
-      data.DateTimeOriginal instanceof Date ? data.DateTimeOriginal : null;
-    return { lat, lng, takenAt: taken ? taken.toISOString() : null };
+    const gps = await exifr.gps(file);
+    if (
+      gps &&
+      typeof gps.latitude === "number" &&
+      typeof gps.longitude === "number"
+    ) {
+      lat = gps.latitude;
+      lng = gps.longitude;
+    }
   } catch {
-    return EMPTY_EXIF;
+    // ignore
   }
+
+  try {
+    const data = await exifr.parse(file, { gps: true });
+    if (data) {
+      if (
+        lat == null &&
+        typeof (data as { latitude?: unknown }).latitude === "number"
+      ) {
+        lat = (data as { latitude: number }).latitude;
+      }
+      if (
+        lng == null &&
+        typeof (data as { longitude?: unknown }).longitude === "number"
+      ) {
+        lng = (data as { longitude: number }).longitude;
+      }
+      const taken = (data as { DateTimeOriginal?: unknown }).DateTimeOriginal;
+      if (taken instanceof Date) {
+        takenAt = taken.toISOString();
+      } else if (typeof taken === "string") {
+        const d = new Date(taken);
+        if (!Number.isNaN(d.getTime())) takenAt = d.toISOString();
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  console.info("[photo-upload] EXIF parsed:", { lat, lng, takenAt });
+
+  return { lat, lng, takenAt };
 }
 
 async function renderToBlob(
@@ -100,13 +114,13 @@ export async function preparePhoto(
     return { file, exif };
   }
 
-  // If client-side EXIF parsing returned nothing useful, the original file
-  // may still contain GPS/timestamp data that we'd silently strip by
-  // re-encoding. Skip compression and let the server read EXIF from the
-  // raw buffer instead — bandwidth cost beats losing the map marker.
-  const hasUsefulExif =
-    exif.lat != null || exif.lng != null || exif.takenAt != null;
-  if (!hasUsefulExif) {
+  // Only re-encode (which strips EXIF) when we successfully read GPS
+  // client-side. Otherwise pass the original through so the server can
+  // extract GPS from the raw buffer. Correctness > bandwidth.
+  if (exif.lat == null || exif.lng == null) {
+    console.info(
+      "[photo-upload] no GPS in client-side EXIF — uploading original to preserve metadata",
+    );
     return { file, exif };
   }
 
