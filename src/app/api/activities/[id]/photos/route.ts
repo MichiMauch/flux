@@ -93,9 +93,13 @@ export async function POST(
     const buffer = Buffer.from(await file.arrayBuffer());
     const photoId = crypto.randomUUID();
 
-    // Extract EXIF GPS + timestamp — try two strategies for robustness:
-    // (1) full exifr.parse with gps:true returns flattened latitude/longitude
-    // (2) exifr.gps() shortcut, sometimes more reliable across formats.
+    // Extract EXIF GPS + timestamp. Three strategies layered, take the
+    // first one that yields finite coordinates:
+    // (1) exifr.parse(...).latitude/longitude (auto-translated decimal)
+    // (2) exifr.gps(buffer) shortcut
+    // (3) Manual DMS→decimal from raw GPSLatitude/GPSLongitude arrays.
+    //     Some Samsung Galaxy S25 JPEGs (HDR + GainMap container) trip
+    //     up exifr's auto-translate but the raw DMS tuples are there.
     let lat: number | null = null;
     let lng: number | null = null;
     let takenAt: Date | null = null;
@@ -121,12 +125,41 @@ export async function POST(
     const gpsLat = gpsOnly?.latitude;
     const gpsLng = gpsOnly?.longitude;
 
+    function dmsToDecimal(
+      dms: unknown,
+      ref: unknown,
+    ): number | null {
+      if (!Array.isArray(dms) || dms.length < 1) return null;
+      const d = typeof dms[0] === "number" ? dms[0] : Number(dms[0]);
+      const m = typeof dms[1] === "number" ? dms[1] : Number(dms[1] ?? 0);
+      const s = typeof dms[2] === "number" ? dms[2] : Number(dms[2] ?? 0);
+      if (![d, m, s].every((v) => Number.isFinite(v))) return null;
+      let decimal = d + m / 60 + s / 3600;
+      const refStr =
+        typeof ref === "string" ? ref.trim().toUpperCase() : "";
+      if (refStr === "S" || refStr === "W") decimal = -decimal;
+      if (!Number.isFinite(decimal)) return null;
+      return decimal;
+    }
+
+    const dmsLat = dmsToDecimal(
+      parsed?.GPSLatitude,
+      parsed?.GPSLatitudeRef,
+    );
+    const dmsLng = dmsToDecimal(
+      parsed?.GPSLongitude,
+      parsed?.GPSLongitudeRef,
+    );
+
     if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
       lat = parsedLat as number;
       lng = parsedLng as number;
     } else if (Number.isFinite(gpsLat) && Number.isFinite(gpsLng)) {
       lat = gpsLat as number;
       lng = gpsLng as number;
+    } else if (dmsLat != null && dmsLng != null) {
+      lat = dmsLat;
+      lng = dmsLng;
     }
 
     const dto = parsed?.DateTimeOriginal;
@@ -144,7 +177,14 @@ export async function POST(
         parsedLng,
         gpsLat,
         gpsLng,
-        rawKeys: parsed ? Object.keys(parsed) : [],
+        rawGPSLat: parsed?.GPSLatitude,
+        rawGPSLng: parsed?.GPSLongitude,
+        rawGPSLatRef: parsed?.GPSLatitudeRef,
+        rawGPSLngRef: parsed?.GPSLongitudeRef,
+        dmsLat,
+        dmsLng,
+        chosenLat: lat,
+        chosenLng: lng,
       },
     );
 
