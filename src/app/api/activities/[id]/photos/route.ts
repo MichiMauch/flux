@@ -100,8 +100,8 @@ export async function POST(
     try {
       const exif = await exifr.parse(buffer, { gps: true });
       if (
-        typeof exif?.latitude === "number" &&
-        typeof exif?.longitude === "number"
+        Number.isFinite(exif?.latitude) &&
+        Number.isFinite(exif?.longitude)
       ) {
         lat = exif.latitude;
         lng = exif.longitude;
@@ -126,19 +126,25 @@ export async function POST(
     }
 
     // Client-supplied overrides take precedence (image was re-encoded
-    // and EXIF in the buffer is missing/incomplete).
+    // and EXIF in the buffer is missing/incomplete). Only accept finite
+    // numbers — NaN/Infinity would corrupt the DB and crash Leaflet.
     const override = exifOverrides[i];
     if (override) {
       console.info(
         `[photos POST] ${file.name} — client override:`,
         override,
       );
-      if (typeof override.lat === "number") lat = override.lat;
-      if (typeof override.lng === "number") lng = override.lng;
+      if (Number.isFinite(override.lat)) lat = override.lat as number;
+      if (Number.isFinite(override.lng)) lng = override.lng as number;
       if (typeof override.takenAt === "string") {
         const d = new Date(override.takenAt);
         if (!Number.isNaN(d.getTime())) takenAt = d;
       }
+    }
+    // Final safety net: never persist non-finite coordinates.
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      lat = null;
+      lng = null;
     }
     console.info(
       `[photos POST] ${file.name} — final lat=${lat} lng=${lng} takenAt=${takenAt?.toISOString() ?? null}`,

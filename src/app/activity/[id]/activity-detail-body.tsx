@@ -82,7 +82,10 @@ export function ActivityDetailBody({
               isRunning={isRunning}
               color={color}
               photos={photos
-                .filter((p) => p.lat != null && p.lng != null)
+                .filter(
+                  (p) =>
+                    Number.isFinite(p.lat) && Number.isFinite(p.lng),
+                )
                 .map((p) => ({
                   id: p.id,
                   lat: p.lat as number,

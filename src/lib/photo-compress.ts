@@ -22,11 +22,11 @@ async function parseExif(file: File): Promise<PhotoExif> {
     const gps = await exifr.gps(file);
     if (
       gps &&
-      typeof gps.latitude === "number" &&
-      typeof gps.longitude === "number"
+      Number.isFinite(gps.latitude) &&
+      Number.isFinite(gps.longitude)
     ) {
-      lat = gps.latitude;
-      lng = gps.longitude;
+      lat = gps.latitude as number;
+      lng = gps.longitude as number;
     }
   } catch {
     // ignore
@@ -35,17 +35,13 @@ async function parseExif(file: File): Promise<PhotoExif> {
   try {
     const data = await exifr.parse(file, { gps: true });
     if (data) {
-      if (
-        lat == null &&
-        typeof (data as { latitude?: unknown }).latitude === "number"
-      ) {
-        lat = (data as { latitude: number }).latitude;
+      const dataLat = (data as { latitude?: unknown }).latitude;
+      const dataLng = (data as { longitude?: unknown }).longitude;
+      if (lat == null && Number.isFinite(dataLat)) {
+        lat = dataLat as number;
       }
-      if (
-        lng == null &&
-        typeof (data as { longitude?: unknown }).longitude === "number"
-      ) {
-        lng = (data as { longitude: number }).longitude;
+      if (lng == null && Number.isFinite(dataLng)) {
+        lng = dataLng as number;
       }
       const taken = (data as { DateTimeOriginal?: unknown }).DateTimeOriginal;
       if (taken instanceof Date) {
