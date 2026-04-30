@@ -299,11 +299,15 @@ export async function POST(
                 : "null"
             }`,
         );
-        // Only use the route match if the closest point is within 30 min
-        // of the photo's timestamp — otherwise the photo was likely not
-        // taken during this activity at all.
-        const TOLERANCE_MS = 30 * 60 * 1000;
-        if (bestPoint && bestDelta <= TOLERANCE_MS) {
+        // The owner deliberately attached this photo to *this* activity,
+        // so any track point is preferable to a missing marker. We always
+        // pick the closest one, even if the timestamp delta is large
+        // (e.g. due to camera-clock TZ drift, EXIF OffsetTimeOriginal
+        // confusion, or photos taken just before/after the recording).
+        // Only skip if delta is absurdly large (> 24 h), which would
+        // mean the photo isn't from that day at all.
+        const ABSURD_DELTA_MS = 24 * 60 * 60 * 1000;
+        if (bestPoint && bestDelta <= ABSURD_DELTA_MS) {
           routeMatchLat = bestPoint.lat;
           routeMatchLng = bestPoint.lng;
           routeMatchDeltaSec = Math.round(bestDelta / 1000);
