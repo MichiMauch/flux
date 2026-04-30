@@ -252,20 +252,31 @@ export async function POST(
     let routeMatchLat: number | null = null;
     let routeMatchLng: number | null = null;
     let routeMatchDeltaSec: number | null = null;
+    let routeDataLen = 0;
+    let routeBestDeltaSec: number | null = null;
     if ((lat == null || lng == null) && photoTakenAt != null) {
       const routeData = activity.routeData as
         | Array<{ lat: number; lng: number; time?: string }>
         | null;
-      if (Array.isArray(routeData) && routeData.length > 0) {
+      const isArr = Array.isArray(routeData);
+      routeDataLen = isArr ? (routeData as unknown[]).length : 0;
+      console.info(
+        `[photos POST] ${file.name} ROUTE_MATCH input: photoTakenAt=${photoTakenAt.toISOString()} ` +
+          `routeData=${typeof routeData} isArray=${isArr} length=${routeDataLen}`,
+      );
+      if (isArr && routeData!.length > 0) {
         const photoMs = photoTakenAt.getTime();
         let bestDelta = Infinity;
         let bestPoint: { lat: number; lng: number; time?: string } | null = null;
-        for (const p of routeData) {
-          if (
-            !Number.isFinite(p.lat) ||
-            !Number.isFinite(p.lng) ||
-            typeof p.time !== "string"
-          ) {
+        let skippedNoTime = 0;
+        let skippedBadCoord = 0;
+        for (const p of routeData!) {
+          if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) {
+            skippedBadCoord += 1;
+            continue;
+          }
+          if (typeof p.time !== "string") {
+            skippedNoTime += 1;
             continue;
           }
           const t = new Date(p.time).getTime();
@@ -276,6 +287,18 @@ export async function POST(
             bestPoint = p;
           }
         }
+        if (Number.isFinite(bestDelta)) {
+          routeBestDeltaSec = Math.round(bestDelta / 1000);
+        }
+        console.info(
+          `[photos POST] ${file.name} ROUTE_MATCH scan: ` +
+            `bestDelta=${routeBestDeltaSec}s skippedNoTime=${skippedNoTime} ` +
+            `skippedBadCoord=${skippedBadCoord} bestPoint=${
+              bestPoint
+                ? `{lat:${bestPoint.lat},lng:${bestPoint.lng},time:${bestPoint.time}}`
+                : "null"
+            }`,
+        );
         // Only use the route match if the closest point is within 30 min
         // of the photo's timestamp — otherwise the photo was likely not
         // taken during this activity at all.
@@ -311,6 +334,7 @@ export async function POST(
         `piexifLngRef=${refToString(piexifLngRefRaw)} ` +
         `routeMatchLat=${routeMatchLat} routeMatchLng=${routeMatchLng} ` +
         `routeMatchDeltaSec=${routeMatchDeltaSec} ` +
+        `routeDataLen=${routeDataLen} routeBestDeltaSec=${routeBestDeltaSec} ` +
         `chosenLat=${lat} chosenLng=${lng}`,
     );
     if (lat == null && lng == null) {
