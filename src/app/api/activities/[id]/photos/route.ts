@@ -7,6 +7,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import sharp from "sharp";
 import exifr from "exifr";
+import * as piexif from "piexif-ts";
 import {
   getPhotoDir,
   getPhotoFilename,
@@ -151,6 +152,38 @@ export async function POST(
       parsed?.GPSLongitudeRef,
     );
 
+    // Strategy 4: piexif-ts (independent JPEG EXIF parser, robust against
+    // exifr-quirks like Samsung Galaxy S25 HDR/GainMap JPEGs).
+    let piexifLat: number | null = null;
+    let piexifLng: number | null = null;
+    try {
+      const binStr = buffer.toString("binary");
+      const exifObj = piexif.load(binStr);
+      const gps = exifObj.GPS;
+      if (gps) {
+        const latRaw = gps[piexif.TagValues.GPSIFD.GPSLatitude];
+        const latRef = gps[piexif.TagValues.GPSIFD.GPSLatitudeRef];
+        const lngRaw = gps[piexif.TagValues.GPSIFD.GPSLongitude];
+        const lngRef = gps[piexif.TagValues.GPSIFD.GPSLongitudeRef];
+        if (latRaw && typeof latRef === "string") {
+          const v = piexif.GPSHelper.dmsRationalToDeg(
+            latRaw as number[][],
+            latRef,
+          );
+          if (Number.isFinite(v)) piexifLat = v;
+        }
+        if (lngRaw && typeof lngRef === "string") {
+          const v = piexif.GPSHelper.dmsRationalToDeg(
+            lngRaw as number[][],
+            lngRef,
+          );
+          if (Number.isFinite(v)) piexifLng = v;
+        }
+      }
+    } catch (e) {
+      console.warn(`[photos POST] ${file.name} — piexif failed:`, e);
+    }
+
     if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
       lat = parsedLat as number;
       lng = parsedLng as number;
@@ -160,6 +193,9 @@ export async function POST(
     } else if (dmsLat != null && dmsLng != null) {
       lat = dmsLat;
       lng = dmsLng;
+    } else if (piexifLat != null && piexifLng != null) {
+      lat = piexifLat;
+      lng = piexifLng;
     }
 
     const dto = parsed?.DateTimeOriginal;
@@ -177,12 +213,10 @@ export async function POST(
         parsedLng,
         gpsLat,
         gpsLng,
-        rawGPSLat: parsed?.GPSLatitude,
-        rawGPSLng: parsed?.GPSLongitude,
-        rawGPSLatRef: parsed?.GPSLatitudeRef,
-        rawGPSLngRef: parsed?.GPSLongitudeRef,
         dmsLat,
         dmsLng,
+        piexifLat,
+        piexifLng,
         chosenLat: lat,
         chosenLng: lng,
       },
