@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { activities, activityBoosts, users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
+import { sendPushToUser } from "@/lib/push";
 
 export async function POST(
   _request: NextRequest,
@@ -16,7 +17,11 @@ export async function POST(
   const { id: activityId } = await params;
 
   const [activity] = await db
-    .select({ id: activities.id, userId: activities.userId })
+    .select({
+      id: activities.id,
+      userId: activities.userId,
+      name: activities.name,
+    })
     .from(activities)
     .where(eq(activities.id, activityId))
     .limit(1);
@@ -51,6 +56,36 @@ export async function POST(
       userId,
     });
     boosted = true;
+
+    // Notify the activity owner — only on insert, never on un-boost,
+    // and respect partnerPushEnabled.
+    try {
+      const [booster] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const [owner] = await db
+        .select({
+          id: users.id,
+          partnerPushEnabled: users.partnerPushEnabled,
+        })
+        .from(users)
+        .where(eq(users.id, activity.userId))
+        .limit(1);
+      if (owner?.partnerPushEnabled) {
+        const boosterName = booster?.name?.trim() || "Jemand";
+        await sendPushToUser(owner.id, {
+          title: `${boosterName} hat deine Aktivität geboostet`,
+          body: `„${activity.name}" — Rakete an!`,
+          url: `/activity/${activityId}`,
+          tag: `boost-${activityId}`,
+          kind: "boost",
+        });
+      }
+    } catch (err) {
+      console.error("[boost] notification failed:", err);
+    }
   }
 
   const allBoosts = await db
