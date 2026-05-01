@@ -37,11 +37,13 @@ export function SevenSegTile({
   value,
   label,
   suffix,
+  sub,
 }: {
   icon: React.ReactNode;
   value: string;
   label: string;
   suffix?: string;
+  sub?: string;
 }) {
   return (
     <div>
@@ -63,6 +65,11 @@ export function SevenSegTile({
           </span>
         )}
       </div>
+      {sub && (
+        <div className="[font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3] mt-2">
+          {sub}
+        </div>
+      )}
     </div>
   );
 }

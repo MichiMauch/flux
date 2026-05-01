@@ -27,6 +27,7 @@ interface Props {
   };
   photoIds: { id: string }[];
   duration: number;
+  totalDuration: number | null;
   distanceKm: string;
   ascent: number | null;
   calories: number | null;
@@ -39,6 +40,7 @@ export function ActivityDetailHero({
   activity,
   photoIds,
   duration,
+  totalDuration,
   distanceKm,
   ascent,
   calories,
@@ -90,6 +92,11 @@ export function ActivityDetailHero({
             icon={<Clock />}
             value={duration > 0 ? formatDurationHMS(duration) : "–"}
             label="Zeit"
+            sub={
+              totalDuration != null && totalDuration > duration
+                ? `↳ Gesamt ${formatDurationHMS(totalDuration)}`
+                : undefined
+            }
           />
           <SevenSegTile
             icon={<Ruler />}

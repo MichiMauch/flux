@@ -43,6 +43,7 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
       .select({
         distance: activities.distance,
         duration: activities.duration,
+        movingTime: activities.movingTime,
       })
       .from(activities)
       .where(
@@ -56,6 +57,7 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
       .select({
         distance: activities.distance,
         duration: activities.duration,
+        movingTime: activities.movingTime,
       })
       .from(activities)
       .where(
@@ -69,11 +71,17 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
 
   const count = rows.length;
   const distance = rows.reduce((s, r) => s + (r.distance ?? 0), 0);
-  const duration = rows.reduce((s, r) => s + (r.duration ?? 0), 0);
+  const duration = rows.reduce(
+    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
+    0,
+  );
 
   const prevCount = prevRows.length;
   const prevDistance = prevRows.reduce((s, r) => s + (r.distance ?? 0), 0);
-  const prevDuration = prevRows.reduce((s, r) => s + (r.duration ?? 0), 0);
+  const prevDuration = prevRows.reduce(
+    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
+    0,
+  );
 
   const monthLabel = MONTHS[current.from.getMonth()];
 

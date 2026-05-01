@@ -82,6 +82,10 @@ export default async function ActivityBentoPage({
   const isOwner = activity.userId === session.user.id;
 
   const duration = activity.movingTime ?? activity.duration ?? 0;
+  const totalDuration =
+    activity.duration != null && activity.duration > duration
+      ? activity.duration
+      : null;
   const distanceKm = km(activity.distance);
   const ascent = activity.ascent != null ? Math.round(activity.ascent) : null;
   const descent = activity.descent != null ? Math.round(activity.descent) : null;
@@ -145,6 +149,7 @@ export default async function ActivityBentoPage({
           }}
           photoIds={photos.map((p) => ({ id: p.id }))}
           duration={duration}
+          totalDuration={totalDuration}
           distanceKm={distanceKm}
           ascent={ascent}
           calories={calories}

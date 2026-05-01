@@ -124,7 +124,7 @@ export default async function ActivityClassicPage({
                 isRunning={isRunning}
                 photos={photoMarkers}
                 startTime={activity.startTime}
-                duration={activity.duration}
+                duration={activity.movingTime ?? activity.duration}
               />
             </div>
           )}

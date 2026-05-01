@@ -179,7 +179,10 @@ export function ActivitySummary({
             />
 
             {activity.trimp != null && activity.trimp > 0 && (
-              <TrimpValues trimp={activity.trimp} durationSec={activity.duration} />
+              <TrimpValues
+                trimp={activity.trimp}
+                durationSec={activity.movingTime ?? activity.duration}
+              />
             )}
 
             {heartRateData && heartRateData.length > 1 && userProfile && (

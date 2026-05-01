@@ -19,7 +19,10 @@ function lastYearSameRange(now: Date): { from: Date; to: Date } {
 
 async function sumDuration(userId: string, from: Date, to: Date): Promise<number> {
   const rows = await db
-    .select({ duration: activities.duration })
+    .select({
+      duration: activities.duration,
+      movingTime: activities.movingTime,
+    })
     .from(activities)
     .where(
       and(
@@ -28,7 +31,10 @@ async function sumDuration(userId: string, from: Date, to: Date): Promise<number
         lt(activities.startTime, to)
       )
     );
-  return rows.reduce((s, r) => s + (r.duration ?? 0), 0);
+  return rows.reduce(
+    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
+    0,
+  );
 }
 
 export async function BentoDashboardYtdTime({ userId }: { userId: string }) {
@@ -40,7 +46,10 @@ export async function BentoDashboardYtdTime({ userId }: { userId: string }) {
     sumDuration(userId, ytd.from, ytd.to),
     sumDuration(userId, lastYear.from, lastYear.to),
     db
-      .select({ duration: activities.duration })
+      .select({
+        duration: activities.duration,
+        movingTime: activities.movingTime,
+      })
       .from(activities)
       .where(and(eq(activities.userId, userId), gte(activities.startTime, ytd.from)))
       .orderBy(desc(activities.startTime))
@@ -50,7 +59,8 @@ export async function BentoDashboardYtdTime({ userId }: { userId: string }) {
   const hoursYtd = secYtd / 3600;
   const hoursLast = secLastYear / 3600;
   const lifeDays = hoursYtd / 24;
-  const lastSec = latestRow[0]?.duration ?? null;
+  const lastSec =
+    latestRow[0]?.movingTime ?? latestRow[0]?.duration ?? null;
   const lastLabel = (() => {
     if (lastSec == null || lastSec <= 0) return null;
     const h = Math.floor(lastSec / 3600);

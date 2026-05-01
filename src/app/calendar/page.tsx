@@ -58,6 +58,7 @@ export default async function CalendarPage({
       startTime: activities.startTime,
       distance: activities.distance,
       duration: activities.duration,
+      movingTime: activities.movingTime,
     })
     .from(activities)
     .where(
@@ -86,7 +87,7 @@ export default async function CalendarPage({
       type: r.type,
       name: r.name,
       distanceKm: r.distance != null ? r.distance / 1000 : null,
-      durationSec: r.duration ?? null,
+      durationSec: r.movingTime ?? r.duration ?? null,
     });
   }
 

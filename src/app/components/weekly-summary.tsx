@@ -16,6 +16,7 @@ export async function WeeklySummary({ userId }: { userId: string }) {
     .select({
       distance: activities.distance,
       duration: activities.duration,
+      movingTime: activities.movingTime,
       trimp: activities.trimp,
     })
     .from(activities)
@@ -29,7 +30,10 @@ export async function WeeklySummary({ userId }: { userId: string }) {
 
   const count = rows.length;
   const distance = rows.reduce((s, r) => s + (r.distance ?? 0), 0);
-  const duration = rows.reduce((s, r) => s + (r.duration ?? 0), 0);
+  const duration = rows.reduce(
+    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
+    0,
+  );
   const trimp = rows.reduce((s, r) => s + (r.trimp ?? 0), 0);
 
   const weekNo = isoWeek(from);

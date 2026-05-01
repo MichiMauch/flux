@@ -15,6 +15,7 @@ interface Props {
     type: string;
     distance: number | null;
     duration: number | null;
+    movingTime: number | null;
     descent: number | null;
     avgHeartRate: number | null;
     maxHeartRate: number | null;
@@ -32,6 +33,11 @@ interface Props {
 export function SummaryMetricsGrid({ activity, formatDuration }: Props) {
   const isRunning = activity.type.toUpperCase() === "RUNNING";
   const hasMacros = activity.fatPercentage != null;
+  const activeDuration = activity.movingTime ?? activity.duration;
+  const showTotalDuration =
+    activity.duration != null &&
+    activity.movingTime != null &&
+    activity.duration > activity.movingTime;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 border-b border-border">
@@ -43,14 +49,14 @@ export function SummaryMetricsGrid({ activity, formatDuration }: Props) {
           unit="m"
         />
       )}
-      {activity.distance != null && activity.duration != null && (
+      {activity.distance != null && activeDuration != null && (
         <Mini
           icon={isRunning ? <Footprints /> : <Gauge />}
           label={isRunning ? "Pace" : "Ø Speed"}
           value={
             isRunning
-              ? formatPace(activity.distance, activity.duration)
-              : ((activity.distance / 1000) / (activity.duration / 3600)).toFixed(1)
+              ? formatPace(activity.distance, activeDuration)
+              : ((activity.distance / 1000) / (activeDuration / 3600)).toFixed(1)
           }
           unit={isRunning ? "/km" : "km/h"}
         />
@@ -95,7 +101,15 @@ export function SummaryMetricsGrid({ activity, formatDuration }: Props) {
           unit="kcal"
         />
       )}
-      {activity.duration != null && (
+      {activeDuration != null && (
+        <Mini
+          icon={<Clock />}
+          label="Bewegungszeit"
+          value={formatDuration(activeDuration)}
+          unit=""
+        />
+      )}
+      {showTotalDuration && (
         <Mini
           icon={<Clock />}
           label="Gesamtzeit"
