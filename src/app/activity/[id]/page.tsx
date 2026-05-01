@@ -177,6 +177,7 @@ export default async function ActivityBentoPage({
           boostable={!isOwner}
           boostedByMe={boostedByMe}
           boosters={boosterDtos}
+          color={color}
         />
 
         <ActivityDetailBody

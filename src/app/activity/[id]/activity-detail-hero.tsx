@@ -35,6 +35,7 @@ interface Props {
   boostable: boolean;
   boostedByMe: boolean;
   boosters: Booster[];
+  color: string;
 }
 
 export function ActivityDetailHero({
@@ -51,6 +52,7 @@ export function ActivityDetailHero({
   boostable,
   boostedByMe,
   boosters,
+  color,
 }: Props) {
   const showBoost = boostable || boosters.length > 0;
   return (
@@ -93,6 +95,7 @@ export function ActivityDetailHero({
               initialBoosted={boostedByMe}
               initialBoosters={boosters}
               canBoost={boostable}
+              color={color}
             />
           </div>
         )}

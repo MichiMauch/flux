@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Flame } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BoostLottie } from "./boost-lottie";
 
-const NEON = "var(--activity-color, #FF6A00)";
+const NEON_FALLBACK = "#FF6A00";
 
 export interface Booster {
   id: string;
@@ -17,6 +17,7 @@ interface Props {
   initialBoosted: boolean;
   initialBoosters: Booster[];
   canBoost: boolean;
+  color?: string;
 }
 
 function getInitials(name: string): string {
@@ -34,7 +35,9 @@ export function BoostButton({
   initialBoosted,
   initialBoosters,
   canBoost,
+  color,
 }: Props) {
+  const accent = color ?? NEON_FALLBACK;
   const [boosted, setBoosted] = useState(initialBoosted);
   const [boosters, setBoosters] = useState<Booster[]>(initialBoosters);
   const [pending, startTransition] = useTransition();
@@ -57,20 +60,11 @@ export function BoostButton({
           userIds: string[];
         };
         setBoosted(data.boosted);
-        // Server returns userIds — re-derive boosters by intersecting with
-        // initialBoosters + the current user (if known).
-        // Simplest: trust local update.
-        setBoosters((prev) => {
-          // Optimistic update based on server boosted-state
-          if (data.boosted) {
-            // already in prev or will be revealed on refresh
-            return prev;
-          }
-          // remove current user from boosters list — we don't know which,
-          // but the count diff tells us. Simplest: leave prev, refresh
-          // will sync on next page load.
-          return prev;
-        });
+        // Server returns userIds; we don't have full booster info for
+        // others on the client, so trust the count from the server and
+        // only sync the boosters list on next page render. For UX
+        // immediacy, just toggle the local state — the count badge
+        // already reflects the new value via boosters length adjustment.
       } catch (e) {
         setError(e instanceof Error ? e.message : "Boost fehlgeschlagen");
       }
@@ -86,22 +80,28 @@ export function BoostButton({
         onClick={handleClick}
         disabled={!canBoost || pending}
         aria-label={boosted ? "Boost zurücknehmen" : "Boosten"}
-        className={`inline-flex items-center gap-1.5 px-3 h-9 rounded-md border transition-colors ${
+        className={`inline-flex items-center gap-1.5 px-3 h-10 rounded-md border transition-colors ${
           boosted
             ? "border-transparent"
             : "border-[#2a2a2a] hover:bg-[#1a1a1a]"
         } ${!canBoost ? "cursor-default opacity-70" : "cursor-pointer"}`}
         style={
           boosted
-            ? { background: NEON, color: "#0f0f0f" }
-            : { color: NEON }
+            ? {
+                background: `color-mix(in srgb, ${accent} 18%, transparent)`,
+                boxShadow: `0 0 0 1px ${accent}`,
+                color: accent,
+              }
+            : { color: accent }
         }
       >
-        <Flame
-          className={`h-4 w-4 ${boosted ? "flame-pulse" : ""}`}
-          style={{ color: boosted ? "#0f0f0f" : NEON }}
+        <BoostLottie
+          file="rocket"
+          size={22}
+          color={accent}
+          playing={canBoost || boosted}
         />
-        <span className="[font-family:var(--bento-mono)] text-[11px] font-bold uppercase tracking-[0.12em] tabular-nums">
+        <span className="[font-family:var(--bento-mono)] text-[12px] font-bold uppercase tracking-[0.12em] tabular-nums">
           {count}
         </span>
       </button>
