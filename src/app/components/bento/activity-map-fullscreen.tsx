@@ -162,36 +162,50 @@ function FullscreenContent({
         />
       </div>
 
-      {/* Toolbar — top-left, separate from the map's existing top-right
-          buttons (Photos toggle, Minimize via map). */}
-      <div className="absolute top-2 left-2 z-[1100] flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setShowKm((v) => !v)}
-          aria-label="Kilometer-Liste umschalten"
-          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md border [font-family:var(--bento-mono)] text-[11px] uppercase tracking-[0.12em] transition-colors ${
-            showKm
-              ? "bg-white text-black border-transparent"
-              : "bg-[#0f0f0f] border-[#2a2a2a] text-[#a3a3a3] hover:text-white"
-          }`}
-        >
-          <ListOrdered className="h-3.5 w-3.5" />
-          Kilometer
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowElev((v) => !v)}
-          aria-label="Höhenprofil umschalten"
-          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md border [font-family:var(--bento-mono)] text-[11px] uppercase tracking-[0.12em] transition-colors ${
-            showElev
-              ? "bg-white text-black border-transparent"
-              : "bg-[#0f0f0f] border-[#2a2a2a] text-[#a3a3a3] hover:text-white"
-          }`}
-        >
-          <LineChart className="h-3.5 w-3.5" />
-          Höhenprofil
-        </button>
-      </div>
+      {/* Kilometer tab — left edge, vertically centered. Slides with the
+          panel: when the panel is open the tab sits at its right edge. */}
+      <button
+        type="button"
+        onClick={() => setShowKm((v) => !v)}
+        aria-label="Kilometer-Liste umschalten"
+        className={`absolute top-1/2 z-[1100] flex flex-col items-center gap-1.5 px-2 py-3 border-y border-r [font-family:var(--bento-mono)] text-[11px] uppercase tracking-[0.14em] transition-all duration-200 ${
+          showKm
+            ? "bg-white text-black border-transparent rounded-r-md"
+            : "bg-[#0f0f0f] border-[#2a2a2a] text-[#a3a3a3] hover:text-white rounded-r-md"
+        }`}
+        style={{
+          left: showKm ? 260 : 0,
+          transform: "translateY(-50%)",
+          writingMode: "vertical-rl",
+        }}
+      >
+        <ListOrdered
+          className="h-3.5 w-3.5"
+          style={{ writingMode: "horizontal-tb" }}
+        />
+        Kilometer
+      </button>
+
+      {/* Höhenprofil tab — bottom edge, horizontally centered. Slides
+          with the panel: when the panel is open the tab sits at its
+          top edge. */}
+      <button
+        type="button"
+        onClick={() => setShowElev((v) => !v)}
+        aria-label="Höhenprofil umschalten"
+        className={`absolute left-1/2 z-[1100] flex items-center gap-1.5 px-4 py-2 border-x border-t [font-family:var(--bento-mono)] text-[11px] uppercase tracking-[0.14em] transition-all duration-200 ${
+          showElev
+            ? "bg-white text-black border-transparent rounded-t-md"
+            : "bg-[#0f0f0f] border-[#2a2a2a] text-[#a3a3a3] hover:text-white rounded-t-md"
+        }`}
+        style={{
+          bottom: showElev ? 200 : 0,
+          transform: "translateX(-50%)",
+        }}
+      >
+        <LineChart className="h-3.5 w-3.5" />
+        Höhenprofil
+      </button>
 
       {/* Close button — top-right corner */}
       <button
