@@ -1,7 +1,12 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { activities, activityPhotos, users } from "@/lib/db/schema";
+import {
+  activities,
+  activityBoosts,
+  activityPhotos,
+  users,
+} from "@/lib/db/schema";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
@@ -86,6 +91,35 @@ export default async function StreamPage() {
     });
   }
 
+  const activityIds = rows.map((r) => r.id);
+  const boostRows =
+    activityIds.length === 0
+      ? []
+      : await db
+          .select({
+            activityId: activityBoosts.activityId,
+            userId: users.id,
+            userName: users.name,
+            userImage: users.image,
+          })
+          .from(activityBoosts)
+          .innerJoin(users, eq(activityBoosts.userId, users.id))
+          .where(inArray(activityBoosts.activityId, activityIds));
+
+  const boostsByActivity = new Map<
+    string,
+    { id: string; name: string; image: string | null }[]
+  >();
+  for (const b of boostRows) {
+    const list = boostsByActivity.get(b.activityId) ?? [];
+    list.push({
+      id: b.userId,
+      name: b.userName ?? "User",
+      image: b.userImage,
+    });
+    boostsByActivity.set(b.activityId, list);
+  }
+
   return (
     <BentoPageShell>
       <BentoPageHeader
@@ -117,6 +151,9 @@ export default async function StreamPage() {
         <div className="grid gap-3 lg:grid-cols-2">
           {rows.map((r) => {
             const owner = ownerById.get(r.userId);
+            const boosters = boostsByActivity.get(r.id) ?? [];
+            const boostedByMe = boosters.some((b) => b.id === userId);
+            const canBoost = r.userId !== userId;
             return (
               <BentoHomeFeedCard
                 key={r.id}
@@ -132,6 +169,11 @@ export default async function StreamPage() {
                 routeData={r.routeData}
                 photoCount={r.photoCount ?? 0}
                 owner={owner}
+                boost={{
+                  canBoost,
+                  boostedByMe,
+                  boosters,
+                }}
               />
             );
           })}

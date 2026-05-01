@@ -19,10 +19,11 @@ function hexToRgbNormalized(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
-// Aggressively tint every non-near-black, non-near-white color in the
-// Lottie data to the accent color. Black strokes stay black (then we
-// invert via foreground tint if needed), whites stay white. Everything
-// else gets pulled to the activity color.
+// Tint *every* visible color in the Lottie data to the accent color.
+// Mono-color icon — works on any background (incl. dark themes where
+// black would be invisible). Only fully-transparent values are kept
+// as-is. Strokes/fills are mapped to the accent so the whole shape
+// glows in one neon hue.
 function tintAll<T>(data: T, accent: [number, number, number]): T {
   if (data == null) return data;
   if (Array.isArray(data)) {
@@ -31,11 +32,8 @@ function tintAll<T>(data: T, accent: [number, number, number]): T {
       data.every((v) => typeof v === "number" && v >= 0 && v <= 1)
     ) {
       const arr = data as number[];
-      const isBlack = arr[0] < 0.05 && arr[1] < 0.05 && arr[2] < 0.05;
-      const isWhite =
-        arr[0] > 0.95 && arr[1] > 0.95 && arr[2] > 0.95;
       const isTransparent = nearlyEqual(arr[3], 0);
-      if (!isBlack && !isWhite && !isTransparent) {
+      if (!isTransparent) {
         return [accent[0], accent[1], accent[2], arr[3]] as unknown as T;
       }
     }

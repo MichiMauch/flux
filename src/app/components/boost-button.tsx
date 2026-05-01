@@ -18,6 +18,7 @@ interface Props {
   initialBoosters: Booster[];
   canBoost: boolean;
   color?: string;
+  compact?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -36,6 +37,7 @@ export function BoostButton({
   initialBoosters,
   canBoost,
   color,
+  compact = false,
 }: Props) {
   const accent = color ?? NEON_FALLBACK;
   const [boosted, setBoosted] = useState(initialBoosted);
@@ -45,7 +47,12 @@ export function BoostButton({
 
   const count = boosters.length;
 
-  function handleClick() {
+  function handleClick(e: React.MouseEvent) {
+    // The button may be embedded inside a wrapping <Link> (e.g. on the
+    // stream-card). Prevent the navigation + bubbling so a click on the
+    // boost button only toggles the boost.
+    e.preventDefault();
+    e.stopPropagation();
     if (!canBoost || pending) return;
     setError(null);
     startTransition(async () => {
@@ -80,7 +87,9 @@ export function BoostButton({
         onClick={handleClick}
         disabled={!canBoost || pending}
         aria-label={boosted ? "Boost zurücknehmen" : "Boosten"}
-        className={`inline-flex items-center gap-1.5 px-3 h-10 rounded-md border transition-colors ${
+        className={`inline-flex items-center gap-1.5 rounded-md border transition-colors ${
+          compact ? "h-7 px-2" : "h-10 px-3"
+        } ${
           boosted
             ? "border-transparent"
             : "border-[#2a2a2a] hover:bg-[#1a1a1a]"
@@ -97,15 +106,19 @@ export function BoostButton({
       >
         <BoostLottie
           file="rocket"
-          size={22}
+          size={compact ? 16 : 22}
           color={accent}
           playing={canBoost || boosted}
         />
-        <span className="[font-family:var(--bento-mono)] text-[12px] font-bold uppercase tracking-[0.12em] tabular-nums">
+        <span
+          className={`[font-family:var(--bento-mono)] font-bold uppercase tracking-[0.12em] tabular-nums ${
+            compact ? "text-[10px]" : "text-[12px]"
+          }`}
+        >
           {count}
         </span>
       </button>
-      {boosters.length > 0 && (
+      {boosters.length > 0 && !compact && (
         <div className="flex -space-x-1.5">
           {boosters.slice(0, 3).map((b) => (
             <Avatar

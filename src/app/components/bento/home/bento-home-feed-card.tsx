@@ -3,6 +3,7 @@ import { Clock, Heart, Mountain, Ruler, Image as ImageIcon } from "lucide-react"
 import { activityTypeColor } from "@/lib/activity-types";
 import { SportChip } from "@/app/components/sport-chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BoostButton, type Booster } from "@/app/components/boost-button";
 import {
   formatDateLabel,
   formatDistanceKm,
@@ -29,6 +30,11 @@ interface Props {
   owner?: {
     name: string;
     image: string | null;
+  };
+  boost?: {
+    canBoost: boolean;
+    boostedByMe: boolean;
+    boosters: Booster[];
   };
 }
 
@@ -138,6 +144,19 @@ export function BentoHomeFeedCard(a: Props) {
             />
           )}
         </div>
+        {a.boost &&
+          (a.boost.canBoost || a.boost.boosters.length > 0) && (
+            <div className="pt-1">
+              <BoostButton
+                activityId={a.id}
+                initialBoosted={a.boost.boostedByMe}
+                initialBoosters={a.boost.boosters}
+                canBoost={a.boost.canBoost}
+                color={color}
+                compact
+              />
+            </div>
+          )}
       </div>
     </Link>
   );
