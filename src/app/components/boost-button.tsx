@@ -83,8 +83,8 @@ export function BoostButton({
         onClick={handleClick}
         disabled={!canBoost || pending}
         aria-label={boosted ? "Boost zurücknehmen" : "Boosten"}
-        className={`inline-flex items-center gap-1.5 rounded-md border transition-colors ${
-          compact ? "h-7 px-2" : "h-10 px-3"
+        className={`inline-flex items-center gap-2 rounded-md border transition-colors ${
+          compact ? "h-11 px-3.5" : "h-10 px-3"
         } ${
           boosted
             ? "border-transparent"
@@ -102,13 +102,13 @@ export function BoostButton({
       >
         <BoostLottie
           file="rocket"
-          size={compact ? 16 : 22}
+          size={compact ? 26 : 22}
           color={accent}
           playing={canBoost || boosted}
         />
         <span
           className={`[font-family:var(--bento-mono)] font-bold uppercase tracking-[0.12em] tabular-nums ${
-            compact ? "text-[10px]" : "text-[12px]"
+            compact ? "text-[13px]" : "text-[12px]"
           }`}
         >
           {count}
