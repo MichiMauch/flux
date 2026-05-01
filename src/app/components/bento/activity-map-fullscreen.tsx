@@ -150,7 +150,7 @@ function FullscreenContent({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black">
+    <div className="fixed inset-0 z-[2000] bg-black">
       <div className="absolute inset-0">
         <BentoMapClient
           routeData={routeData}
