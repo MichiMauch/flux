@@ -108,7 +108,7 @@ export function ActivityDetailHero({
           borderColor: HERO_BORDER,
         }}
       >
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
           <SevenSegTile
             icon={<Clock />}
             value={duration > 0 ? formatDurationHMS(duration) : "–"}
