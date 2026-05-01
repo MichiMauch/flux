@@ -3,12 +3,18 @@ import { Download } from "lucide-react";
 const NEON = "var(--activity-color, #FF6A00)";
 const NEON_ALPHA_1A = "color-mix(in srgb, var(--activity-color, #FF6A00) 10%, transparent)";
 
-export function BentoGpxTile({ activityId }: { activityId: string }) {
+export function BentoGpxTile({
+  activityId,
+  className = "",
+}: {
+  activityId: string;
+  className?: string;
+}) {
   return (
     <a
       href={`/api/activities/${activityId}/gpx`}
       download
-      className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 flex flex-col gap-2 hover:border-[#4a4a4a] hover:bg-[#151515] transition-colors"
+      className={`rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 flex flex-col gap-2 hover:border-[#4a4a4a] hover:bg-[#151515] transition-colors ${className}`}
     >
       <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
         Export
