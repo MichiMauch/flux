@@ -176,14 +176,10 @@ function FullscreenContent({
         style={{
           left: showKm ? 260 : 0,
           transform: "translateY(-50%)",
-          writingMode: "vertical-rl",
         }}
       >
-        <ListOrdered
-          className="h-3.5 w-3.5"
-          style={{ writingMode: "horizontal-tb" }}
-        />
-        Kilometer
+        <ListOrdered className="h-3.5 w-3.5" />
+        <span style={{ writingMode: "vertical-rl" }}>Kilometer</span>
       </button>
 
       {/* Höhenprofil tab — bottom edge, horizontally centered. Slides
