@@ -148,7 +148,7 @@ export default async function StreamPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="mx-auto flex max-w-2xl flex-col gap-3">
           {rows.map((r) => {
             const owner = ownerById.get(r.userId);
             const boosters = boostsByActivity.get(r.id) ?? [];

@@ -68,18 +68,24 @@ export function BentoHomeFeedCard(a: Props) {
       )}
       <div className="flex-1 p-3 flex flex-col gap-2">
         {a.owner && (
-          <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
+          <div className="flex items-center gap-2 -ml-1">
+            <Avatar
+              className="h-8 w-8 ring-2"
+              style={{
+                boxShadow: `0 0 0 2px ${color}`,
+              }}
+            >
               {a.owner.image && (
                 <AvatarImage src={a.owner.image} alt={a.owner.name} />
               )}
-              <AvatarFallback className="text-[10px] font-bold">
+              <AvatarFallback
+                className="text-[11px] font-bold"
+                style={{ background: color, color: "#0f0f0f" }}
+              >
                 {getInitials(a.owner.name)}
               </AvatarFallback>
             </Avatar>
-            <span
-              className={`${spaceMono.className} text-[11px] font-bold tracking-[0.04em] text-white`}
-            >
+            <span className="text-[13px] font-bold tracking-[0.01em] text-white">
               {a.owner.name}
             </span>
           </div>
