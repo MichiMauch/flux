@@ -47,7 +47,7 @@ export function KilometerList({
 }: Props) {
   return (
     <>
-      <div className="[font-family:var(--bento-mono)] px-3 py-2 bg-[#0a0a0a] border-b border-[#2a2a2a] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] sticky top-0 z-10">
+      <div className="[font-family:var(--bento-mono)] px-3 py-2 bg-[#0a0a0a] border-b border-[#2a2a2a] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
         Runden
       </div>
       {highlights && (
