@@ -79,7 +79,6 @@ async function parseExif(file: File): Promise<PhotoExif> {
     // ignore
   }
 
-  console.info("[photo-upload] EXIF parsed:", { lat, lng, takenAt });
   return { lat, lng, takenAt };
 }
 

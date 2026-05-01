@@ -192,8 +192,6 @@ export async function POST(
 
     let piexifLat: number | null = null;
     let piexifLng: number | null = null;
-    let piexifLatRefRaw: unknown = undefined;
-    let piexifLngRefRaw: unknown = undefined;
     let rawDateTimeOriginal: unknown = undefined;
     let rawOffsetTimeOriginal: unknown = undefined;
     try {
@@ -201,14 +199,14 @@ export async function POST(
       const exifObj = piexif.load(binStr);
       const gps = exifObj.GPS;
       if (gps) {
-        const latRaw = gps[piexif.TagValues.GPSIFD.GPSLatitude];
-        const latRef = gps[piexif.TagValues.GPSIFD.GPSLatitudeRef];
-        const lngRaw = gps[piexif.TagValues.GPSIFD.GPSLongitude];
-        const lngRef = gps[piexif.TagValues.GPSIFD.GPSLongitudeRef];
-        piexifLatRefRaw = latRef;
-        piexifLngRefRaw = lngRef;
-        piexifLat = rationalDmsToDecimal(latRaw, latRef);
-        piexifLng = rationalDmsToDecimal(lngRaw, lngRef);
+        piexifLat = rationalDmsToDecimal(
+          gps[piexif.TagValues.GPSIFD.GPSLatitude],
+          gps[piexif.TagValues.GPSIFD.GPSLatitudeRef],
+        );
+        piexifLng = rationalDmsToDecimal(
+          gps[piexif.TagValues.GPSIFD.GPSLongitude],
+          gps[piexif.TagValues.GPSIFD.GPSLongitudeRef],
+        );
       }
       const exifSection = exifObj.Exif;
       if (exifSection) {
@@ -292,34 +290,21 @@ export async function POST(
     // the photo's takenAt against the closest track point. This is
     // often more accurate than phone-EXIF-GPS during sport activities
     // anyway (sport-watch GPS is cleaner than phone-GPS while moving).
-    let routeMatchLat: number | null = null;
-    let routeMatchLng: number | null = null;
-    let routeMatchDeltaSec: number | null = null;
-    let routeDataLen = 0;
-    let routeBestDeltaSec: number | null = null;
+    let routeMatchedDeltaSec: number | null = null;
     if ((lat == null || lng == null) && photoTakenAt != null) {
       const routeData = activity.routeData as
         | Array<{ lat: number; lng: number; time?: string }>
         | null;
-      const isArr = Array.isArray(routeData);
-      routeDataLen = isArr ? (routeData as unknown[]).length : 0;
-      console.info(
-        `[photos POST] ${file.name} ROUTE_MATCH input: photoTakenAt=${photoTakenAt.toISOString()} ` +
-          `routeData=${typeof routeData} isArray=${isArr} length=${routeDataLen}`,
-      );
-      if (isArr && routeData!.length > 0) {
+      if (Array.isArray(routeData) && routeData.length > 0) {
         const photoMs = photoTakenAt.getTime();
         let bestDelta = Infinity;
         let bestPoint: { lat: number; lng: number; time?: string } | null = null;
-        let skippedNoTime = 0;
-        let skippedBadCoord = 0;
-        for (const p of routeData!) {
-          if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) {
-            skippedBadCoord += 1;
-            continue;
-          }
-          if (typeof p.time !== "string") {
-            skippedNoTime += 1;
+        for (const p of routeData) {
+          if (
+            !Number.isFinite(p.lat) ||
+            !Number.isFinite(p.lng) ||
+            typeof p.time !== "string"
+          ) {
             continue;
           }
           const t = new Date(p.time).getTime();
@@ -330,75 +315,26 @@ export async function POST(
             bestPoint = p;
           }
         }
-        if (Number.isFinite(bestDelta)) {
-          routeBestDeltaSec = Math.round(bestDelta / 1000);
-        }
-        console.info(
-          `[photos POST] ${file.name} ROUTE_MATCH scan: ` +
-            `bestDelta=${routeBestDeltaSec}s skippedNoTime=${skippedNoTime} ` +
-            `skippedBadCoord=${skippedBadCoord} bestPoint=${
-              bestPoint
-                ? `{lat:${bestPoint.lat},lng:${bestPoint.lng},time:${bestPoint.time}}`
-                : "null"
-            }`,
-        );
         // With correct UTC parsing of DateTimeOriginal + OffsetTimeOriginal
         // the photo timestamp matches the GPS-track timestamp on the
-        // second. A 5-minute tolerance still leaves room for camera-clock
-        // drift but rejects photos that are clearly not from this activity.
+        // second. A 5-minute tolerance leaves room for camera-clock drift
+        // but rejects photos that are clearly not from this activity.
         const TOLERANCE_MS = 5 * 60 * 1000;
         if (bestPoint && bestDelta <= TOLERANCE_MS) {
-          routeMatchLat = bestPoint.lat;
-          routeMatchLng = bestPoint.lng;
-          routeMatchDeltaSec = Math.round(bestDelta / 1000);
-          if (lat == null || lng == null) {
-            lat = routeMatchLat;
-            lng = routeMatchLng;
-          }
+          lat = bestPoint.lat;
+          lng = bestPoint.lng;
+          routeMatchedDeltaSec = Math.round(bestDelta / 1000);
         }
       }
     }
 
     if (photoTakenAt != null) takenAt = photoTakenAt;
 
-    const refToString = (v: unknown) =>
-      typeof v === "string"
-        ? JSON.stringify(v)
-        : v == null
-          ? "null"
-          : typeof v;
-    console.info(
-      `[photos POST] ${file.name} EXTRACTION: ` +
-        `size=${file.size} ` +
-        `parsedLat=${parsedLat} parsedLng=${parsedLng} ` +
-        `gpsLat=${gpsLat} gpsLng=${gpsLng} ` +
-        `dmsLat=${dmsLat} dmsLng=${dmsLng} ` +
-        `piexifLat=${piexifLat} piexifLng=${piexifLng} ` +
-        `piexifLatRef=${refToString(piexifLatRefRaw)} ` +
-        `piexifLngRef=${refToString(piexifLngRefRaw)} ` +
-        `rawDateTimeOriginal=${refToString(rawDateTimeOriginal)} ` +
-        `rawOffsetTimeOriginal=${refToString(rawOffsetTimeOriginal)} ` +
-        `photoTakenAt=${photoTakenAt?.toISOString() ?? "null"} ` +
-        `routeMatchLat=${routeMatchLat} routeMatchLng=${routeMatchLng} ` +
-        `routeMatchDeltaSec=${routeMatchDeltaSec} ` +
-        `routeDataLen=${routeDataLen} routeBestDeltaSec=${routeBestDeltaSec} ` +
-        `chosenLat=${lat} chosenLng=${lng}`,
-    );
-    if (lat == null && lng == null) {
-      console.warn(
-        `[photos POST] ${file.name} NO_GPS — file appears to have no readable GPS EXIF (mobile browser may have stripped metadata)`,
-      );
-    }
-
     // Client-supplied overrides take precedence (image was re-encoded
     // and EXIF in the buffer is missing/incomplete). Only accept finite
     // numbers — NaN/Infinity would corrupt the DB and crash Leaflet.
     const override = exifOverrides[i];
     if (override) {
-      console.info(
-        `[photos POST] ${file.name} — client override:`,
-        override,
-      );
       if (Number.isFinite(override.lat)) lat = override.lat as number;
       if (Number.isFinite(override.lng)) lng = override.lng as number;
       if (typeof override.takenAt === "string") {
@@ -411,8 +347,15 @@ export async function POST(
       lat = null;
       lng = null;
     }
+
+    const gpsSource =
+      lat == null
+        ? "none"
+        : routeMatchedDeltaSec != null
+          ? `route-match (Δ${routeMatchedDeltaSec}s)`
+          : "exif";
     console.info(
-      `[photos POST] ${file.name} — final lat=${lat} lng=${lng} takenAt=${takenAt?.toISOString() ?? null}`,
+      `[photos POST] ${file.name} (${(file.size / 1024).toFixed(0)}kB) gps=${gpsSource}`,
     );
 
     // Web-optimized: max 2048px longest side, WebP quality 82
@@ -458,29 +401,7 @@ export async function POST(
       height: meta.height ?? null,
     });
 
-    uploaded.push({
-      id: photoId,
-      lat,
-      lng,
-      location,
-      // Diagnostics — exposed in the upload response so the client can
-      // surface "no GPS extracted" to the user without server-log access.
-      diagnostics: {
-        parsedLat: Number.isFinite(parsedLat) ? parsedLat : null,
-        parsedLng: Number.isFinite(parsedLng) ? parsedLng : null,
-        gpsLat: Number.isFinite(gpsLat) ? gpsLat : null,
-        gpsLng: Number.isFinite(gpsLng) ? gpsLng : null,
-        dmsLat,
-        dmsLng,
-        piexifLat,
-        piexifLng,
-        routeMatchLat,
-        routeMatchLng,
-        routeMatchDeltaSec,
-        fileSize: file.size,
-        fileType: file.type,
-      },
-    });
+    uploaded.push({ id: photoId, lat, lng, location });
   }
 
   return NextResponse.json({ uploaded });
