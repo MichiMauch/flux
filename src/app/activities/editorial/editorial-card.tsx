@@ -341,22 +341,27 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
               )}
             </span>
           </footer>
-
-          {a.boost &&
-            (a.boost.canBoost || a.boost.boosters.length > 0) && (
-              <div className="reveal reveal-3 mt-4">
-                <BoostButton
-                  activityId={a.id}
-                  initialBoosted={a.boost.boostedByMe}
-                  initialBoosters={a.boost.boosters}
-                  canBoost={a.boost.canBoost}
-                  color={color}
-                  compact
-                />
-              </div>
-            )}
         </div>
       </Link>
+      {a.boost &&
+        (a.boost.canBoost || a.boost.boosters.length > 0) && (
+          <div
+            className="absolute z-20"
+            style={{
+              right: cfg.padding,
+              bottom: cfg.padding,
+            }}
+          >
+            <BoostButton
+              activityId={a.id}
+              initialBoosted={a.boost.boostedByMe}
+              initialBoosters={a.boost.boosters}
+              canBoost={a.boost.canBoost}
+              color={color}
+              compact
+            />
+          </div>
+        )}
     </article>
   );
 }
