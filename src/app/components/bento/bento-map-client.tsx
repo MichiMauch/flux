@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Camera, CameraOff } from "lucide-react";
+import { Camera, CameraOff, Maximize2, Minimize2 } from "lucide-react";
 
 const DEFAULT_NEON = "#FF6A00";
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -20,6 +20,10 @@ interface Props {
   hoverIdx?: number | null;
   highlightRange?: [number, number] | null;
   color?: string;
+  /** When set, render a maximize button that calls this on click. */
+  onRequestFullscreen?: () => void;
+  /** When set, render a minimize button that calls this on click. */
+  onRequestExitFullscreen?: () => void;
 }
 
 export default function BentoMapClient({
@@ -28,6 +32,8 @@ export default function BentoMapClient({
   hoverIdx = null,
   highlightRange = null,
   color = DEFAULT_NEON,
+  onRequestFullscreen,
+  onRequestExitFullscreen,
 }: Props) {
   const NEON = color;
   const mapRef = useRef<L.Map | null>(null);
@@ -124,8 +130,22 @@ export default function BentoMapClient({
 
     map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
 
+    // Watch container size — Leaflet doesn't auto-detect when its host
+    // element changes size (e.g. when the map switches between inline and
+    // fullscreen layouts). Without invalidateSize() the tiles render at
+    // the old viewport and leave grey gaps.
+    const ro = new ResizeObserver(() => {
+      try {
+        map.invalidateSize(false);
+      } catch {
+        // map already removed
+      }
+    });
+    ro.observe(containerRef.current);
+
     return () => {
       cleanupTouch?.();
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -208,21 +228,49 @@ export default function BentoMapClient({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
-      {photos.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowPhotos((v) => !v)}
-          className={`absolute top-2 right-2 z-[1000] inline-flex items-center gap-1 px-3 py-1.5 text-[11px] rounded-md border border-[#2a2a2a] [font-family:var(--bento-mono)] uppercase tracking-[0.12em] transition-colors ${
-            showPhotos
-              ? "bg-black text-white"
-              : "bg-[#0f0f0f] text-[#a3a3a3] hover:text-white"
-          }`}
-          title={showPhotos ? "Fotos ausblenden" : "Fotos einblenden"}
-        >
-          {showPhotos ? <Camera className="h-3.5 w-3.5" /> : <CameraOff className="h-3.5 w-3.5" />}
-          Fotos
-        </button>
-      )}
+      <div className="absolute top-2 right-2 z-[1000] flex items-center gap-2">
+        {photos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowPhotos((v) => !v)}
+            className={`inline-flex items-center gap-1 px-3 py-1.5 text-[11px] rounded-md border border-[#2a2a2a] [font-family:var(--bento-mono)] uppercase tracking-[0.12em] transition-colors ${
+              showPhotos
+                ? "bg-black text-white"
+                : "bg-[#0f0f0f] text-[#a3a3a3] hover:text-white"
+            }`}
+            title={showPhotos ? "Fotos ausblenden" : "Fotos einblenden"}
+          >
+            {showPhotos ? (
+              <Camera className="h-3.5 w-3.5" />
+            ) : (
+              <CameraOff className="h-3.5 w-3.5" />
+            )}
+            Fotos
+          </button>
+        )}
+        {onRequestFullscreen && (
+          <button
+            type="button"
+            onClick={onRequestFullscreen}
+            className="hidden md:inline-flex items-center justify-center h-8 w-8 rounded-md border border-[#2a2a2a] bg-[#0f0f0f] text-[#a3a3a3] hover:text-white transition-colors"
+            title="Vollbild"
+            aria-label="Karte im Vollbild öffnen"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {onRequestExitFullscreen && (
+          <button
+            type="button"
+            onClick={onRequestExitFullscreen}
+            className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-[#2a2a2a] bg-[#0f0f0f] text-[#a3a3a3] hover:text-white transition-colors"
+            title="Vollbild schliessen"
+            aria-label="Vollbild schliessen"
+          >
+            <Minimize2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
