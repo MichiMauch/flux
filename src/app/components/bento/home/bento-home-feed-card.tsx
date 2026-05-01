@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Clock, Heart, Mountain, Ruler, Image as ImageIcon } from "lucide-react";
 import { activityTypeColor } from "@/lib/activity-types";
 import { SportChip } from "@/app/components/sport-chip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   formatDateLabel,
   formatDistanceKm,
@@ -25,6 +26,20 @@ interface Props {
   routeData?: unknown;
   photoCount: number;
   hero?: boolean;
+  owner?: {
+    name: string;
+    image: string | null;
+  };
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 export function BentoHomeFeedCard(a: Props) {
@@ -46,6 +61,23 @@ export function BentoHomeFeedCard(a: Props) {
         </div>
       )}
       <div className="flex-1 p-3 flex flex-col gap-2">
+        {a.owner && (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              {a.owner.image && (
+                <AvatarImage src={a.owner.image} alt={a.owner.name} />
+              )}
+              <AvatarFallback className="text-[10px] font-bold">
+                {getInitials(a.owner.name)}
+              </AvatarFallback>
+            </Avatar>
+            <span
+              className={`${spaceMono.className} text-[11px] font-bold tracking-[0.04em] text-white`}
+            >
+              {a.owner.name}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2">
           <SportChip type={a.type} variant="mono" />
           <span

@@ -166,6 +166,30 @@ export const activityPhotos = pgTable("activity_photos", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ── Activity Boosts (Likes / Kudos) ────────────────────────────────────────
+
+export const activityBoosts = pgTable(
+  "activity_boosts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueByUserAndActivity: uniqueIndex("activity_boosts_user_activity_unique").on(
+      table.activityId,
+      table.userId,
+    ),
+  }),
+);
+
 // ── Goals ──────────────────────────────────────────────────────────────────
 
 export const goals = pgTable("goals", {

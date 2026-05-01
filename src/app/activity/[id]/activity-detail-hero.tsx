@@ -1,5 +1,6 @@
 import { Clock, Flame, Mountain, Ruler } from "lucide-react";
 import { ActivityActionsMenu } from "@/app/components/activity-actions-menu";
+import { BoostButton, type Booster } from "@/app/components/boost-button";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
 import { formatDurationHMS } from "@/lib/activity-format";
 import { fmt } from "./helpers";
@@ -31,6 +32,9 @@ interface Props {
   distanceKm: string;
   ascent: number | null;
   calories: number | null;
+  boostable: boolean;
+  boostedByMe: boolean;
+  boosters: Booster[];
 }
 
 export function ActivityDetailHero({
@@ -44,7 +48,11 @@ export function ActivityDetailHero({
   distanceKm,
   ascent,
   calories,
+  boostable,
+  boostedByMe,
+  boosters,
 }: Props) {
+  const showBoost = boostable || boosters.length > 0;
   return (
     <>
       <div
@@ -75,6 +83,16 @@ export function ActivityDetailHero({
             <ActivityActionsMenu
               activity={activity}
               initialPhotos={photoIds}
+            />
+          </div>
+        )}
+        {showBoost && (
+          <div className="mt-3">
+            <BoostButton
+              activityId={activity.id}
+              initialBoosted={boostedByMe}
+              initialBoosters={boosters}
+              canBoost={boostable}
             />
           </div>
         )}

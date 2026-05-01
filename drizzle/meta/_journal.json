@@ -134,6 +134,13 @@
       "when": 1777211008796,
       "tag": "0018_parallel_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777653066430,
+      "tag": "0019_outstanding_stingray",
+      "breakpoints": true
     }
   ]
 }

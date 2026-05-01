@@ -1,7 +1,12 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { activities, users, activityPhotos } from "@/lib/db/schema";
+import {
+  activities,
+  users,
+  activityPhotos,
+  activityBoosts,
+} from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { computeHrZones } from "@/lib/hr-zones";
 import { fetchHistoricalWeather, type WeatherData } from "@/lib/weather";
@@ -46,6 +51,22 @@ export default async function ActivityBentoPage({
     .from(activityPhotos)
     .where(eq(activityPhotos.activityId, activity.id))
     .orderBy(activityPhotos.takenAt);
+
+  const boosters = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      image: users.image,
+    })
+    .from(activityBoosts)
+    .innerJoin(users, eq(activityBoosts.userId, users.id))
+    .where(eq(activityBoosts.activityId, activity.id));
+  const boostedByMe = boosters.some((b) => b.id === session.user.id);
+  const boosterDtos = boosters.map((b) => ({
+    id: b.id,
+    name: b.name ?? "User",
+    image: b.image,
+  }));
 
   const route = (activity.routeData as RoutePoint[] | null) ?? [];
   const isRunning = activity.type?.toUpperCase() === "RUNNING";
@@ -153,6 +174,9 @@ export default async function ActivityBentoPage({
           distanceKm={distanceKm}
           ascent={ascent}
           calories={calories}
+          boostable={!isOwner}
+          boostedByMe={boostedByMe}
+          boosters={boosterDtos}
         />
 
         <ActivityDetailBody

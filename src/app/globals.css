@@ -161,3 +161,18 @@
 .photo-marker-img:hover {
   transform: scale(1.15);
 }
+
+@keyframes flame-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 3px currentColor);
+  }
+  50% {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 20px currentColor);
+  }
+}
+.flame-pulse {
+  animation: flame-pulse 1.4s ease-in-out infinite;
+  will-change: transform, filter;
+}
