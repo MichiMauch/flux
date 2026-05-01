@@ -133,19 +133,33 @@ export function ActivityDetailBody({
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <StatTile icon={<Heart />} label="Ø Puls" value={fmt(avgHr)} unit="bpm" />
-            <StatTile icon={<Heart />} label="Max Puls" value={fmt(maxHr)} unit="bpm" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <StatTile
+              icon={<Heart />}
+              label="Ø Puls"
+              value={fmt(avgHr)}
+              unit="bpm"
+              className="order-1 sm:order-1"
+            />
+            <StatTile
+              icon={<Heart />}
+              label="Max Puls"
+              value={fmt(maxHr)}
+              unit="bpm"
+              className="order-2 sm:order-2"
+            />
             <StatTile
               icon={<TrendingDown />}
               label="Abstieg"
               value={fmt(descent)}
               unit="m"
+              className="order-5 sm:order-3"
             />
             <DotsTile
               icon={<Zap />}
               label="TRIMP"
               count={trimp != null ? dotsForTrimp(trimp) : 0}
+              className="order-3 sm:order-4"
             />
             <DotsTile
               icon={<Gauge />}
@@ -155,12 +169,14 @@ export function ActivityDetailBody({
                   ? dotsForIntensity(trimp / (duration / 3600))
                   : 0
               }
+              className="order-4 sm:order-5"
             />
             <StatTile
               icon={<ActivityIcon />}
               label="Ø Tempo"
               value={fmt(avgSpeed != null ? avgSpeed * 3.6 : null, 1)}
               unit="km/h"
+              className="order-6 sm:order-6"
             />
           </div>
 

@@ -79,14 +79,16 @@ export function StatTile({
   label,
   value,
   unit,
+  className,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   unit?: string;
+  className?: string;
 }) {
   return (
-    <Tile>
+    <Tile className={className}>
       <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] mb-2">
         <span className="[&>svg]:h-3 [&>svg]:w-3" style={{ color: NEON_DIM }}>
           {icon}
@@ -115,13 +117,15 @@ export function DotsTile({
   label,
   count,
   icon,
+  className,
 }: {
   label: string;
   count: number;
   icon?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Tile>
+    <Tile className={className}>
       <div className="flex items-center gap-1.5 [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] mb-3">
         {icon && (
           <span className="[&>svg]:h-3 [&>svg]:w-3" style={{ color: NEON_DIM }}>
