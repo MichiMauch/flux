@@ -1,168 +1,252 @@
-import { readFileSync } from "fs";
+import { config } from "dotenv";
+import { readFile } from "fs/promises";
 import { XMLParser } from "fast-xml-parser";
 import postgres from "postgres";
-import { basename } from "path";
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://flux:flux-prod-2026@localhost:5432/flux";
+config({ path: ".env.local" });
+config({ path: ".env" });
 
-interface TrackPoint {
-  "@_lat": string;
-  "@_lon": string;
-  ele?: number;
-  time?: string;
+interface RoutePoint {
+  lat: number;
+  lng: number;
+  elevation: number | null;
+  time: string;
 }
 
-async function importGpx(filePath: string, userId: string) {
-  const sql = postgres(DATABASE_URL);
-  const parser = new XMLParser({ ignoreAttributes: false });
+function haversineMeters(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const R = 6371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
 
-  console.log(`\nParsing ${basename(filePath)}...`);
-  const xml = readFileSync(filePath, "utf-8");
-  const gpx = parser.parse(xml);
+function parseGpx(xml: string): {
+  name: string | null;
+  type: string | null;
+  points: RoutePoint[];
+} {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "",
+    parseAttributeValue: true,
+    isArray: (name) => ["trk", "trkseg", "trkpt"].includes(name),
+  });
+  const doc = parser.parse(xml);
+  const gpx = doc.gpx;
+  if (!gpx) throw new Error("not a GPX file");
 
-  const segments = gpx.gpx.trk.trkseg;
-  const segArray = Array.isArray(segments) ? segments : [segments];
+  const trks = gpx.trk ?? [];
+  const trk = Array.isArray(trks) ? trks[0] : trks;
+  const trkName: string | null =
+    typeof trk?.name === "string" ? trk.name : null;
+  const trkType: string | null =
+    typeof trk?.type === "string" ? trk.type : null;
 
-  // Collect all track points
-  const allPoints: TrackPoint[] = [];
-  for (const seg of segArray) {
-    const pts = Array.isArray(seg.trkpt) ? seg.trkpt : [seg.trkpt];
-    allPoints.push(...pts);
-  }
+  const segs = trk?.trkseg ?? [];
+  const segArr = Array.isArray(segs) ? segs : [segs];
 
-  console.log(`  Total points: ${allPoints.length}`);
-
-  // Sample every Nth point to keep it manageable (max ~500 points)
-  const sampleRate = Math.max(1, Math.floor(allPoints.length / 500));
-  const sampled = allPoints.filter((_, i) => i % sampleRate === 0);
-  console.log(`  Sampled to: ${sampled.length} points (every ${sampleRate}th)`);
-
-  // Build route data
-  const routeData = sampled.map((pt) => ({
-    lat: parseFloat(pt["@_lat"]),
-    lng: parseFloat(pt["@_lon"]),
-    elevation: pt.ele ?? null,
-    time: pt.time ?? null,
-  }));
-
-  // Calculate stats
-  const startTime = allPoints[0]?.time ? new Date(allPoints[0].time) : new Date();
-  const endTime = allPoints[allPoints.length - 1]?.time
-    ? new Date(allPoints[allPoints.length - 1].time!)
-    : startTime;
-  const durationSec = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
-
-  // Calculate distance (Haversine)
-  let totalDistance = 0;
-  for (let i = 1; i < allPoints.length; i++) {
-    const lat1 = parseFloat(allPoints[i - 1]["@_lat"]);
-    const lon1 = parseFloat(allPoints[i - 1]["@_lon"]);
-    const lat2 = parseFloat(allPoints[i]["@_lat"]);
-    const lon2 = parseFloat(allPoints[i]["@_lon"]);
-    totalDistance += haversine(lat1, lon1, lat2, lon2);
-  }
-
-  // Calculate elevation gain
-  let ascent = 0;
-  let descent = 0;
-  for (let i = 1; i < sampled.length; i++) {
-    const diff = (sampled[i].ele ?? 0) - (sampled[i - 1].ele ?? 0);
-    if (diff > 0) ascent += diff;
-    else descent += Math.abs(diff);
-  }
-
-  // Calculate speed data (from sampled points)
-  const speedData = [];
-  for (let i = 1; i < sampled.length; i++) {
-    const t1 = sampled[i - 1].time ? new Date(sampled[i - 1].time!).getTime() : 0;
-    const t2 = sampled[i].time ? new Date(sampled[i].time!).getTime() : 0;
-    const dt = (t2 - t1) / 1000; // seconds
-    if (dt > 0) {
-      const dist = haversine(
-        parseFloat(sampled[i - 1]["@_lat"]),
-        parseFloat(sampled[i - 1]["@_lon"]),
-        parseFloat(sampled[i]["@_lat"]),
-        parseFloat(sampled[i]["@_lon"])
-      );
-      const speed = (dist / dt) * 3.6; // km/h
-      speedData.push({ time: sampled[i].time, speed: Math.round(speed * 10) / 10 });
+  const points: RoutePoint[] = [];
+  for (const seg of segArr) {
+    const pts = seg?.trkpt ?? [];
+    const ptsArr = Array.isArray(pts) ? pts : [pts];
+    for (const pt of ptsArr) {
+      const lat = Number(pt.lat);
+      const lng = Number(pt.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      const eleRaw =
+        typeof pt.ele === "number"
+          ? pt.ele
+          : typeof pt.ele === "string"
+            ? Number(pt.ele)
+            : null;
+      const time = typeof pt.time === "string" ? pt.time : null;
+      if (!time) continue;
+      points.push({
+        lat,
+        lng,
+        elevation: Number.isFinite(eleRaw as number)
+          ? (eleRaw as number)
+          : null,
+        time,
+      });
     }
   }
 
-  // Determine activity name from filename
-  const fileName = basename(filePath);
-  const dateMatch = fileName.match(/(\d{4}-\d{2}-\d{2})/);
-  const dateStr = dateMatch ? dateMatch[1] : "Unknown";
-  const name = totalDistance > 10000 ? `Velofahrt ${dateStr}` : `Lauf ${dateStr}`;
-  const type = totalDistance > 10000 ? "CYCLING" : "RUNNING";
+  return { name: trkName, type: trkType, points };
+}
 
-  console.log(`  Name: ${name}`);
-  console.log(`  Type: ${type}`);
-  console.log(`  Start: ${startTime.toISOString()}`);
-  console.log(`  Duration: ${Math.floor(durationSec / 60)}min ${durationSec % 60}s`);
-  console.log(`  Distance: ${(totalDistance / 1000).toFixed(2)} km`);
-  console.log(`  Ascent: ${ascent.toFixed(0)}m / Descent: ${descent.toFixed(0)}m`);
+function computeStats(points: RoutePoint[]) {
+  let distance = 0;
+  let ascent = 0;
+  let descent = 0;
+  let minAlt = Infinity;
+  let maxAlt = -Infinity;
+  for (let i = 1; i < points.length; i++) {
+    distance += haversineMeters(points[i - 1], points[i]);
+    const e0 = points[i - 1].elevation;
+    const e1 = points[i].elevation;
+    if (e0 != null && e1 != null) {
+      const d = e1 - e0;
+      if (d > 0) ascent += d;
+      else descent -= d;
+    }
+    if (e1 != null) {
+      if (e1 < minAlt) minAlt = e1;
+      if (e1 > maxAlt) maxAlt = e1;
+    }
+  }
+  const startTime = new Date(points[0].time);
+  const endTime = new Date(points[points.length - 1].time);
+  const duration = Math.round(
+    (endTime.getTime() - startTime.getTime()) / 1000,
+  );
+  return {
+    distance,
+    ascent,
+    descent,
+    minAltitude: Number.isFinite(minAlt) ? minAlt : null,
+    maxAltitude: Number.isFinite(maxAlt) ? maxAlt : null,
+    startTime,
+    duration,
+  };
+}
 
-  // Insert into DB
+function mapType(gpxType: string | null): string {
+  const lower = (gpxType ?? "").toLowerCase();
+  if (lower.includes("run") || lower.includes("lauf")) return "RUNNING";
+  if (lower.includes("hike") || lower.includes("wander")) return "HIKING";
+  if (lower.includes("walk") || lower.includes("spazier")) return "WALKING";
+  if (lower.includes("swim") || lower.includes("schwim")) return "SWIMMING";
+  return "CYCLING";
+}
+
+async function main() {
+  const file = process.argv[2];
+  if (!file || file.startsWith("--")) {
+    console.error(
+      "Usage: npx tsx scripts/import-gpx.ts <gpx-path> [--user=<email>] [--name=<title>] [--type=<TYPE>] [--commit]",
+    );
+    process.exit(1);
+  }
+  const userArg = process.argv.find((a) => a.startsWith("--user="));
+  const nameArg = process.argv.find((a) => a.startsWith("--name="));
+  const typeArg = process.argv.find((a) => a.startsWith("--type="));
+  const commit = process.argv.includes("--commit");
+  const userEmail = userArg ? userArg.split("=")[1] : null;
+
+  const xml = await readFile(file, "utf8");
+  const { name: gpxName, type: gpxType, points } = parseGpx(xml);
+  if (points.length === 0)
+    throw new Error("GPX has no track points with time");
+  const stats = computeStats(points);
+  const type = typeArg ? typeArg.split("=")[1] : mapType(gpxType);
+  const name =
+    (nameArg ? nameArg.split("=")[1] : null) ?? gpxName ?? "GPX Import";
+
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL missing");
+  const sql = postgres(url);
+
+  let userId: string | null = null;
+  if (userEmail) {
+    const [u] = await sql<
+      { id: string; email: string }[]
+    >`SELECT id, email FROM "user" WHERE email = ${userEmail} LIMIT 1`;
+    if (u) userId = u.id;
+  } else {
+    const userRows = await sql<
+      { id: string; email: string }[]
+    >`SELECT id, email FROM "user" ORDER BY email LIMIT 2`;
+    if (userRows.length === 1) userId = userRows[0].id;
+    else if (userRows.length > 1) {
+      console.error(
+        `Multiple users in DB — pass --user=<email>. Found:\n  ` +
+          userRows.map((r) => r.email).join("\n  "),
+      );
+      await sql.end();
+      process.exit(1);
+    }
+  }
+  if (!userId) {
+    console.error("No matching user found.");
+    await sql.end();
+    process.exit(1);
+  }
+
+  const summary = {
+    file,
+    name,
+    type,
+    userId,
+    startTime: stats.startTime.toISOString(),
+    durationSec: stats.duration,
+    distanceM: Math.round(stats.distance),
+    ascentM: Math.round(stats.ascent),
+    descentM: Math.round(stats.descent),
+    minAltitude: stats.minAltitude,
+    maxAltitude: stats.maxAltitude,
+    points: points.length,
+    firstPoint: points[0],
+    lastPoint: points[points.length - 1],
+  };
+  console.log("Parsed GPX:");
+  console.log(summary);
+
+  if (!commit) {
+    console.log("\nDRY RUN — pass --commit to actually insert.");
+    await sql.end();
+    return;
+  }
+
+  const avgSpeed =
+    stats.duration > 0 ? stats.distance / stats.duration : null;
   const id = crypto.randomUUID();
   await sql`
-    INSERT INTO activities (id, polar_id, user_id, name, type, start_time, duration, distance, ascent, descent, route_data, speed_data, created_at)
-    VALUES (
+    INSERT INTO activities (
+      id, user_id, name, type, start_time, duration, moving_time,
+      distance, ascent, descent, min_altitude, max_altitude,
+      avg_speed, route_data, created_at
+    ) VALUES (
       ${id},
-      ${"gpx_" + dateStr + "_" + Date.now()},
       ${userId},
       ${name},
       ${type},
-      ${startTime.toISOString()},
-      ${durationSec},
-      ${totalDistance},
-      ${ascent},
-      ${descent},
-      ${JSON.stringify(routeData)},
-      ${JSON.stringify(speedData)},
+      ${stats.startTime},
+      ${stats.duration},
+      ${stats.duration},
+      ${stats.distance},
+      ${stats.ascent},
+      ${stats.descent},
+      ${stats.minAltitude},
+      ${stats.maxAltitude},
+      ${avgSpeed},
+      ${sql.json(
+        points.map((p) => ({
+          lat: p.lat,
+          lng: p.lng,
+          elevation: p.elevation,
+          time: p.time,
+        })),
+      )},
       NOW()
     )
   `;
 
-  console.log(`  Imported as activity ${id}`);
+  console.log(`\nInserted activity ${id} for user ${userId}.`);
+  console.log(`Open: /activity/${id}`);
   await sql.end();
 }
 
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-async function main() {
-  const sql = postgres(DATABASE_URL);
-  const rows = await sql`SELECT id FROM "user" WHERE email = 'michi.mauch@gmail.com'`;
-  const userId = rows[0]?.id;
-  await sql.end();
-
-  if (!userId) {
-    console.error("User not found!");
-    return;
-  }
-
-  console.log("User ID:", userId);
-
-  const files = [
-    "/Users/michaelmauch/Downloads/Michi_Mauch_2026-04-10_09-15-04.GPX",
-    "/Users/michaelmauch/Downloads/Michi_Mauch_2026-04-12_12-04-35.GPX",
-  ];
-
-  for (const file of files) {
-    await importGpx(file, userId);
-  }
-
-  console.log("\nDone! Both activities imported.");
-}
-
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
