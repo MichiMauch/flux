@@ -40,11 +40,20 @@ export const NAV_ITEMS: NavItem[] = [
 export const PRIMARY_ITEMS = NAV_ITEMS.filter((i) => i.group === "primary");
 export const SECONDARY_ITEMS = NAV_ITEMS.filter((i) => i.group === "secondary");
 
+const MOBILE_MORE_HREFS = ["/stats", "/training-load"];
+export const MOBILE_PRIMARY_ITEMS = PRIMARY_ITEMS.filter(
+  (i) => !MOBILE_MORE_HREFS.includes(i.href),
+);
+export const MOBILE_MORE_ITEMS = [
+  ...PRIMARY_ITEMS.filter((i) => MOBILE_MORE_HREFS.includes(i.href)),
+  ...SECONDARY_ITEMS,
+];
+
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-export function isSecondaryActive(pathname: string): boolean {
-  return SECONDARY_ITEMS.some((i) => isActive(pathname, i.href));
+export function isMoreActive(pathname: string): boolean {
+  return MOBILE_MORE_ITEMS.some((i) => isActive(pathname, i.href));
 }

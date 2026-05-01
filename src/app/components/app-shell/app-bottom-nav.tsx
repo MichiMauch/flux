@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { NavLink } from "./nav-link";
 import { NavLottie } from "./nav-lottie";
-import { PRIMARY_ITEMS, isSecondaryActive } from "./nav-items";
+import { MOBILE_PRIMARY_ITEMS, isMoreActive } from "./nav-items";
 
 interface AppBottomNavProps {
   onOpenMore: () => void;
@@ -12,7 +12,7 @@ interface AppBottomNavProps {
 
 export function AppBottomNav({ onOpenMore }: AppBottomNavProps) {
   const pathname = usePathname();
-  const moreActive = isSecondaryActive(pathname);
+  const moreActive = isMoreActive(pathname);
   const [moreHover, setMoreHover] = useState(false);
 
   return (
@@ -22,7 +22,7 @@ export function AppBottomNav({ onOpenMore }: AppBottomNavProps) {
       aria-label="Hauptnavigation"
     >
       <div className="flex">
-        {PRIMARY_ITEMS.map((item) => (
+        {MOBILE_PRIMARY_ITEMS.map((item) => (
           <NavLink
             key={item.href}
             href={item.href}

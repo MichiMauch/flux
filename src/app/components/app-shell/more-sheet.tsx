@@ -3,7 +3,7 @@
 import { LogOut } from "lucide-react";
 import { BottomSheet } from "../bottom-sheet";
 import { NavLink } from "./nav-link";
-import { SECONDARY_ITEMS } from "./nav-items";
+import { MOBILE_MORE_ITEMS } from "./nav-items";
 
 interface MoreSheetProps {
   open: boolean;
@@ -16,7 +16,7 @@ export function MoreSheet({ open, onClose, logoutAction }: MoreSheetProps) {
     <BottomSheet open={open} onClose={onClose} title="Mehr">
       <div className="p-2">
         <div className="grid grid-cols-1 gap-1">
-          {SECONDARY_ITEMS.map((item) => (
+          {MOBILE_MORE_ITEMS.map((item) => (
             <NavLink
               key={item.href}
               href={item.href}
