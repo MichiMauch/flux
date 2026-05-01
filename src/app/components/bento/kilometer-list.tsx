@@ -36,6 +36,7 @@ interface Props {
   selectedKm: number | null;
   onSelectKm: (km: number | null) => void;
   highlights: Highlights | null;
+  headerClassName?: string;
 }
 
 export function KilometerList({
@@ -44,10 +45,13 @@ export function KilometerList({
   selectedKm,
   onSelectKm,
   highlights,
+  headerClassName,
 }: Props) {
   return (
     <>
-      <div className="[font-family:var(--bento-mono)] px-3 py-2 bg-[#0a0a0a] border-b border-[#2a2a2a] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
+      <div
+        className={`[font-family:var(--bento-mono)] px-3 py-2 bg-[#0a0a0a] border-b border-[#2a2a2a] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] ${headerClassName ?? ""}`}
+      >
         Runden
       </div>
       {highlights && (

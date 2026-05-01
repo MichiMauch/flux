@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { ChevronDown } from "lucide-react";
 import {
   computeSplits,
   type HrSample,
@@ -50,6 +51,7 @@ export function BentoRouteInteractive({
 }: Props) {
   const [selectedKm, setSelectedKm] = useState<number | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [kmOpen, setKmOpen] = useState(false);
   const { hoverIdx } = useHover();
 
   const splits = useMemo(
@@ -93,9 +95,22 @@ export function BentoRouteInteractive({
   return (
     <>
       <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setKmOpen((v) => !v)}
+          aria-expanded={kmOpen}
+          aria-controls="km-list-aside"
+          className="md:hidden w-full flex items-center justify-between px-3 py-2.5 bg-[#0a0a0a] border-b border-[#2a2a2a] [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]"
+        >
+          <span>Kilometer</span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${kmOpen ? "rotate-180" : ""}`}
+          />
+        </button>
         <div className="grid md:grid-cols-[200px_1fr]">
           <aside
-            className="border-b md:border-b-0 md:border-r border-[#2a2a2a] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            id="km-list-aside"
+            className={`${kmOpen ? "" : "hidden md:block"} border-b md:border-b-0 md:border-r border-[#2a2a2a] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
             style={{ maxHeight: MAP_HEIGHT }}
           >
             <KilometerList
@@ -104,6 +119,7 @@ export function BentoRouteInteractive({
               selectedKm={selectedKm}
               onSelectKm={setSelectedKm}
               highlights={highlights}
+              headerClassName="hidden md:block"
             />
           </aside>
           <div style={{ height: MAP_HEIGHT }}>
