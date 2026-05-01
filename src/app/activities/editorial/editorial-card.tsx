@@ -340,13 +340,26 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
                 />
               )}
             </span>
+            {a.boost &&
+              (a.boost.canBoost || a.boost.boosters.length > 0) && (
+                <div className="basis-full sm:hidden mt-2">
+                  <BoostButton
+                    activityId={a.id}
+                    initialBoosted={a.boost.boostedByMe}
+                    initialBoosters={a.boost.boosters}
+                    canBoost={a.boost.canBoost}
+                    color={color}
+                    compact
+                  />
+                </div>
+              )}
           </footer>
         </div>
       </Link>
       {a.boost &&
         (a.boost.canBoost || a.boost.boosters.length > 0) && (
           <div
-            className="absolute z-20"
+            className="hidden sm:block absolute z-20"
             style={{
               right: cfg.padding,
               bottom: cfg.padding,
