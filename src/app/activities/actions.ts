@@ -17,6 +17,14 @@ export interface ActivityFeedItem {
   ascent: number | null;
   routeData: unknown;
   photoCount: number;
+  /** Optional — only set on multi-user feeds (e.g. stream). */
+  owner?: { id: string; name: string; image: string | null };
+  /** Optional — only set on multi-user feeds. */
+  boost?: {
+    canBoost: boolean;
+    boostedByMe: boolean;
+    boosters: { id: string; name: string; image: string | null }[];
+  };
 }
 
 export interface LoadMoreResult {

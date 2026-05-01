@@ -11,8 +11,9 @@ import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoSyncButton } from "../components/bento/home/bento-sync-button";
-import { BentoHomeFeedCard } from "../components/bento/home/bento-home-feed-card";
+import { EditorialFeed } from "../activities/editorial/editorial-feed";
 import { spaceMono } from "../components/bento/bento-fonts";
+import type { ActivityFeedItem } from "../activities/actions";
 
 const DAYS_BACK = 14;
 
@@ -80,12 +81,10 @@ export default async function StreamPage() {
     )
     .orderBy(desc(activities.startTime));
 
-  const ownerById = new Map<string, { name: string; image: string | null }>();
-  if (me) {
-    ownerById.set(me.id, { name: me.name ?? "Du", image: me.image });
-  }
+  const ownerById = new Map<string, { id: string; name: string; image: string | null }>();
   if (partner) {
     ownerById.set(partner.id, {
+      id: partner.id,
       name: partner.name ?? "Partner",
       image: partner.image,
     });
@@ -120,6 +119,28 @@ export default async function StreamPage() {
     boostsByActivity.set(b.activityId, list);
   }
 
+  const items: ActivityFeedItem[] = rows.map((r) => {
+    const owner = r.userId === userId ? undefined : ownerById.get(r.userId);
+    const boosters = boostsByActivity.get(r.id) ?? [];
+    const boostedByMe = boosters.some((b) => b.id === userId);
+    const canBoost = r.userId !== userId;
+    return {
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      startTime: r.startTime,
+      distance: r.distance,
+      duration: r.duration,
+      movingTime: r.movingTime,
+      avgHeartRate: r.avgHeartRate,
+      ascent: r.ascent,
+      routeData: r.routeData,
+      photoCount: r.photoCount ?? 0,
+      owner,
+      boost: { canBoost, boostedByMe, boosters },
+    };
+  });
+
   return (
     <BentoPageShell>
       <BentoPageHeader
@@ -134,50 +155,18 @@ export default async function StreamPage() {
             className={`${spaceMono.className} text-[11px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
           >
             Kein Partner verbunden — du siehst nur deine eigenen Aktivitäten.
-            Im Profil kannst du eine Partner-Verknüpfung einrichten.
           </p>
         </div>
       )}
 
-      {rows.length === 0 ? (
+      {items.length === 0 ? (
         <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-8 text-center">
-          <p
-            className={`${spaceMono.className} text-sm text-[#a3a3a3]`}
-          >
+          <p className={`${spaceMono.className} text-sm text-[#a3a3a3]`}>
             Keine Aktivitäten in den letzten {DAYS_BACK} Tagen.
           </p>
         </div>
       ) : (
-        <div className="mx-auto flex max-w-2xl flex-col gap-3">
-          {rows.map((r) => {
-            const owner = ownerById.get(r.userId);
-            const boosters = boostsByActivity.get(r.id) ?? [];
-            const boostedByMe = boosters.some((b) => b.id === userId);
-            const canBoost = r.userId !== userId;
-            return (
-              <BentoHomeFeedCard
-                key={r.id}
-                id={r.id}
-                name={r.name}
-                type={r.type}
-                startTime={r.startTime}
-                distance={r.distance}
-                duration={r.duration}
-                movingTime={r.movingTime}
-                avgHeartRate={r.avgHeartRate}
-                ascent={r.ascent}
-                routeData={r.routeData}
-                photoCount={r.photoCount ?? 0}
-                owner={owner}
-                boost={{
-                  canBoost,
-                  boostedByMe,
-                  boosters,
-                }}
-              />
-            );
-          })}
-        </div>
+        <EditorialFeed initial={items} initialHasMore={false} sport={null} />
       )}
     </BentoPageShell>
   );

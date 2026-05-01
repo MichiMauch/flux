@@ -9,6 +9,8 @@ import {
 } from "@/lib/activity-format";
 import { rajdhani, spaceMono } from "../../components/bento/bento-fonts";
 import { RouteSvg } from "./route-svg";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BoostButton } from "../../components/boost-button";
 import type { ActivityFeedItem } from "../actions";
 
 export type CardSize = "hero" | "medium" | "small";
@@ -25,6 +27,16 @@ interface Props {
 const formatDistanceKm = (m: number) =>
   sharedFormatDistanceKm(m, m >= 10000 ? 1 : 2);
 const formatDurationShort = formatDurationWordsPadded;
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 function formatPaceMinPerKm(distM: number, timeS: number): string | null {
   if (!distM || !timeS) return null;
@@ -246,7 +258,28 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
             zIndex: 3,
           }}
         >
-          <header className="reveal reveal-1">
+          <header className="reveal reveal-1 flex flex-col gap-2">
+            {a.owner && (
+              <div className="flex items-center gap-2">
+                <Avatar
+                  className="h-7 w-7"
+                  style={{ boxShadow: `0 0 0 2px ${color}` }}
+                >
+                  {a.owner.image && (
+                    <AvatarImage src={a.owner.image} alt={a.owner.name} />
+                  )}
+                  <AvatarFallback
+                    className="text-[10px] font-bold"
+                    style={{ background: color, color: "#0f0f0f" }}
+                  >
+                    {getInitials(a.owner.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-[12px] font-bold tracking-[0.01em] text-white">
+                  {a.owner.name}
+                </span>
+              </div>
+            )}
             <div
               className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.22em]`}
               style={{ color: "#9a9a9a" }}
@@ -308,6 +341,20 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
               )}
             </span>
           </footer>
+
+          {a.boost &&
+            (a.boost.canBoost || a.boost.boosters.length > 0) && (
+              <div className="reveal reveal-3 mt-4">
+                <BoostButton
+                  activityId={a.id}
+                  initialBoosted={a.boost.boostedByMe}
+                  initialBoosters={a.boost.boosters}
+                  canBoost={a.boost.canBoost}
+                  color={color}
+                  compact
+                />
+              </div>
+            )}
         </div>
       </Link>
     </article>
