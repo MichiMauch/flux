@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { activities, activityBoosts } from "@/lib/db/schema";
+import { activities, activityBoosts, users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 
 export async function POST(
@@ -54,13 +54,22 @@ export async function POST(
   }
 
   const allBoosts = await db
-    .select({ userId: activityBoosts.userId })
+    .select({
+      userId: activityBoosts.userId,
+      userName: users.name,
+      userImage: users.image,
+    })
     .from(activityBoosts)
+    .innerJoin(users, eq(activityBoosts.userId, users.id))
     .where(eq(activityBoosts.activityId, activityId));
 
   return NextResponse.json({
     boosted,
     count: allBoosts.length,
-    userIds: allBoosts.map((b) => b.userId),
+    boosters: allBoosts.map((b) => ({
+      id: b.userId,
+      name: b.userName ?? "User",
+      image: b.userImage,
+    })),
   });
 }

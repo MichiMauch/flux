@@ -64,14 +64,10 @@ export function BoostButton({
         const data = (await res.json()) as {
           boosted: boolean;
           count: number;
-          userIds: string[];
+          boosters: Booster[];
         };
         setBoosted(data.boosted);
-        // Server returns userIds; we don't have full booster info for
-        // others on the client, so trust the count from the server and
-        // only sync the boosters list on next page render. For UX
-        // immediacy, just toggle the local state — the count badge
-        // already reflects the new value via boosters length adjustment.
+        setBoosters(data.boosters);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Boost fehlgeschlagen");
       }
