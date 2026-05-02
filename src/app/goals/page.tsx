@@ -46,8 +46,8 @@ export default async function GoalsPage() {
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {withProgress.map(({ goal, progress }) => (
-            <GoalCard key={goal.id} goal={goal} progress={progress} />
+          {withProgress.map(({ goal, progress }, i) => (
+            <GoalCard key={goal.id} goal={goal} progress={progress} index={i} />
           ))}
         </div>
       )}
