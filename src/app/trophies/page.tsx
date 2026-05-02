@@ -80,13 +80,20 @@ export default async function TrophiesPage() {
 
       <BentoTile label="Level" title={`Level ${level.level}`}>
         <div className="flex items-center gap-4">
-          <div
-            className={`${rajdhani.className} flex h-16 w-16 items-center justify-center rounded-full bg-[#FF6A00] text-black font-bold text-3xl`}
-            style={{
-              textShadow: "0 0 12px rgba(255,106,0,0.4)",
-            }}
-          >
-            {level.level}
+          <div className="relative h-20 w-20 shrink-0">
+            <TrophyIcon
+              code="_default"
+              alt={`Level ${level.level}`}
+              className="h-full w-full"
+            />
+            <div
+              className={`${rajdhani.className} absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6A00] text-black font-bold text-base ring-2 ring-[#0f0f0f] tabular-nums`}
+              style={{
+                textShadow: "0 0 6px rgba(255,106,0,0.4)",
+              }}
+            >
+              {level.level}
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <div
