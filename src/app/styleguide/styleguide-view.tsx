@@ -99,6 +99,7 @@ import { SevenSegDisplay } from "../components/bento/seven-seg";
 import { LedValue } from "../components/bento/led-value";
 import { ActivityMetric } from "../components/activity-metric";
 import { TrophyIcon } from "../components/trophy-icon";
+import { TROPHIES } from "@/lib/trophies";
 import { SPORT_COLORS } from "@/lib/sport-colors";
 import { activityTypeIcon } from "@/lib/activity-icon";
 import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
@@ -264,22 +265,6 @@ const SPORT_ICON_TYPES = [
   "OTHER_OUTDOOR",
 ];
 
-const TROPHY_ICONS = [
-  "Bike",
-  "Footprints",
-  "Medal",
-  "Mountain",
-  "Clock",
-  "Sunrise",
-  "Moon",
-  "Route",
-  "TrendingUp",
-  "Activity",
-  "Hourglass",
-  "Flame",
-  "Sun",
-  "Trophy",
-];
 
 export function StyleguideView() {
   return (
@@ -664,17 +649,24 @@ export function StyleguideView() {
             </div>
           </Section>
 
-          <Section id="trophy-icons" title="Trophy Icons" note="Icon-Set für Trophäen (TrophyIcon-Mapping)">
+          <Section id="trophy-icons" title="Trophy Icons" note="Vollständiges Trophäen-Set (PNG → WebP, transparent)">
             <Panel>
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-7">
-                {TROPHY_ICONS.map((name) => (
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                {TROPHIES.map((t) => (
                   <div
-                    key={name}
+                    key={t.code}
                     className="flex flex-col items-center gap-2 rounded-md border border-border bg-surface p-3"
                   >
-                    <TrophyIcon name={name} className="h-6 w-6 text-brand" />
+                    <TrophyIcon
+                      code={t.code}
+                      alt={t.title}
+                      className="h-16 w-16"
+                    />
+                    <span className="truncate text-[11px] font-semibold text-foreground">
+                      {t.title}
+                    </span>
                     <span className="truncate text-[10px] text-muted-foreground">
-                      {name}
+                      {t.code}
                     </span>
                   </div>
                 ))}

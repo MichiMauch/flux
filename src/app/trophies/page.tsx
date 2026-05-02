@@ -6,7 +6,7 @@ import {
 } from "@/lib/trophies-server";
 import { TrophyIcon } from "@/app/components/trophy-icon";
 import { TrophyRescanButton } from "@/app/components/trophy-rescan-button";
-import { tierColor, formatXp, type TrophyCategory } from "@/lib/trophies";
+import { formatXp, type TrophyCategory } from "@/lib/trophies";
 import { Trophy, Lock, CheckCircle2 } from "lucide-react";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
@@ -134,14 +134,15 @@ export default async function TrophiesPage() {
                   >
                     <div className="flex items-start gap-3">
                       <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-md ${
                           isUnlocked ? "bg-black/60" : "bg-black/40"
                         }`}
                       >
                         {isUnlocked ? (
                           <TrophyIcon
-                            name={def.icon}
-                            className={`h-5 w-5 ${tierColor(def.tier)}`}
+                            code={def.code}
+                            alt={def.title}
+                            className="h-10 w-10"
                           />
                         ) : (
                           <Lock className="h-4 w-4 text-[#9ca3af]" />

@@ -47,12 +47,14 @@ export async function BentoHomeTrophies({ userId }: { userId: string }) {
               key={r.code}
               href="/trophies"
               title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH")}`}
-              className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#4a4a4a] transition-colors"
+              className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#4a4a4a] transition-colors p-1"
               style={{ boxShadow: `inset 0 0 6px ${glow}22` }}
             >
-              <span style={{ color: glow, filter: `drop-shadow(0 0 4px ${glow}88)` }}>
-                <TrophyIcon name={def.icon} className="h-4 w-4" />
-              </span>
+              <TrophyIcon
+                code={def.code}
+                alt={def.title}
+                className="h-full w-full object-contain"
+              />
             </Link>
           );
         })}

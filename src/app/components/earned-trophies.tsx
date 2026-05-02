@@ -3,7 +3,7 @@ import { Trophy } from "lucide-react";
 import { db } from "@/lib/db";
 import { userTrophies } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { getTrophy, tierColor } from "@/lib/trophies";
+import { getTrophy } from "@/lib/trophies";
 import { TrophyIcon } from "./trophy-icon";
 
 export async function EarnedTrophies({ userId }: { userId: string }) {
@@ -43,8 +43,9 @@ export async function EarnedTrophies({ userId }: { userId: string }) {
               className="flex aspect-square items-center justify-center rounded-md bg-background border border-border hover:bg-surface transition-colors"
             >
               <TrophyIcon
-                name={def.icon}
-                className={`h-4 w-4 ${tierColor(def.tier)}`}
+                code={def.code}
+                alt={def.title}
+                className="h-6 w-6"
               />
             </Link>
           );

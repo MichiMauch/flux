@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
-import { getTrophy, tierColor } from "@/lib/trophies";
+import { getTrophy } from "@/lib/trophies";
 import { TrophyIcon } from "./trophy-icon";
 import { X } from "lucide-react";
 
@@ -100,10 +100,11 @@ export function UnlockCelebration() {
         <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brand">
           Trophäe freigeschaltet!
         </div>
-        <div className="mx-auto mt-4 flex h-20 w-20 items-center justify-center rounded-full bg-surface">
+        <div className="mx-auto mt-4 flex h-24 w-24 items-center justify-center rounded-full bg-surface">
           <TrophyIcon
-            name={def.icon}
-            className={`h-10 w-10 ${tierColor(def.tier)}`}
+            code={def.code}
+            alt={def.title}
+            className="h-20 w-20"
           />
         </div>
         <div className="mt-4 text-xl font-bold">{def.title}</div>

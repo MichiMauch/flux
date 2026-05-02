@@ -1,45 +1,22 @@
-import {
-  Bike,
-  Footprints,
-  Medal,
-  Mountain,
-  Clock,
-  Sunrise,
-  Moon,
-  Route,
-  TrendingUp,
-  Activity,
-  Hourglass,
-  Flame,
-  Sun,
-  Trophy,
-  type LucideIcon,
-} from "lucide-react";
-
-const ICONS: Record<string, LucideIcon> = {
-  Bike,
-  Footprints,
-  Medal,
-  Mountain,
-  Clock,
-  Sunrise,
-  Moon,
-  Route,
-  TrendingUp,
-  Activity,
-  Hourglass,
-  Flame,
-  Sun,
-  Trophy,
-};
+import Image from "next/image";
 
 export function TrophyIcon({
-  name,
+  code,
   className,
+  alt,
 }: {
-  name: string;
+  code: string;
   className?: string;
+  alt?: string;
 }) {
-  const Icon = ICONS[name] ?? Trophy;
-  return <Icon className={className} />;
+  return (
+    <Image
+      src={`/trophies/${code}.webp`}
+      alt={alt ?? code}
+      width={256}
+      height={256}
+      className={className}
+      unoptimized
+    />
+  );
 }

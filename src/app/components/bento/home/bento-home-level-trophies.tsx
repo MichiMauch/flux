@@ -99,12 +99,14 @@ export async function BentoHomeLevelTrophies({ userId }: { userId: string }) {
               <span
                 key={r.code}
                 title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH")}`}
-                className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a]"
+                className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] p-0.5"
                 style={{ boxShadow: `inset 0 0 6px ${glow}22` }}
               >
-                <span style={{ color: glow, filter: `drop-shadow(0 0 4px ${glow}88)` }}>
-                  <TrophyIcon name={def.icon} className="h-3.5 w-3.5" />
-                </span>
+                <TrophyIcon
+                  code={def.code}
+                  alt={def.title}
+                  className="h-full w-full object-contain"
+                />
               </span>
             );
           })}
