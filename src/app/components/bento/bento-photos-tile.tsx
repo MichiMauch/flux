@@ -114,11 +114,11 @@ export function BentoPhotosTile({ activityId, photos, isOwner }: Props) {
       )}
 
       {(photos.length > 0 || pending.length > 0) && (
-        <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+        <div className="flex md:grid md:grid-cols-4 gap-2 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {photos.map((p) => (
             <div
               key={p.id}
-              className="relative aspect-square rounded-md overflow-hidden border border-[#2a2a2a] bg-[#0f0f0f] group"
+              className="relative aspect-square rounded-md overflow-hidden border border-[#2a2a2a] bg-[#0f0f0f] group flex-none basis-[42%] md:basis-auto md:flex-initial snap-start"
             >
               <button
                 type="button"
@@ -142,7 +142,7 @@ export function BentoPhotosTile({ activityId, photos, isOwner }: Props) {
                     setError(null);
                     setPhotoToDelete(p.id);
                   }}
-                  className="absolute top-1 right-1 p-1.5 rounded-full bg-black/60 text-white md:opacity-0 md:group-hover:opacity-100 hover:bg-black/80 transition-opacity"
+                  className="hidden md:block absolute top-1 right-1 p-1.5 rounded-full bg-black/60 text-white md:opacity-0 md:group-hover:opacity-100 hover:bg-black/80 transition-opacity"
                   aria-label="Foto löschen"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -153,7 +153,7 @@ export function BentoPhotosTile({ activityId, photos, isOwner }: Props) {
           {pending.map((p) => (
             <div
               key={p.clientId}
-              className="relative aspect-square rounded-md overflow-hidden border border-[#2a2a2a] bg-[#0f0f0f] flex items-center justify-center"
+              className="relative aspect-square rounded-md overflow-hidden border border-[#2a2a2a] bg-[#0f0f0f] flex items-center justify-center flex-none basis-[42%] md:basis-auto md:flex-initial snap-start"
             >
               {p.status === "failed" ? (
                 <button
