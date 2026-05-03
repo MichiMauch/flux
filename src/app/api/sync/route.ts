@@ -7,6 +7,7 @@ import { listExercises, downloadFit, parsePolarStartTime } from "@/lib/polar-cli
 import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
+import { reverseGeocodeStructured } from "@/lib/geocode";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
 import { evaluateTrophies } from "@/lib/trophies-server";
@@ -110,6 +111,20 @@ export async function POST() {
         fallbackTitle: fallbackName,
       });
 
+      // Reverse-Geocode (best effort — bei Failure NULL, Backfill kann später nachholen)
+      let locality: string | null = null;
+      let country: string | null = null;
+      let geocodedAt: Date | null = null;
+      const startPoint = (routeData as { lat: number; lng: number }[] | null)?.[0];
+      if (startPoint && typeof startPoint.lat === "number" && typeof startPoint.lng === "number") {
+        const loc = await reverseGeocodeStructured(startPoint.lat, startPoint.lng);
+        if (loc) {
+          locality = loc.locality;
+          country = loc.country;
+          geocodedAt = new Date();
+        }
+      }
+
       // Insert activity
       await db.insert(activities).values({
         polarId: exercise.id,
@@ -133,6 +148,9 @@ export async function POST() {
         trimp,
         device: exercise.device ?? null,
         fitFilePath,
+        locality,
+        country,
+        geocodedAt,
       });
 
       synced++;

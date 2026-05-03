@@ -141,6 +141,13 @@
       "when": 1777653066430,
       "tag": "0019_outstanding_stingray",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777823292448,
+      "tag": "0020_slippery_silver_fox",
+      "breakpoints": true
     }
   ]
 }

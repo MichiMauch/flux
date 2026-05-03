@@ -130,6 +130,9 @@ export const activities = pgTable("activities", {
   fitFilePath: text("fit_file_path"),
   weather: json("weather"), // {temp, feelsLike, windSpeed, windDeg, clouds, description, icon, humidity}
   weatherFetchedAt: timestamp("weather_fetched_at"),
+  locality: text("locality"), // Stadt/Stadtteil aus routeData[0] via Mapbox
+  country: text("country"), // ISO-2 Country-Code (z.B. "CH", "FR")
+  geocodedAt: timestamp("geocoded_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

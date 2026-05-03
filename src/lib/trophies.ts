@@ -44,7 +44,11 @@ export type Criterion =
       durationToleranceSec: number;
       distanceToleranceM: number;
       roundKmSteps: number[];
-    };
+    }
+  | { kind: "distinct_localities"; threshold: number }
+  | { kind: "distinct_countries"; threshold: number }
+  | { kind: "pbs_in_window"; threshold: number; windowDays: number }
+  | { kind: "co_activity_count"; threshold: number };
 
 export interface TrophyDef {
   code: string;
@@ -396,6 +400,48 @@ export const TROPHIES: TrophyDef[] = [
       roundKmSteps: [5, 10, 20, 50, 100],
     },
     xpReward: 100,
+  },
+
+  // ── Phase 2: Geocoding / PB / Pacemaker ───────────────────────────────────
+  {
+    code: "local_hero",
+    title: "Local Hero",
+    description: "Aktivitäten in 5 verschiedenen Stadtteilen",
+    icon: "MapPin",
+    tier: null,
+    category: "special",
+    criterion: { kind: "distinct_localities", threshold: 5 },
+    xpReward: 200,
+  },
+  {
+    code: "weltenbummler",
+    title: "Weltenbummler",
+    description: "Aktivitäten in 3 verschiedenen Ländern",
+    icon: "Globe",
+    tier: null,
+    category: "special",
+    criterion: { kind: "distinct_countries", threshold: 3 },
+    xpReward: 400,
+  },
+  {
+    code: "pb_jaeger",
+    title: "PB-Jäger",
+    description: "3 persönliche Bestleistungen innerhalb 30 Tagen",
+    icon: "Trophy",
+    tier: null,
+    category: "special",
+    criterion: { kind: "pbs_in_window", threshold: 3, windowDays: 30 },
+    xpReward: 300,
+  },
+  {
+    code: "pacemaker",
+    title: "Pacemaker",
+    description: "Gemeinsame Aktivität mit Partner",
+    icon: "Users",
+    tier: null,
+    category: "special",
+    criterion: { kind: "co_activity_count", threshold: 1 },
+    xpReward: 200,
   },
 ];
 

@@ -3,6 +3,7 @@ import { validateWebhookSignature, listExercises, downloadFit, parsePolarStartTi
 import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
+import { reverseGeocodeStructured } from "@/lib/geocode";
 import { db } from "@/lib/db";
 import { users, activities, deletedPolarActivities } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -152,6 +153,20 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
       fallbackTitle: fallbackName,
     });
 
+    // Reverse-Geocode (best effort — bei Failure NULL, Backfill kann später nachholen)
+    let locality: string | null = null;
+    let country: string | null = null;
+    let geocodedAt: Date | null = null;
+    const startPoint = (routeData as { lat: number; lng: number }[] | null)?.[0];
+    if (startPoint && typeof startPoint.lat === "number" && typeof startPoint.lng === "number") {
+      const loc = await reverseGeocodeStructured(startPoint.lat, startPoint.lng);
+      if (loc) {
+        locality = loc.locality;
+        country = loc.country;
+        geocodedAt = new Date();
+      }
+    }
+
     const [inserted] = await db
       .insert(activities)
       .values({
@@ -186,6 +201,9 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
         trimp,
         device: exercise.device ?? null,
         fitFilePath,
+        locality,
+        country,
+        geocodedAt,
       })
       .returning({ id: activities.id });
 

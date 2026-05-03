@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import {
   activities,
   activityBoosts,
+  users,
   userTrophies,
   pendingUnlocks,
 } from "@/lib/db/schema";
@@ -25,9 +26,20 @@ interface ActivityLite {
   movingTime: number | null;
   trimp: number | null;
   weather: WeatherData | null;
+  type: string;
+  locality: string | null;
+  country: string | null;
+  startLat: number | null;
+  startLng: number | null;
 }
 
-async function loadAllActivities(userId: string): Promise<ActivityLite[]> {
+interface EvalContext {
+  acts: ActivityLite[];
+  partnerActs: ActivityLite[];
+  boostCount: number;
+}
+
+async function loadActivitiesFor(userId: string): Promise<ActivityLite[]> {
   const rows = await db
     .select({
       id: activities.id,
@@ -38,6 +50,11 @@ async function loadAllActivities(userId: string): Promise<ActivityLite[]> {
       movingTime: activities.movingTime,
       trimp: activities.trimp,
       weather: activities.weather,
+      type: activities.type,
+      locality: activities.locality,
+      country: activities.country,
+      startLat: sql<number | null>`(${activities.routeData}->0->>'lat')::float`,
+      startLng: sql<number | null>`(${activities.routeData}->0->>'lng')::float`,
     })
     .from(activities)
     .where(eq(activities.userId, userId))
@@ -46,6 +63,18 @@ async function loadAllActivities(userId: string): Promise<ActivityLite[]> {
     ...r,
     weather: (r.weather as WeatherData | null) ?? null,
   }));
+}
+
+async function loadAllActivities(userId: string): Promise<ActivityLite[]> {
+  return loadActivitiesFor(userId);
+}
+
+async function loadPartnerId(userId: string): Promise<string | null> {
+  const rows = await db
+    .select({ partnerId: users.partnerId })
+    .from(users)
+    .where(eq(users.id, userId));
+  return rows[0]?.partnerId ?? null;
 }
 
 async function loadBoostCount(userId: string): Promise<number> {
@@ -199,6 +228,130 @@ function weekdayCount(weekday: number, acts: ActivityLite[]): number {
   return acts.filter((a) => a.startTime.getDay() === weekday).length;
 }
 
+function distinctLocalities(acts: ActivityLite[]): number {
+  const set = new Set<string>();
+  for (const a of acts) if (a.locality) set.add(a.locality);
+  return set.size;
+}
+
+function distinctCountries(acts: ActivityLite[]): number {
+  const set = new Set<string>();
+  for (const a of acts) if (a.country) set.add(a.country);
+  return set.size;
+}
+
+function haversineMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Sliding window: gibt es einen Zeitraum von windowDays, in dem mindestens
+ * `threshold` PB-Setter-Activities liegen? PB-Definition: erstmaliger Bestwert
+ * (>) pro (Sportart × Metrik) mit Metriken {distance, avgSpeedKmh, ascent,
+ * duration}. Erste Activity einer Sportart zählt nicht (keine Baseline).
+ * Liefert die Activity, die das Limit *innerhalb* des Fensters reisst.
+ */
+function pbsInWindowHit(
+  acts: ActivityLite[],
+  windowDays: number,
+  threshold: number
+): { hit: boolean; activityId: string | null } {
+  if (acts.length < threshold) return { hit: false, activityId: null };
+  const asc = [...acts].sort(
+    (x, y) => x.startTime.getTime() - y.startTime.getTime()
+  );
+  const best = new Map<string, number>();
+  const pbs: { id: string; t: number }[] = [];
+  for (const a of asc) {
+    if (!a.type) continue;
+    const dist = a.distance ?? 0;
+    const moving = a.movingTime ?? a.duration ?? 0;
+    const speedKmh =
+      dist > 0 && moving > 0 ? dist / 1000 / (moving / 3600) : 0;
+    const ascent = a.ascent ?? 0;
+    const duration = a.duration ?? 0;
+    const candidates: { metric: string; value: number }[] = [
+      { metric: "distance", value: dist },
+      { metric: "avgSpeedKmh", value: speedKmh },
+      { metric: "ascent", value: ascent },
+      { metric: "duration", value: duration },
+    ];
+    let setNewPb = false;
+    for (const { metric, value } of candidates) {
+      if (value <= 0) continue;
+      const key = `${a.type}:${metric}`;
+      const prev = best.get(key);
+      if (prev === undefined) {
+        best.set(key, value);
+      } else if (value > prev) {
+        best.set(key, value);
+        setNewPb = true;
+      }
+    }
+    if (setNewPb) pbs.push({ id: a.id, t: a.startTime.getTime() });
+  }
+  const ms = windowDays * 24 * 3600 * 1000;
+  for (let i = 0; i + threshold - 1 < pbs.length; i++) {
+    const last = pbs[i + threshold - 1];
+    if (last.t - pbs[i].t <= ms) {
+      return { hit: true, activityId: last.id };
+    }
+  }
+  return { hit: false, activityId: null };
+}
+
+/**
+ * Zählt gemeinsame Activities mit dem Partner: Start-Zeit-Differenz ≤ 10 Min
+ * UND Start-Koordinate (haversine) ≤ 500 m. Eine Partner-Activity wird nur
+ * einmal gematcht.
+ */
+function coActivityCount(
+  myActs: ActivityLite[],
+  partnerActs: ActivityLite[]
+): { count: number; activityId: string | null } {
+  if (partnerActs.length === 0) return { count: 0, activityId: null };
+  const TIME_MS = 600 * 1000;
+  const RADIUS_M = 500;
+  const myAsc = [...myActs].sort(
+    (a, b) => a.startTime.getTime() - b.startTime.getTime()
+  );
+  const partnerAsc = [...partnerActs].sort(
+    (a, b) => a.startTime.getTime() - b.startTime.getTime()
+  );
+  const matched = new Set<string>();
+  let count = 0;
+  let lastId: string | null = null;
+  for (const a of myAsc) {
+    if (a.startLat == null || a.startLng == null) continue;
+    for (const p of partnerAsc) {
+      if (matched.has(p.id)) continue;
+      const dt = Math.abs(a.startTime.getTime() - p.startTime.getTime());
+      if (dt > TIME_MS) continue;
+      if (p.startLat == null || p.startLng == null) continue;
+      const d = haversineMeters(a.startLat, a.startLng, p.startLat, p.startLng);
+      if (d <= RADIUS_M) {
+        matched.add(p.id);
+        count++;
+        lastId = a.id;
+        break;
+      }
+    }
+  }
+  return { count, activityId: lastId };
+}
+
 export interface TrophyProgress {
   code: string;
   currentValue: number;
@@ -209,11 +362,41 @@ export interface TrophyProgress {
 
 function criterionProgress(
   c: Criterion,
-  acts: ActivityLite[],
-  boostCount: number
+  ctx: EvalContext
 ): TrophyProgress | null {
+  const { acts, partnerActs, boostCount } = ctx;
   if (c.kind === "boosts_given") {
     const v = boostCount;
+    return {
+      code: "",
+      currentValue: v,
+      targetValue: c.threshold,
+      progressPct: Math.min(100, (v / c.threshold) * 100),
+      unit: "",
+    };
+  }
+  if (c.kind === "distinct_localities") {
+    const v = distinctLocalities(acts);
+    return {
+      code: "",
+      currentValue: v,
+      targetValue: c.threshold,
+      progressPct: Math.min(100, (v / c.threshold) * 100),
+      unit: "",
+    };
+  }
+  if (c.kind === "distinct_countries") {
+    const v = distinctCountries(acts);
+    return {
+      code: "",
+      currentValue: v,
+      targetValue: c.threshold,
+      progressPct: Math.min(100, (v / c.threshold) * 100),
+      unit: "",
+    };
+  }
+  if (c.kind === "co_activity_count") {
+    const v = coActivityCount(acts, partnerActs).count;
     return {
       code: "",
       currentValue: v,
@@ -291,10 +474,10 @@ function criterionProgress(
 
 function isCriterionMet(
   def: TrophyDef,
-  acts: ActivityLite[],
-  boostCount: number
+  ctx: EvalContext
 ): { met: boolean; activityId: string | null } {
   const c = def.criterion;
+  const { acts, partnerActs, boostCount } = ctx;
   if (
     c.kind === "single_activity" ||
     c.kind === "single_activity_time" ||
@@ -330,6 +513,26 @@ function isCriterionMet(
   if (c.kind === "boosts_given") {
     return { met: boostCount >= c.threshold, activityId: null };
   }
+  if (c.kind === "distinct_localities") {
+    return {
+      met: distinctLocalities(acts) >= c.threshold,
+      activityId: null,
+    };
+  }
+  if (c.kind === "distinct_countries") {
+    return {
+      met: distinctCountries(acts) >= c.threshold,
+      activityId: null,
+    };
+  }
+  if (c.kind === "pbs_in_window") {
+    const r = pbsInWindowHit(acts, c.windowDays, c.threshold);
+    return { met: r.hit, activityId: r.activityId };
+  }
+  if (c.kind === "co_activity_count") {
+    const r = coActivityCount(acts, partnerActs);
+    return { met: r.count >= c.threshold, activityId: r.activityId };
+  }
   return { met: false, activityId: null };
 }
 
@@ -342,24 +545,23 @@ export async function evaluateTrophies(
   userId: string,
   activityId?: string
 ): Promise<string[]> {
-  const [acts, alreadyRows, boostCount] = await Promise.all([
+  const [acts, alreadyRows, boostCount, partnerId] = await Promise.all([
     loadAllActivities(userId),
     db
       .select({ code: userTrophies.trophyCode })
       .from(userTrophies)
       .where(eq(userTrophies.userId, userId)),
     loadBoostCount(userId),
+    loadPartnerId(userId),
   ]);
+  const partnerActs = partnerId ? await loadActivitiesFor(partnerId) : [];
+  const ctx: EvalContext = { acts, partnerActs, boostCount };
   const already = new Set(alreadyRows.map((r) => r.code));
 
   const newlyUnlocked: string[] = [];
   for (const def of TROPHIES) {
     if (already.has(def.code)) continue;
-    const { met, activityId: matchedActivityId } = isCriterionMet(
-      def,
-      acts,
-      boostCount
-    );
+    const { met, activityId: matchedActivityId } = isCriterionMet(def, ctx);
     if (!met) continue;
     await db.insert(userTrophies).values({
       userId,
@@ -386,7 +588,7 @@ export async function computeLevel(userId: string) {
  * Compute trophy progress for all trophies (locked + unlocked) for a user.
  */
 export async function loadTrophyState(userId: string) {
-  const [acts, unlockedRows, boostCount] = await Promise.all([
+  const [acts, unlockedRows, boostCount, partnerId] = await Promise.all([
     loadAllActivities(userId),
     db
       .select({
@@ -396,10 +598,13 @@ export async function loadTrophyState(userId: string) {
       .from(userTrophies)
       .where(eq(userTrophies.userId, userId)),
     loadBoostCount(userId),
+    loadPartnerId(userId),
   ]);
+  const partnerActs = partnerId ? await loadActivitiesFor(partnerId) : [];
+  const ctx: EvalContext = { acts, partnerActs, boostCount };
   const unlocked = new Map(unlockedRows.map((r) => [r.code, r.unlockedAt]));
   return TROPHIES.map((def) => {
-    const progress = criterionProgress(def.criterion, acts, boostCount);
+    const progress = criterionProgress(def.criterion, ctx);
     const unlockedAt = unlocked.get(def.code) ?? null;
     return {
       def,
