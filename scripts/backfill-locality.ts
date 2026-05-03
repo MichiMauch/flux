@@ -6,7 +6,9 @@
  * um Mapbox reverseGeocodeStructured() zu rufen. Throttled mit kurzem
  * Sleep zwischen Calls (Mapbox Rate-Limit ~600/min für free tier).
  */
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 import { db } from "../src/lib/db";
 import { activities } from "../src/lib/db/schema";
 import { isNull, eq } from "drizzle-orm";
