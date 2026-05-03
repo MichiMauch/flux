@@ -9,11 +9,6 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import { db } from "../src/lib/db";
-import { activities } from "../src/lib/db/schema";
-import { isNull, eq } from "drizzle-orm";
-import { reverseGeocodeStructured } from "../src/lib/geocode";
-
 const SLEEP_MS = 150; // ~6 req/s, well under Mapbox limit
 
 function sleep(ms: number) {
@@ -21,6 +16,13 @@ function sleep(ms: number) {
 }
 
 async function main() {
+  // Dynamische Imports: damit dotenv-config VOR dem db-Modul läuft
+  // (postgres() liest DATABASE_URL bei Modul-Initialisierung).
+  const { db } = await import("../src/lib/db");
+  const { activities } = await import("../src/lib/db/schema");
+  const { isNull, eq } = await import("drizzle-orm");
+  const { reverseGeocodeStructured } = await import("../src/lib/geocode");
+
   const rows = await db
     .select({
       id: activities.id,
