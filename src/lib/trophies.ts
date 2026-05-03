@@ -15,7 +15,14 @@ export type Criterion =
       metric: "distance_km" | "ascent_m" | "duration_h";
       threshold: number;
     }
-  | { kind: "single_activity_time"; beforeHour?: number; afterHour?: number }
+  | {
+      kind: "single_activity_time";
+      beforeHour?: number;
+      afterHour?: number;
+      betweenHourFrom?: number;
+      betweenHourTo?: number;
+      weekdays?: number[]; // 0=Sonntag … 6=Samstag
+    }
   | {
       kind: "lifetime_sum";
       metric: "distance_km" | "ascent_m" | "duration_h";
@@ -23,7 +30,21 @@ export type Criterion =
     }
   | { kind: "lifetime_count"; threshold: number }
   | { kind: "streak_days"; threshold: number }
-  | { kind: "weekday_count"; weekday: number; threshold: number };
+  | { kind: "weekday_count"; weekday: number; threshold: number }
+  | { kind: "comeback_days"; threshold: number }
+  | {
+      kind: "single_activity_combined";
+      ascentMin: number;
+      distanceMaxKm: number;
+    }
+  | { kind: "boosts_given"; threshold: number }
+  | { kind: "weather_condition"; rain?: boolean; tempBelow?: number }
+  | {
+      kind: "round_finish";
+      durationToleranceSec: number;
+      distanceToleranceM: number;
+      roundKmSteps: number[];
+    };
 
 export interface TrophyDef {
   code: string;
@@ -268,6 +289,112 @@ export const TROPHIES: TrophyDef[] = [
     tier: null,
     category: "special",
     criterion: { kind: "weekday_count", weekday: 0, threshold: 10 },
+    xpReward: 100,
+  },
+
+  // ── Phase 1: Comeback / Combined / Boosts / Weather / Time / Round ────────
+  {
+    code: "comeback_kid",
+    title: "Comeback-Kid",
+    description: "Erste Aktivität nach mindestens 14 Tagen Pause",
+    icon: "Sparkles",
+    tier: null,
+    category: "special",
+    criterion: { kind: "comeback_days", threshold: 14 },
+    xpReward: 100,
+  },
+  {
+    code: "bergziege_intensiv",
+    title: "Bergziege intensiv",
+    description: "500 Höhenmeter auf weniger als 5 km",
+    icon: "Mountain",
+    tier: null,
+    category: "single",
+    criterion: {
+      kind: "single_activity_combined",
+      ascentMin: 500,
+      distanceMaxKm: 5,
+    },
+    xpReward: 200,
+  },
+  {
+    code: "motivator_bronze",
+    title: "Motivator (Bronze)",
+    description: "20 Boosts vergeben",
+    icon: "ThumbsUp",
+    tier: "bronze",
+    category: "special",
+    criterion: { kind: "boosts_given", threshold: 20 },
+    xpReward: 100,
+  },
+  {
+    code: "motivator_silber",
+    title: "Motivator (Silber)",
+    description: "50 Boosts vergeben",
+    icon: "ThumbsUp",
+    tier: "silber",
+    category: "special",
+    criterion: { kind: "boosts_given", threshold: 50 },
+    xpReward: 250,
+  },
+  {
+    code: "motivator_gold",
+    title: "Motivator (Gold)",
+    description: "200 Boosts vergeben",
+    icon: "ThumbsUp",
+    tier: "gold",
+    category: "special",
+    criterion: { kind: "boosts_given", threshold: 200 },
+    xpReward: 600,
+  },
+  {
+    code: "schlechtwetter_held",
+    title: "Schlechtwetter-Held",
+    description: "Aktivität bei Regen",
+    icon: "CloudRain",
+    tier: null,
+    category: "special",
+    criterion: { kind: "weather_condition", rain: true },
+    xpReward: 100,
+  },
+  {
+    code: "frostbeisser",
+    title: "Frostbeisser",
+    description: "Aktivität bei unter 0 °C",
+    icon: "Snowflake",
+    tier: null,
+    category: "special",
+    criterion: { kind: "weather_condition", tempBelow: 0 },
+    xpReward: 150,
+  },
+  {
+    code: "lunch_break",
+    title: "Lunch Break",
+    description: "Aktivität zwischen 12:00 und 13:30 an einem Werktag",
+    icon: "Sandwich",
+    tier: null,
+    category: "special",
+    criterion: {
+      kind: "single_activity_time",
+      betweenHourFrom: 12,
+      betweenHourTo: 13.5,
+      weekdays: [1, 2, 3, 4, 5],
+    },
+    xpReward: 50,
+  },
+  {
+    code: "punktlandung",
+    title: "Punktlandung",
+    description: "Genau auf die volle Stunde oder eine runde Distanz beendet",
+    icon: "Target",
+    tier: null,
+    category: "special",
+    criterion: {
+      kind: "round_finish",
+      durationToleranceSec: 2,
+      distanceToleranceM: 20,
+      roundKmSteps: [5, 10, 20, 50, 100],
+    },
     xpReward: 100,
   },
 ];
