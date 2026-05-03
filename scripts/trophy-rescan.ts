@@ -11,7 +11,7 @@ config({ path: ".env.local" });
 async function main() {
   const { db } = await import("../src/lib/db");
   const { users } = await import("../src/lib/db/schema");
-  const { evaluateTrophies } = await import("../src/lib/trophies-server");
+  const { evaluateTrophies } = await import("../src/lib/trophies-eval");
 
   const userRows = await db.select({ id: users.id, name: users.name }).from(users);
 
