@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { currentWeekRange, isoWeek } from "@/lib/activity-week";
-import { Activity, Ruler, Clock } from "lucide-react";
+import { Activity, Ruler, Clock, Mountain } from "lucide-react";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import {
@@ -41,6 +41,7 @@ export async function BentoHomeWeekly({
         distance: activities.distance,
         duration: activities.duration,
         movingTime: activities.movingTime,
+        ascent: activities.ascent,
       })
       .from(activities)
       .where(
@@ -55,6 +56,7 @@ export async function BentoHomeWeekly({
         distance: activities.distance,
         duration: activities.duration,
         movingTime: activities.movingTime,
+        ascent: activities.ascent,
       })
       .from(activities)
       .where(
@@ -72,12 +74,16 @@ export async function BentoHomeWeekly({
     (s, r) => s + (r.movingTime ?? r.duration ?? 0),
     0,
   );
+  const ascent = Math.round(rows.reduce((s, r) => s + (r.ascent ?? 0), 0));
 
   const prevCount = prevRows.length;
   const prevDistance = prevRows.reduce((s, r) => s + (r.distance ?? 0), 0);
   const prevDuration = prevRows.reduce(
     (s, r) => s + (r.movingTime ?? r.duration ?? 0),
     0,
+  );
+  const prevAscent = Math.round(
+    prevRows.reduce((s, r) => s + (r.ascent ?? 0), 0),
   );
 
   const weekNo = isoWeek(from);
@@ -100,7 +106,7 @@ export async function BentoHomeWeekly({
       <div
         className={
           layout === "row"
-            ? "grid grid-cols-3 gap-6 flex-1 content-center"
+            ? "grid grid-cols-4 gap-6 flex-1 content-center"
             : "grid grid-cols-2 gap-3 flex-1 content-center"
         }
       >
@@ -129,6 +135,13 @@ export async function BentoHomeWeekly({
             />
           );
         })()}
+        <Stat
+          icon={<Mountain className="h-3 w-3" />}
+          label="Höhe"
+          value={ascent > 0 ? ascent.toLocaleString("de-CH") : "–"}
+          unit="m"
+          delta={delta(ascent, prevAscent)}
+        />
       </div>
     </div>
   );

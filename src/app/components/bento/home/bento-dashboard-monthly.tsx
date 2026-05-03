@@ -1,4 +1,4 @@
-import { Activity, Ruler, Clock } from "lucide-react";
+import { Activity, Ruler, Clock, Mountain } from "lucide-react";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
 import { and, eq, gte, lt } from "drizzle-orm";
@@ -44,6 +44,7 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
         distance: activities.distance,
         duration: activities.duration,
         movingTime: activities.movingTime,
+        ascent: activities.ascent,
       })
       .from(activities)
       .where(
@@ -58,6 +59,7 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
         distance: activities.distance,
         duration: activities.duration,
         movingTime: activities.movingTime,
+        ascent: activities.ascent,
       })
       .from(activities)
       .where(
@@ -75,12 +77,16 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
     (s, r) => s + (r.movingTime ?? r.duration ?? 0),
     0,
   );
+  const ascent = Math.round(rows.reduce((s, r) => s + (r.ascent ?? 0), 0));
 
   const prevCount = prevRows.length;
   const prevDistance = prevRows.reduce((s, r) => s + (r.distance ?? 0), 0);
   const prevDuration = prevRows.reduce(
     (s, r) => s + (r.movingTime ?? r.duration ?? 0),
     0,
+  );
+  const prevAscent = Math.round(
+    prevRows.reduce((s, r) => s + (r.ascent ?? 0), 0),
   );
 
   const monthLabel = MONTHS[current.from.getMonth()];
@@ -120,6 +126,13 @@ export async function BentoDashboardMonthly({ userId }: { userId: string }) {
           value={duration > 0 ? formatDurationH(duration) : "–"}
           unit="h"
           delta={delta(duration, prevDuration)}
+        />
+        <Stat
+          icon={<Mountain className="h-3 w-3" />}
+          label="Höhe"
+          value={ascent > 0 ? ascent.toLocaleString("de-CH") : "–"}
+          unit="m"
+          delta={delta(ascent, prevAscent)}
         />
       </div>
     </div>
