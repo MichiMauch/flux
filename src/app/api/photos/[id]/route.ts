@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { activities, activityPhotos } from "@/lib/db/schema";
+import { activities, activityPhotos, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { readFile } from "fs/promises";
 
@@ -28,9 +28,17 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Verify ownership
-  if (photo[0].activities.userId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Verify ownership — own activity OR partner's activity (read-only access)
+  const activityOwnerId = photo[0].activities.userId;
+  if (activityOwnerId !== session.user.id) {
+    const [me] = await db
+      .select({ partnerId: users.partnerId })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
+    if (!me?.partnerId || me.partnerId !== activityOwnerId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const path = isThumb
