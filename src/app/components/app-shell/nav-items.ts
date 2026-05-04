@@ -39,7 +39,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/stream", label: "Stream", icon: Users, lottieFile: "customer", section: "movement", showInBottomNav: true },
   { href: "/activities", label: "Aktivitäten", icon: Activity, lottieFile: "activity-feed", section: "movement", showInBottomNav: true },
   { href: "/calendar", label: "Kalender", icon: Calendar, lottieFile: "calendar", section: "movement", showInBottomNav: true },
-  { href: "/groups", label: "Gruppen", icon: Layers, section: "movement" },
+  { href: "/groups", label: "Gruppen", icon: Layers, lottieFile: "map", section: "movement" },
   // Analyse
   { href: "/stats", label: "Statistiken", icon: BarChart3, lottieFile: "stats", section: "analysis" },
   { href: "/training-load", label: "Form", icon: TrendingUp, lottieFile: "energy", section: "analysis" },
