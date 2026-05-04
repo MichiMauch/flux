@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { BentoTile } from "../bento-tile";
 import { spaceMono } from "../bento-fonts";
+import { SevenSegDisplay } from "../seven-seg";
 import {
   formatDistanceAuto,
+  formatDistanceKm,
+  formatDurationHmSplit,
   formatDurationWordsSpaced,
   formatDateLabel,
   formatTimeLabel,
 } from "@/lib/activity-format";
-import { sportColor } from "@/lib/sport-colors";
+import { sportColor, NEON } from "@/lib/sport-colors";
 import type { GroupActivity } from "@/app/groups/data";
 
 interface BentoGroupActivitiesProps {
@@ -43,16 +46,19 @@ export function BentoGroupActivities({
               <li key={m.id}>
                 <Link
                   href={`/activity/${m.id}`}
-                  className="flex items-center gap-3 p-3 hover:bg-[#111]"
+                  className="flex items-stretch gap-3 p-3 hover:bg-[#111] md:gap-4 md:p-5"
                 >
                   <span
-                    className="h-3 w-1 shrink-0 rounded-sm"
+                    className="w-1 shrink-0 self-stretch rounded-sm md:w-1.5"
                     style={{ backgroundColor: color }}
                   />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm text-white">{m.name}</div>
+                  <div className="min-w-0 flex-1 space-y-1 md:space-y-2">
+                    <div className="truncate text-sm text-white md:text-lg md:font-medium">
+                      {m.name}
+                    </div>
+
                     <div
-                      className={`${spaceMono.className} flex flex-wrap items-center gap-x-3 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
+                      className={`${spaceMono.className} flex flex-wrap items-center gap-x-3 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3] md:hidden`}
                     >
                       <span>{formatDateLabel(m.startTime)}</span>
                       <span>{formatTimeLabel(m.startTime)}</span>
@@ -64,6 +70,28 @@ export function BentoGroupActivities({
                       ) : null}
                       {m.ascent ? <span>{Math.round(m.ascent)} m ↑</span> : null}
                     </div>
+
+                    <div
+                      className={`${spaceMono.className} hidden text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3] md:block`}
+                    >
+                      {formatDateLabel(m.startTime)} · {formatTimeLabel(m.startTime)}
+                    </div>
+
+                    <div
+                      className="hidden items-baseline gap-6 leading-none md:flex"
+                      style={{ fontSize: "24px" }}
+                    >
+                      {m.distance != null ? (
+                        <Led value={formatDistanceKm(m.distance, 1)} unit="km" />
+                      ) : null}
+                      {m.movingTime != null ? (() => {
+                        const d = formatDurationHmSplit(m.movingTime);
+                        return <Led value={d.value} unit={d.unit} />;
+                      })() : null}
+                      {m.ascent != null ? (
+                        <Led value={String(Math.round(m.ascent))} unit="m ↑" />
+                      ) : null}
+                    </div>
                   </div>
                 </Link>
               </li>
@@ -72,5 +100,19 @@ export function BentoGroupActivities({
         </ul>
       )}
     </BentoTile>
+  );
+}
+
+function Led({ value, unit }: { value: string; unit: string }) {
+  return (
+    <div className="flex items-baseline gap-1 leading-none">
+      <SevenSegDisplay value={value} />
+      <span
+        className={`${spaceMono.className} text-[0.45em] font-bold lowercase`}
+        style={{ color: NEON }}
+      >
+        {unit}
+      </span>
+    </div>
   );
 }
