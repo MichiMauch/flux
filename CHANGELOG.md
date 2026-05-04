@@ -3,6 +3,55 @@
 Alle nennenswerten Änderungen an Flux werden hier dokumentiert.
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionierung: [SemVer](https://semver.org).
 
+## [1.0.0] - 2026-05-04
+
+Erste stabile Public-Version.
+
+### Added
+
+- **groups:** Activity Groups — Aktivitäten zu Sammlungen bündeln (Schema 0021–0023, CRUD-Pages, Server-Actions)
+- **groups:** Multi-Route-Map mit Sport-Color-Palette, Auto-Fit-Bounds, Layer-Switcher, Hover-Highlight und Klick-zum-Fokussieren mit Stats-Card
+- **groups:** Bento-Dashboard pro Gruppe (Stats / Map / Activities / Galerie)
+- **groups:** Aktivitäts-Liste 2-spaltig auf Desktop mit LED-Schrift für Distanz/Zeit/Höhenmeter
+- **groups:** Cover-Bild-Upload mit Drag-to-Reposition (Maus + Touch), Auto-Save der Position
+- **groups:** Activity-Picker mit Virtualization (`@tanstack/react-virtual`), Sport-/Datums-Filter, Bulk-Aktionen
+- **groups:** Foto-Galerie aller Aktivitäten in der Gruppe mit PhotoLightbox (Mobile-Snap-Slider, Desktop-Grid)
+- **groups:** Mit-Partner-Teilen (Toggle) — Read-only-Zugriff für den verknüpften Partner
+- **groups:** „Gruppen"-Eintrag in der Navigation mit map-Lottie-Icon
+- **groups:** Cross-Link auf Activity-Detail-Seite — zeigt Group-Memberships als Badges
+- **stream:** /stream-Route mit Partner-Activities und Boost (Like/Kudo) pro Aktivität
+- **stream/boost:** Push + In-App-Notification an den Activity-Owner bei Boost
+- **trophies:** Phase 1 — 9 neue Trophies
+- **trophies:** Phase 2 — Geocoding via Mapbox + 4 Country-Trophies
+- **trophies:** Individuelle PNG-Icons je Trophy, Default-Logo als Level-Tile-Icon
+- **activity-detail:** Fullscreen-Map mit zuschaltbaren Overlays (Splits, HR, Höhe)
+- **activity:** Bewegungszeit (`movingTime`) als primäre Anzeige; Gesamtzeit als Sub
+- **dashboard:** Höhenmeter in der Wochen- und Monats-Card
+
+### Changed
+
+- **nav:** Neuordnung in 3 thematische Sektionen (Bewegung / Analyse / Gesundheit) — primary/secondary-Modell ersetzt durch `section` + `showInBottomNav`
+- **nav (mobile):** Form & Statistik standardmäßig im Mehr-Menu, Bottom-Nav schlanker
+- **goals:** Karten-Styling an das Dashboard angeglichen
+- **photos-tile:** Horizontaler Snap-Slider auf Mobile
+- **activity-detail (mobile):** Stat-Grid auf 2 Spalten, Pairs übereinander, ausklappbare Kilometer-Liste, GPX-Tile volle Breite
+- **stream:** Single-Column max-w-2xl, prominenterer Owner-Badge, EditorialFeed-Layout wiederverwendet
+- **trophies-server:** Server-only Guard von der Logik getrennt
+- **ui:** Globaler `cursor: pointer` auf Buttons (Tailwind-v4-Default-Fix), Sonner-Toast-Benachrichtigungen für Speichern/Upload/Delete
+
+### Fixed
+
+- **groups:** Cover-Image in Übersicht und Detail mit `unoptimized` (Next-Image-Optimizer trägt keine Session-Cookies)
+- **groups-map:** SVG-Renderer statt `preferCanvas` — verhindert `clearRect`-Fehler bei React Strict Mode
+- **docker:** `/data/group-covers` im Image-Build anlegen, sonst Persistenz-Verlust beim Redeploy
+- **photos:** Partner darf Fotos verknüpfter Activities sehen
+- **boost:** Server liefert volle Booster-Liste, Client setzt sie direkt; Boost-Button als Sibling des Card-Links — verhindert Detail-Navigation
+- **boost-button:** Compact-Variante deutlich größer für Mobile-Touch; auf Mobile unter die Daten links in der Editorial-Card
+- **activity-map-fullscreen:** Tabs als Schubladen-Griffe am Rand; z-index auf 2000; Kilometer-Tab vertikal
+- **kilometer-list:** Runden-Header nicht mehr sticky
+- **activity-hero:** `items-start` — Hauptzahlen aller Tiles auf gleicher Höhe trotz Sub-Zeile bei Zeit
+- **backfill-locality:** Dynamische DB-Imports nach `dotenv.config()`, lädt `.env.local` explizit
+
 ## [0.6.0] - 2026-05-01
 
 ### Added
