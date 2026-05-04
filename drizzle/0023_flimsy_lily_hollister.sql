@@ -1,0 +1,1 @@
+ALTER TABLE "activity_groups" ADD COLUMN "shared_with_partner" boolean DEFAULT false NOT NULL;

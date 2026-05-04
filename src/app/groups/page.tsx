@@ -98,6 +98,13 @@ export default async function GroupsPage() {
                   </div>
                 )}
                 <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 to-transparent" />
+                {g.sharedFromPartner && g.ownerName ? (
+                  <span
+                    className={`${spaceMono.className} absolute top-2 left-2 inline-flex items-center gap-1 rounded-md bg-black/70 px-2 py-1 text-[9px] uppercase tracking-[0.14em] text-white backdrop-blur`}
+                  >
+                    Von {g.ownerName}
+                  </span>
+                ) : null}
               </div>
               <div className="p-4">
                 <h2 className="line-clamp-1 text-lg font-semibold text-white">

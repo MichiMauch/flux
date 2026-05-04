@@ -9,6 +9,9 @@ import { BentoGroupStats } from "../../components/bento/groups/bento-group-stats
 import { BentoGroupMap } from "../../components/bento/groups/bento-group-map";
 import { BentoGroupActivities } from "../../components/bento/groups/bento-group-activities";
 import type { MultiRouteEntry } from "../../components/multi-route-map-client";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { getGroup, getGroupTotals, getGroupActivities } from "../data";
 
 function formatDateRangeLabel(
@@ -47,6 +50,17 @@ export default async function GroupDetailPage({
 
   if (!group) notFound();
 
+  const isOwner = group.userId === userId;
+  let ownerName: string | null = null;
+  if (!isOwner) {
+    const ownerRow = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, group.userId))
+      .limit(1);
+    ownerName = ownerRow[0]?.name ?? null;
+  }
+
   const routes: MultiRouteEntry[] = members
     .filter(
       (a): a is typeof a & { routeData: { lat: number; lng: number }[] } =>
@@ -75,12 +89,14 @@ export default async function GroupDetailPage({
         title={group.name}
         right={
           <div className="flex items-center gap-3">
-            <Link
-              href={`/groups/${group.id}/edit`}
-              className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
-            >
-              Bearbeiten
-            </Link>
+            {isOwner ? (
+              <Link
+                href={`/groups/${group.id}/edit`}
+                className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
+              >
+                Bearbeiten
+              </Link>
+            ) : null}
             <Link
               href="/groups"
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
@@ -90,6 +106,14 @@ export default async function GroupDetailPage({
           </div>
         }
       />
+
+      {!isOwner && ownerName ? (
+        <div
+          className={`${spaceMono.className} inline-flex items-center gap-2 rounded-md border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
+        >
+          Von <span className="text-white">{ownerName}</span> geteilt
+        </div>
+      ) : null}
 
       {group.coverPhotoPath ? (
         <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-[#2a2a2a]">

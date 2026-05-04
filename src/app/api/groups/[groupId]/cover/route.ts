@@ -3,7 +3,7 @@ import { writeFile, mkdir, unlink, readFile } from "fs/promises";
 import sharp from "sharp";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { activityGroups } from "@/lib/db/schema";
+import { activityGroups, users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
   GROUP_COVERS_PATH,
@@ -27,6 +27,26 @@ async function loadOwnedGroup(userId: string, groupId: string) {
   return rows[0] ?? null;
 }
 
+async function loadReadableGroup(userId: string, groupId: string) {
+  const rows = await db
+    .select({
+      id: activityGroups.id,
+      coverPhotoPath: activityGroups.coverPhotoPath,
+      ownerId: activityGroups.userId,
+      sharedWithPartner: activityGroups.sharedWithPartner,
+      ownerPartnerId: users.partnerId,
+    })
+    .from(activityGroups)
+    .innerJoin(users, eq(users.id, activityGroups.userId))
+    .where(eq(activityGroups.id, groupId))
+    .limit(1);
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  if (r.ownerId === userId) return r;
+  if (r.sharedWithPartner && r.ownerPartnerId === userId) return r;
+  return null;
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ groupId: string }> }
@@ -36,7 +56,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { groupId } = await params;
-  const group = await loadOwnedGroup(session.user.id, groupId);
+  const group = await loadReadableGroup(session.user.id, groupId);
   if (!group) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

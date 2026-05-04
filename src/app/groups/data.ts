@@ -4,8 +4,9 @@ import {
   activities,
   activityGroups,
   activityGroupMembers,
+  users,
 } from "@/lib/db/schema";
-import { and, eq, sql, desc, asc } from "drizzle-orm";
+import { and, eq, or, sql, desc, asc } from "drizzle-orm";
 
 export interface GroupTotals {
   count: number;
@@ -32,6 +33,7 @@ export interface GroupSummary {
   coverPhotoPath: string | null;
   coverOffsetX: number;
   coverOffsetY: number;
+  sharedWithPartner: boolean;
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;
@@ -40,6 +42,9 @@ export interface GroupSummary {
   totalAscent: number;
   firstActivityStart: Date | null;
   lastActivityStart: Date | null;
+  /** True when the calling user is not the owner. */
+  sharedFromPartner: boolean;
+  ownerName: string | null;
 }
 
 export interface GroupActivity {
@@ -57,24 +62,39 @@ export interface GroupActivity {
   country: string | null;
 }
 
-async function ensureGroupOwnership(userId: string, groupId: string) {
+/**
+ * Returns the group owner's userId if the calling user has read access,
+ * else null. Read access = owner OR (sharedWithPartner AND user is the
+ * owner's configured partner).
+ */
+async function getReadableOwnerId(
+  userId: string,
+  groupId: string
+): Promise<string | null> {
   const rows = await db
-    .select({ id: activityGroups.id })
+    .select({
+      ownerId: activityGroups.userId,
+      sharedWithPartner: activityGroups.sharedWithPartner,
+      ownerPartnerId: users.partnerId,
+    })
     .from(activityGroups)
-    .where(
-      and(eq(activityGroups.id, groupId), eq(activityGroups.userId, userId))
-    )
+    .innerJoin(users, eq(users.id, activityGroups.userId))
+    .where(eq(activityGroups.id, groupId))
     .limit(1);
-  return rows.length > 0;
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  if (r.ownerId === userId) return r.ownerId;
+  if (r.sharedWithPartner && r.ownerPartnerId === userId) return r.ownerId;
+  return null;
 }
 
 export async function getGroup(userId: string, groupId: string) {
+  const ownerId = await getReadableOwnerId(userId, groupId);
+  if (!ownerId) return null;
   const rows = await db
     .select()
     .from(activityGroups)
-    .where(
-      and(eq(activityGroups.id, groupId), eq(activityGroups.userId, userId))
-    )
+    .where(eq(activityGroups.id, groupId))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -83,7 +103,8 @@ export async function getGroupTotals(
   userId: string,
   groupId: string
 ): Promise<GroupTotals | null> {
-  if (!(await ensureGroupOwnership(userId, groupId))) return null;
+  const ownerId = await getReadableOwnerId(userId, groupId);
+  if (!ownerId) return null;
 
   const rows = await db
     .select({
@@ -104,7 +125,7 @@ export async function getGroupTotals(
     .where(
       and(
         eq(activityGroupMembers.groupId, groupId),
-        eq(activities.userId, userId)
+        eq(activities.userId, ownerId)
       )
     );
   return rows[0];
@@ -114,7 +135,8 @@ export async function getGroupActivities(
   userId: string,
   groupId: string
 ): Promise<GroupActivity[]> {
-  if (!(await ensureGroupOwnership(userId, groupId))) return [];
+  const ownerId = await getReadableOwnerId(userId, groupId);
+  if (!ownerId) return [];
 
   const rows = await db
     .select({
@@ -139,7 +161,7 @@ export async function getGroupActivities(
     .where(
       and(
         eq(activityGroupMembers.groupId, groupId),
-        eq(activities.userId, userId)
+        eq(activities.userId, ownerId)
       )
     )
     .orderBy(asc(activities.startTime));
@@ -154,7 +176,8 @@ export async function getGroupSportBreakdown(
   userId: string,
   groupId: string
 ): Promise<GroupSportBucket[]> {
-  if (!(await ensureGroupOwnership(userId, groupId))) return [];
+  const ownerId = await getReadableOwnerId(userId, groupId);
+  if (!ownerId) return [];
 
   return db
     .select({
@@ -171,7 +194,7 @@ export async function getGroupSportBreakdown(
     .where(
       and(
         eq(activityGroupMembers.groupId, groupId),
-        eq(activities.userId, userId)
+        eq(activities.userId, ownerId)
       )
     )
     .groupBy(activities.type)
@@ -181,7 +204,25 @@ export async function getGroupSportBreakdown(
 export async function listGroupsForUser(
   userId: string
 ): Promise<GroupSummary[]> {
-  return db
+  // Step 1: collect all visible group ids — own + shared by partner
+  const me = await db
+    .select({ partnerId: users.partnerId })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const partnerId = me[0]?.partnerId ?? null;
+
+  const visibilityWhere = partnerId
+    ? or(
+        eq(activityGroups.userId, userId),
+        and(
+          eq(activityGroups.userId, partnerId),
+          eq(activityGroups.sharedWithPartner, true)
+        )
+      )!
+    : eq(activityGroups.userId, userId);
+
+  const rows = await db
     .select({
       id: activityGroups.id,
       name: activityGroups.name,
@@ -189,9 +230,12 @@ export async function listGroupsForUser(
       coverPhotoPath: activityGroups.coverPhotoPath,
       coverOffsetX: activityGroups.coverOffsetX,
       coverOffsetY: activityGroups.coverOffsetY,
+      sharedWithPartner: activityGroups.sharedWithPartner,
       startDate: activityGroups.startDate,
       endDate: activityGroups.endDate,
       createdAt: activityGroups.createdAt,
+      ownerId: activityGroups.userId,
+      ownerName: users.name,
       count: sql<number>`count(${activities.id})::int`,
       totalDistance: sql<number>`coalesce(sum(${activities.distance}), 0)`,
       totalAscent: sql<number>`coalesce(sum(${activities.ascent}), 0)`,
@@ -199,6 +243,7 @@ export async function listGroupsForUser(
       lastActivityStart: sql<Date | null>`max(${activities.startTime})`,
     })
     .from(activityGroups)
+    .innerJoin(users, eq(users.id, activityGroups.userId))
     .leftJoin(
       activityGroupMembers,
       eq(activityGroups.id, activityGroupMembers.groupId)
@@ -207,12 +252,32 @@ export async function listGroupsForUser(
       activities,
       and(
         eq(activityGroupMembers.activityId, activities.id),
-        eq(activities.userId, userId)
+        eq(activities.userId, activityGroups.userId)
       )
     )
-    .where(eq(activityGroups.userId, userId))
-    .groupBy(activityGroups.id)
+    .where(visibilityWhere)
+    .groupBy(activityGroups.id, users.name)
     .orderBy(desc(activityGroups.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    coverPhotoPath: r.coverPhotoPath,
+    coverOffsetX: r.coverOffsetX,
+    coverOffsetY: r.coverOffsetY,
+    sharedWithPartner: r.sharedWithPartner,
+    startDate: r.startDate,
+    endDate: r.endDate,
+    createdAt: r.createdAt,
+    count: r.count,
+    totalDistance: r.totalDistance,
+    totalAscent: r.totalAscent,
+    firstActivityStart: r.firstActivityStart,
+    lastActivityStart: r.lastActivityStart,
+    sharedFromPartner: r.ownerId !== userId,
+    ownerName: r.ownerId !== userId ? r.ownerName : null,
+  }));
 }
 
 export async function getGroupsForActivity(

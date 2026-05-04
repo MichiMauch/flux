@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
+import { activities, users } from "@/lib/db/schema";
 import { and, desc, eq, notInArray } from "drizzle-orm";
 import { BentoPageShell } from "../../../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../../../components/bento/bento-page-header";
@@ -43,6 +43,25 @@ export default async function EditGroupPage({
   const { groupId } = await params;
   const group = await getGroup(userId, groupId);
   if (!group) notFound();
+  if (group.userId !== userId) {
+    // Read-only sharing — non-owners can't edit
+    redirect(`/groups/${groupId}`);
+  }
+
+  const meRow = await db
+    .select({ partnerId: users.partnerId })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const partner = meRow[0]?.partnerId
+    ? (
+        await db
+          .select({ id: users.id, name: users.name })
+          .from(users)
+          .where(eq(users.id, meRow[0].partnerId))
+          .limit(1)
+      )[0] ?? null
+    : null;
 
   const members = await getGroupActivities(userId, groupId);
 
@@ -101,7 +120,9 @@ export default async function EditGroupPage({
             description: group.description,
             startDate: toDateInput(group.startDate),
             endDate: toDateInput(group.endDate),
+            sharedWithPartner: group.sharedWithPartner,
           }}
+          partnerName={partner?.name ?? null}
         />
 
         <div className="space-y-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-6">

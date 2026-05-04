@@ -13,10 +13,12 @@ interface Props {
     description: string | null;
     startDate: string;
     endDate: string;
+    sharedWithPartner: boolean;
   };
+  partnerName: string | null;
 }
 
-export function GroupDetailsForm({ groupId, initial }: Props) {
+export function GroupDetailsForm({ groupId, initial, partnerName }: Props) {
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
   const router = useRouter();
@@ -117,6 +119,29 @@ export function GroupDetailsForm({ groupId, initial }: Props) {
           />
         </div>
       </div>
+
+      {partnerName ? (
+        <div className="space-y-1 border-t border-[#1a1a1a] pt-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              name="sharedWithPartner"
+              defaultChecked={initial.sharedWithPartner}
+              className="mt-0.5 h-4 w-4 accent-[#ff6a00]"
+            />
+            <span className="flex-1">
+              <span className="block text-sm text-white">
+                Mit {partnerName} teilen
+              </span>
+              <span
+                className={`${spaceMono.className} mt-0.5 block text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
+              >
+                Lesezugriff auf Karte, Stats und Aktivitäten — kein Editieren
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
 
       <div className="flex justify-end pt-2">
         <button

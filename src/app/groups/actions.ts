@@ -83,6 +83,7 @@ export async function updateGroup(
   const description = parseDescription(formData.get("description"));
   const startDate = parseDate(formData.get("startDate"));
   const endDate = parseDate(formData.get("endDate"));
+  const sharedWithPartner = formData.get("sharedWithPartner") === "on";
 
   await db
     .update(activityGroups)
@@ -91,6 +92,7 @@ export async function updateGroup(
       description,
       startDate,
       endDate,
+      sharedWithPartner,
       updatedAt: new Date(),
     })
     .where(eq(activityGroups.id, groupId));
