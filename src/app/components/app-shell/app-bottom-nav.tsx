@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { NavLink } from "./nav-link";
 import { NavLottie } from "./nav-lottie";
-import { MOBILE_PRIMARY_ITEMS, isMoreActive } from "./nav-items";
+import { BOTTOM_NAV_ITEMS, isMoreActive } from "./nav-items";
 
 interface AppBottomNavProps {
   onOpenMore: () => void;
@@ -22,7 +22,7 @@ export function AppBottomNav({ onOpenMore }: AppBottomNavProps) {
       aria-label="Hauptnavigation"
     >
       <div className="flex">
-        {MOBILE_PRIMARY_ITEMS.map((item) => (
+        {BOTTOM_NAV_ITEMS.map((item) => (
           <NavLink
             key={item.href}
             href={item.href}

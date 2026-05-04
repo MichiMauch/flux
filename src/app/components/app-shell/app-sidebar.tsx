@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { NavLink } from "./nav-link";
-import { PRIMARY_ITEMS, SECONDARY_ITEMS } from "./nav-items";
+import {
+  ITEMS_BY_SECTION,
+  SECTION_LABELS,
+  SECTION_ORDER,
+} from "./nav-items";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev";
 
@@ -18,43 +22,26 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
       className={`hidden lg:flex fixed left-0 top-14 bottom-0 z-30 flex-col border-r border-border bg-background transition-[width] duration-200 ${width}`}
     >
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-6">
-        <div className="space-y-1">
-          {!collapsed && (
-            <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/60">
-              Übersicht
-            </div>
-          )}
-          {PRIMARY_ITEMS.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              lottieFile={item.lottieFile}
-              variant="side"
-              collapsed={collapsed}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-1">
-          {!collapsed && (
-            <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/60">
-              Mehr
-            </div>
-          )}
-          {SECONDARY_ITEMS.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              lottieFile={item.lottieFile}
-              variant="side"
-              collapsed={collapsed}
-            />
-          ))}
-        </div>
+        {SECTION_ORDER.map((section) => (
+          <div key={section} className="space-y-1">
+            {!collapsed && (
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/60">
+                {SECTION_LABELS[section]}
+              </div>
+            )}
+            {ITEMS_BY_SECTION[section].map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                lottieFile={item.lottieFile}
+                variant="side"
+                collapsed={collapsed}
+              />
+            ))}
+          </div>
+        ))}
       </nav>
       <Link
         href="/changelog"

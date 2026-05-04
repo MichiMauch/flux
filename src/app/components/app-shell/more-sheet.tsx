@@ -3,7 +3,12 @@
 import { LogOut } from "lucide-react";
 import { BottomSheet } from "../bottom-sheet";
 import { NavLink } from "./nav-link";
-import { MOBILE_MORE_ITEMS } from "./nav-items";
+import {
+  MORE_SHEET_ITEMS,
+  SECTION_LABELS,
+  SECTION_ORDER,
+  type NavSection,
+} from "./nav-items";
 
 interface MoreSheetProps {
   open: boolean;
@@ -12,24 +17,41 @@ interface MoreSheetProps {
 }
 
 export function MoreSheet({ open, onClose, logoutAction }: MoreSheetProps) {
+  const itemsBySection: Record<NavSection, typeof MORE_SHEET_ITEMS> = {
+    movement: MORE_SHEET_ITEMS.filter((i) => i.section === "movement"),
+    analysis: MORE_SHEET_ITEMS.filter((i) => i.section === "analysis"),
+    health: MORE_SHEET_ITEMS.filter((i) => i.section === "health"),
+  };
+
   return (
     <BottomSheet open={open} onClose={onClose} title="Mehr">
-      <div className="p-2">
-        <div className="grid grid-cols-1 gap-1">
-          {MOBILE_MORE_ITEMS.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              lottieFile={item.lottieFile}
-              variant="side"
-              onClick={onClose}
-            />
-          ))}
-        </div>
+      <div className="p-2 space-y-4">
+        {SECTION_ORDER.map((section) => {
+          const items = itemsBySection[section];
+          if (items.length === 0) return null;
+          return (
+            <div key={section} className="space-y-1">
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/60">
+                {SECTION_LABELS[section]}
+              </div>
+              <div className="grid grid-cols-1 gap-1">
+                {items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    icon={item.icon}
+                    lottieFile={item.lottieFile}
+                    variant="side"
+                    onClick={onClose}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
-        <div className="my-2 border-t border-border" />
+        <div className="border-t border-border" />
 
         <form action={logoutAction}>
           <button
