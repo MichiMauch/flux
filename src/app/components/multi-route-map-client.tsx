@@ -115,6 +115,8 @@ export default function MultiRouteMapClient({
 
     map.setView([46.8, 8.2], 7);
 
+    map.on("click", () => setSelectedId(null));
+
     const polylinesMap = polylinesRef.current;
     return () => {
       map.remove();
@@ -147,6 +149,7 @@ export default function MultiRouteMapClient({
         color,
         weight: 4,
         opacity: 0.85,
+        bubblingMouseEvents: false,
       }).addTo(map);
 
       polyline.bindTooltip(`<strong>${escapeHtml(route.name)}</strong>`, {
@@ -345,6 +348,17 @@ export default function MultiRouteMapClient({
 
       {showLegend && routes.length > 0 && (
         <div className="absolute bottom-2 left-2 z-[1000] max-h-64 max-w-[60%] overflow-auto rounded-md border bg-background/95 backdrop-blur shadow-sm">
+          {effectiveSelectedId != null && (
+            <div className="sticky top-0 z-[1] border-b bg-background/95 backdrop-blur">
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="flex w-full items-center justify-center gap-1 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                Alle einblenden
+              </button>
+            </div>
+          )}
           <ul className="divide-y">
             {routes.map((route, idx) => {
               const color = colorFor(route, idx);
