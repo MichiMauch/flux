@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { toast } from "sonner";
 import { addActivitiesToGroup } from "./actions";
 import { formatDistanceAuto } from "@/lib/activity-format";
 
@@ -83,8 +84,12 @@ export function GroupActivityPicker({
   async function handleAdd() {
     if (selected.size === 0) return;
     setBusy(true);
+    const count = selected.size;
     try {
       await addActivitiesToGroup(groupId, Array.from(selected));
+      toast.success(
+        `${count} ${count === 1 ? "Aktivität" : "Aktivitäten"} hinzugefügt`
+      );
       setSelected(new Set());
       setOpen(false);
       setQuery("");
@@ -92,6 +97,10 @@ export function GroupActivityPicker({
       setFromDate("");
       setToDate("");
       startTransition(() => router.refresh());
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Hinzufügen fehlgeschlagen"
+      );
     } finally {
       setBusy(false);
     }

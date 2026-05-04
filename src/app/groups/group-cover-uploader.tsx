@@ -2,6 +2,7 @@
 
 import { useState, useRef, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { updateGroupCoverPosition } from "./actions";
 
 interface Props {
@@ -61,9 +62,12 @@ export function GroupCoverUploader({
       setVersion(Date.now());
       setOffsetX(50);
       setOffsetY(50);
+      toast.success("Cover hochgeladen");
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload fehlgeschlagen");
+      const msg = e instanceof Error ? e.message : "Upload fehlgeschlagen";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -83,9 +87,12 @@ export function GroupCoverUploader({
       }
       setUrl(null);
       setVersion(Date.now());
+      toast.success("Cover entfernt");
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Löschen fehlgeschlagen");
+      const msg = e instanceof Error ? e.message : "Löschen fehlgeschlagen";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -95,7 +102,12 @@ export function GroupCoverUploader({
     setSavingPosition(true);
     try {
       await updateGroupCoverPosition(groupId, x, y);
+      toast.success("Position gespeichert");
       startTransition(() => router.refresh());
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Position konnte nicht gespeichert werden"
+      );
     } finally {
       setSavingPosition(false);
     }

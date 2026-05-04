@@ -11,16 +11,14 @@ import {
   getGroup,
   getGroupActivities,
 } from "../../data";
-import {
-  updateGroup,
-  deleteGroup,
-  removeActivityFromGroup,
-} from "../../actions";
 import { GroupCoverUploader } from "../../group-cover-uploader";
 import {
   GroupActivityPicker,
   type PickableActivity,
 } from "../../group-activity-picker";
+import { GroupDetailsForm } from "../../group-details-form";
+import { GroupDeleteButton } from "../../group-delete-button";
+import { GroupMemberRemoveButton } from "../../group-member-remove-button";
 import {
   formatDistanceAuto,
   formatDateLabel,
@@ -78,13 +76,6 @@ export default async function EditGroupPage({
   const candidates: PickableActivity[] = candidatesRaw;
   const availableSports = sportRows.map((r) => r.type).sort();
 
-  const updateAction = updateGroup.bind(null, groupId);
-  async function deleteAction() {
-    "use server";
-    await deleteGroup(groupId);
-    redirect("/groups");
-  }
-
   return (
     <BentoPageShell>
       <BentoPageHeader
@@ -103,93 +94,15 @@ export default async function EditGroupPage({
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <form
-          action={updateAction}
-          className="space-y-5 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-6"
-        >
-          <h2
-            className={`${spaceMono.className} text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
-          >
-            Details
-          </h2>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="name"
-              className={`${spaceMono.className} block text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
-            >
-              Name
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              maxLength={120}
-              defaultValue={group.name}
-              className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="description"
-              className={`${spaceMono.className} block text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
-            >
-              Beschreibung
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={3}
-              maxLength={2000}
-              defaultValue={group.description ?? ""}
-              className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <label
-                htmlFor="startDate"
-                className={`${spaceMono.className} block text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
-              >
-                Start
-              </label>
-              <input
-                id="startDate"
-                name="startDate"
-                type="date"
-                defaultValue={toDateInput(group.startDate)}
-                className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label
-                htmlFor="endDate"
-                className={`${spaceMono.className} block text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
-              >
-                Ende
-              </label>
-              <input
-                id="endDate"
-                name="endDate"
-                type="date"
-                defaultValue={toDateInput(group.endDate)}
-                className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#ff6a00] bg-[#ff6a00] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-black hover:bg-[#ff8030]`}
-            >
-              Speichern
-            </button>
-          </div>
-        </form>
+        <GroupDetailsForm
+          groupId={group.id}
+          initial={{
+            name: group.name,
+            description: group.description,
+            startDate: toDateInput(group.startDate),
+            endDate: toDateInput(group.endDate),
+          }}
+        />
 
         <div className="space-y-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-6">
           <h2
@@ -220,10 +133,7 @@ export default async function EditGroupPage({
         ) : (
           <ul className="divide-y divide-[#1a1a1a] rounded-md border border-[#1a1a1a]">
             {members.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center gap-3 p-3"
-              >
+              <li key={m.id} className="flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm text-white">{m.name}</div>
                   <div
@@ -236,19 +146,11 @@ export default async function EditGroupPage({
                     ) : null}
                   </div>
                 </div>
-                <form
-                  action={async () => {
-                    "use server";
-                    await removeActivityFromGroup(groupId, m.id);
-                  }}
-                >
-                  <button
-                    type="submit"
-                    className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
-                  >
-                    Entfernen
-                  </button>
-                </form>
+                <GroupMemberRemoveButton
+                  groupId={group.id}
+                  activityId={m.id}
+                  activityName={m.name}
+                />
               </li>
             ))}
           </ul>
@@ -271,14 +173,7 @@ export default async function EditGroupPage({
           Die Gruppe wird unwiderruflich gelöscht. Die zugeordneten Aktivitäten
           bleiben erhalten.
         </p>
-        <form action={deleteAction}>
-          <button
-            type="submit"
-            className={`${spaceMono.className} inline-flex items-center rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-red-300 hover:border-red-700 hover:text-red-200`}
-          >
-            Gruppe löschen
-          </button>
-        </form>
+        <GroupDeleteButton groupId={group.id} groupName={group.name} />
       </section>
     </BentoPageShell>
   );

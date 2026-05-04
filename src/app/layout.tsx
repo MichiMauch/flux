@@ -6,6 +6,7 @@ import { AppShell } from "./components/app-shell/app-shell";
 import { SwRegister } from "./components/pwa/sw-register";
 import { InstallPrompt } from "./components/pwa/install-prompt";
 import { WeeklyBriefingModalHost } from "./components/coach/weekly-briefing-modal-host";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -67,6 +68,12 @@ export default function RootLayout({
           <InstallPrompt />
           <SwRegister />
           <WeeklyBriefingModalHost />
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            richColors
+            closeButton
+          />
         </ThemeProvider>
       </body>
     </html>
