@@ -4,8 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Link from "next/link";
-import { Mountain, Bike, Satellite } from "lucide-react";
+import { Mountain, Bike, Satellite, X } from "lucide-react";
 import { sportColor } from "@/lib/sport-colors";
+import {
+  formatDistanceAuto,
+  formatDurationWordsSpaced,
+} from "@/lib/activity-format";
 
 export interface MultiRouteEntry {
   activityId: string;
@@ -13,6 +17,10 @@ export interface MultiRouteEntry {
   routeData: { lat: number; lng: number }[];
   color?: string;
   type?: string;
+  distance?: number | null;
+  ascent?: number | null;
+  movingTime?: number | null;
+  startTime?: Date | string | null;
 }
 
 interface MultiRouteMapClientProps {
@@ -59,15 +67,33 @@ function colorFor(route: MultiRouteEntry, idx: number) {
   return route.color ?? sportColor(route.type ?? "", idx);
 }
 
+function formatStartLabel(start: MultiRouteEntry["startTime"]): string | null {
+  if (!start) return null;
+  const d = start instanceof Date ? start : new Date(start);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("de-CH", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function MultiRouteMapClient({
   routes,
   showLegend = true,
 }: MultiRouteMapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const polylinesRef = useRef<L.Polyline[]>([]);
+  const polylinesRef = useRef<Map<string, L.Polyline>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
   const [layer, setLayer] = useState<LayerType>("outdoors");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Treat selectedId as null when it points to a route that no longer exists
+  const effectiveSelectedId =
+    selectedId != null && routes.some((r) => r.activityId === selectedId)
+      ? selectedId
+      : null;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -87,11 +113,12 @@ export default function MultiRouteMapClient({
 
     map.setView([46.8, 8.2], 7);
 
+    const polylinesMap = polylinesRef.current;
     return () => {
       map.remove();
       mapRef.current = null;
       tileLayerRef.current = null;
-      polylinesRef.current = [];
+      polylinesMap.clear();
     };
   }, []);
 
@@ -99,8 +126,8 @@ export default function MultiRouteMapClient({
     const map = mapRef.current;
     if (!map) return;
 
-    for (const p of polylinesRef.current) p.remove();
-    polylinesRef.current = [];
+    for (const p of polylinesRef.current.values()) p.remove();
+    polylinesRef.current.clear();
 
     const allPositions: L.LatLngExpression[] = [];
 
@@ -125,12 +152,12 @@ export default function MultiRouteMapClient({
       });
 
       polyline.on("click", () => {
-        window.location.href = `/activity/${route.activityId}`;
+        setSelectedId((prev) =>
+          prev === route.activityId ? null : route.activityId
+        );
       });
-      polyline.on("mouseover", () => polyline.setStyle({ weight: 6 }));
-      polyline.on("mouseout", () => polyline.setStyle({ weight: 4 }));
 
-      polylinesRef.current.push(polyline);
+      polylinesRef.current.set(route.activityId, polyline);
     });
 
     if (allPositions.length > 0) {
@@ -138,6 +165,30 @@ export default function MultiRouteMapClient({
       map.fitBounds(bounds, { padding: [40, 40] });
     }
   }, [routes]);
+
+  // Re-style polylines on selection change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    for (const [id, polyline] of polylinesRef.current.entries()) {
+      const isSelected = id === effectiveSelectedId;
+      const dimmed = effectiveSelectedId !== null && !isSelected;
+      polyline.setStyle({
+        weight: isSelected ? 6 : dimmed ? 2 : 4,
+        opacity: isSelected ? 1 : dimmed ? 0.35 : 0.85,
+      });
+      if (isSelected) {
+        polyline.bringToFront();
+        try {
+          map.fitBounds(polyline.getBounds(), {
+            padding: [50, 50],
+            maxZoom: 15,
+          });
+        } catch {}
+      }
+    }
+  }, [effectiveSelectedId]);
 
   useEffect(() => {
     if (!mapRef.current || !tileLayerRef.current) return;
@@ -150,6 +201,18 @@ export default function MultiRouteMapClient({
       zoomOffset: isMapbox ? -1 : 0,
     }).addTo(mapRef.current);
   }, [layer]);
+
+  const selectedRoute =
+    effectiveSelectedId != null
+      ? routes.find((r) => r.activityId === effectiveSelectedId) ?? null
+      : null;
+  const selectedIdx = selectedRoute ? routes.indexOf(selectedRoute) : -1;
+  const selectedColor = selectedRoute
+    ? colorFor(selectedRoute, selectedIdx)
+    : null;
+  const selectedDate = selectedRoute
+    ? formatStartLabel(selectedRoute.startTime)
+    : null;
 
   return (
     <div className="relative h-full w-full">
@@ -197,29 +260,117 @@ export default function MultiRouteMapClient({
         </button>
       </div>
 
+      {selectedRoute && (
+        <div className="absolute top-2 left-2 z-[1000] w-72 max-w-[calc(100%-1rem)] rounded-md border bg-background/95 shadow-md backdrop-blur">
+          <div className="flex items-start gap-2 px-3 py-2">
+            <span
+              className="mt-1 h-3 w-1.5 shrink-0 rounded-sm"
+              style={{
+                backgroundColor: selectedColor ?? "#ffffff",
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold leading-tight text-foreground">
+                {selectedRoute.name}
+              </div>
+              {selectedDate ? (
+                <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  {selectedDate}
+                </div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              aria-label="Auswahl aufheben"
+              onClick={() => setSelectedId(null)}
+              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <dl className="grid grid-cols-3 gap-2 border-t px-3 py-2 text-center">
+            <Stat
+              label="Distanz"
+              value={
+                selectedRoute.distance != null
+                  ? formatDistanceAuto(selectedRoute.distance, 1)
+                  : "—"
+              }
+            />
+            <Stat
+              label="Höhenmeter"
+              value={
+                selectedRoute.ascent != null
+                  ? `${Math.round(selectedRoute.ascent)} m`
+                  : "—"
+              }
+            />
+            <Stat
+              label="Zeit"
+              value={
+                selectedRoute.movingTime != null
+                  ? formatDurationWordsSpaced(selectedRoute.movingTime)
+                  : "—"
+              }
+            />
+          </dl>
+          <div className="border-t p-2">
+            <Link
+              href={`/activity/${selectedRoute.activityId}`}
+              className="flex w-full items-center justify-center rounded-md bg-foreground px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-background hover:opacity-90"
+            >
+              Details ansehen →
+            </Link>
+          </div>
+        </div>
+      )}
+
       {showLegend && routes.length > 0 && (
         <div className="absolute bottom-2 left-2 z-[1000] max-h-64 max-w-[60%] overflow-auto rounded-md border bg-background/95 backdrop-blur shadow-sm">
           <ul className="divide-y">
             {routes.map((route, idx) => {
               const color = colorFor(route, idx);
+              const isSelected = route.activityId === effectiveSelectedId;
               return (
                 <li key={route.activityId}>
-                  <Link
-                    href={`/activity/${route.activityId}`}
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedId((prev) =>
+                        prev === route.activityId ? null : route.activityId
+                      )
+                    }
+                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
+                      isSelected
+                        ? "bg-foreground text-background"
+                        : "hover:bg-muted"
+                    }`}
                   >
                     <span
                       className="h-2.5 w-4 rounded-sm shrink-0"
                       style={{ backgroundColor: color }}
                     />
                     <span className="truncate">{route.name}</span>
-                  </Link>
+                  </button>
                 </li>
               );
             })}
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
+        {value}
+      </div>
     </div>
   );
 }

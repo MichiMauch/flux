@@ -57,6 +57,10 @@ export default async function GroupDetailPage({
       name: a.name,
       routeData: a.routeData,
       type: a.type,
+      distance: a.distance,
+      ascent: a.ascent,
+      movingTime: a.movingTime,
+      startTime: a.startTime,
     }));
 
   const dateRangeLabel = formatDateRangeLabel(
