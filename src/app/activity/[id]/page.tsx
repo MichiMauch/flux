@@ -20,6 +20,7 @@ import type { HrSample, RoutePoint } from "@/lib/splits";
 import { dimColor, km } from "./helpers";
 import { ActivityDetailBody } from "./activity-detail-body";
 import { ActivityDetailHero } from "./activity-detail-hero";
+import { getGroupsForActivity } from "@/app/groups/data";
 
 export default async function ActivityBentoPage({
   params,
@@ -101,6 +102,9 @@ export default async function ActivityBentoPage({
   });
 
   const isOwner = activity.userId === session.user.id;
+  const groupMemberships = isOwner
+    ? await getGroupsForActivity(session.user.id, id)
+    : [];
 
   const duration = activity.movingTime ?? activity.duration ?? 0;
   const totalDuration =
@@ -155,6 +159,21 @@ export default async function ActivityBentoPage({
             Klassische Ansicht
           </Link>
         </div>
+
+        {groupMemberships.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 [font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]">
+            <span>In Gruppen:</span>
+            {groupMemberships.map((g) => (
+              <Link
+                key={g.id}
+                href={`/groups/${g.id}`}
+                className="rounded border border-[#2a2a2a] px-2 py-0.5 text-white hover:border-[#4a4a4a]"
+              >
+                {g.name}
+              </Link>
+            ))}
+          </div>
+        )}
 
         <ActivityDetailHero
           dateLabel={dateLabel}
