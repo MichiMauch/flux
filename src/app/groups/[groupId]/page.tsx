@@ -8,11 +8,18 @@ import { spaceMono } from "../../components/bento/bento-fonts";
 import { BentoGroupStats } from "../../components/bento/groups/bento-group-stats";
 import { BentoGroupMap } from "../../components/bento/groups/bento-group-map";
 import { BentoGroupActivities } from "../../components/bento/groups/bento-group-activities";
+import { BentoGroupPhotos } from "../../components/bento/groups/bento-group-photos";
+import { PhotoLightbox } from "../../components/photo-lightbox";
 import type { MultiRouteEntry } from "../../components/multi-route-map-client";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getGroup, getGroupTotals, getGroupActivities } from "../data";
+import {
+  getGroup,
+  getGroupTotals,
+  getGroupActivities,
+  getGroupPhotos,
+} from "../data";
 
 function formatDateRangeLabel(
   start: Date | null,
@@ -42,10 +49,11 @@ export default async function GroupDetailPage({
   const userId = session.user.id;
 
   const { groupId } = await params;
-  const [group, totals, members] = await Promise.all([
+  const [group, totals, members, photos] = await Promise.all([
     getGroup(userId, groupId),
     getGroupTotals(userId, groupId),
     getGroupActivities(userId, groupId),
+    getGroupPhotos(userId, groupId),
   ]);
 
   if (!group) notFound();
@@ -144,7 +152,18 @@ export default async function GroupDetailPage({
         <BentoGroupStats totals={totals} dateRangeLabel={dateRangeLabel} />
         <BentoGroupMap routes={routes} />
         <BentoGroupActivities members={members} groupId={group.id} />
+        <BentoGroupPhotos photos={photos} />
       </div>
+
+      {photos.length > 0 && (
+        <PhotoLightbox
+          photos={photos.map((p) => ({
+            id: p.id,
+            location: p.location,
+            takenAt: p.takenAt,
+          }))}
+        />
+      )}
     </BentoPageShell>
   );
 }

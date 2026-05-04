@@ -4,6 +4,7 @@ import {
   activities,
   activityGroups,
   activityGroupMembers,
+  activityPhotos,
   users,
 } from "@/lib/db/schema";
 import { and, eq, or, sql, desc, asc } from "drizzle-orm";
@@ -278,6 +279,47 @@ export async function listGroupsForUser(
     sharedFromPartner: r.ownerId !== userId,
     ownerName: r.ownerId !== userId ? r.ownerName : null,
   }));
+}
+
+export interface GroupPhoto {
+  id: string;
+  activityId: string;
+  takenAt: Date | null;
+  location: string | null;
+}
+
+export async function getGroupPhotos(
+  userId: string,
+  groupId: string
+): Promise<GroupPhoto[]> {
+  const ownerId = await getReadableOwnerId(userId, groupId);
+  if (!ownerId) return [];
+
+  const rows = await db
+    .select({
+      id: activityPhotos.id,
+      activityId: activityPhotos.activityId,
+      takenAt: activityPhotos.takenAt,
+      location: activityPhotos.location,
+    })
+    .from(activityGroupMembers)
+    .innerJoin(
+      activities,
+      eq(activityGroupMembers.activityId, activities.id)
+    )
+    .innerJoin(
+      activityPhotos,
+      eq(activityPhotos.activityId, activities.id)
+    )
+    .where(
+      and(
+        eq(activityGroupMembers.groupId, groupId),
+        eq(activities.userId, ownerId)
+      )
+    )
+    .orderBy(asc(activityPhotos.takenAt), asc(activityPhotos.id));
+
+  return rows;
 }
 
 export async function getGroupsForActivity(
