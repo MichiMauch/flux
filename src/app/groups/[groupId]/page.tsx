@@ -99,6 +99,7 @@ export default async function GroupDetailPage({
             fill
             sizes="(min-width: 1280px) 1280px, 100vw"
             priority
+            unoptimized
             className="object-cover"
             style={{
               objectPosition: `${group.coverOffsetX}% ${group.coverOffsetY}%`,
