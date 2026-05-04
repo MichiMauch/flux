@@ -26,7 +26,7 @@ import {
   formatDateLabel,
 } from "@/lib/activity-format";
 
-const PICKER_LIMIT = 200;
+const PICKER_LIMIT = 1000;
 
 function toDateInput(d: Date | null): string {
   if (!d) return "";
@@ -49,26 +49,34 @@ export default async function EditGroupPage({
   const members = await getGroupActivities(userId, groupId);
 
   const memberIds = members.map((m) => m.id);
-  const candidatesRaw = await db
-    .select({
-      id: activities.id,
-      name: activities.name,
-      type: activities.type,
-      startTime: activities.startTime,
-      distance: activities.distance,
-    })
-    .from(activities)
-    .where(
-      memberIds.length > 0
-        ? and(
-            eq(activities.userId, userId),
-            notInArray(activities.id, memberIds)
-          )
-        : eq(activities.userId, userId)
-    )
-    .orderBy(desc(activities.startTime))
-    .limit(PICKER_LIMIT);
+  const candidateWhere =
+    memberIds.length > 0
+      ? and(
+          eq(activities.userId, userId),
+          notInArray(activities.id, memberIds)
+        )
+      : eq(activities.userId, userId);
+
+  const [candidatesRaw, sportRows] = await Promise.all([
+    db
+      .select({
+        id: activities.id,
+        name: activities.name,
+        type: activities.type,
+        startTime: activities.startTime,
+        distance: activities.distance,
+      })
+      .from(activities)
+      .where(candidateWhere)
+      .orderBy(desc(activities.startTime))
+      .limit(PICKER_LIMIT),
+    db
+      .selectDistinct({ type: activities.type })
+      .from(activities)
+      .where(eq(activities.userId, userId)),
+  ]);
   const candidates: PickableActivity[] = candidatesRaw;
+  const availableSports = sportRows.map((r) => r.type).sort();
 
   const updateAction = updateGroup.bind(null, groupId);
   async function deleteAction() {
@@ -244,7 +252,11 @@ export default async function EditGroupPage({
           </ul>
         )}
 
-        <GroupActivityPicker groupId={group.id} candidates={candidates} />
+        <GroupActivityPicker
+          groupId={group.id}
+          candidates={candidates}
+          availableSports={availableSports}
+        />
       </section>
 
       <section className="space-y-3 rounded-xl border border-red-900/40 bg-[#0a0a0a] p-6">

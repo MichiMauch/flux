@@ -5,20 +5,29 @@ import Image from "next/image";
 import { BentoPageShell } from "../../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../../components/bento/bento-page-header";
 import { spaceMono } from "../../components/bento/bento-fonts";
-import { MultiRouteMapSection } from "../../components/multi-route-map-section";
+import { BentoGroupStats } from "../../components/bento/groups/bento-group-stats";
+import { BentoGroupMap } from "../../components/bento/groups/bento-group-map";
+import { BentoGroupActivities } from "../../components/bento/groups/bento-group-activities";
 import type { MultiRouteEntry } from "../../components/multi-route-map-client";
-import {
-  getGroup,
-  getGroupTotals,
-  getGroupActivities,
-} from "../data";
-import {
-  formatDistanceAuto,
-  formatDurationWordsSpaced,
-  formatDateLabel,
-  formatTimeLabel,
-} from "@/lib/activity-format";
-import { sportColor } from "@/lib/sport-colors";
+import { getGroup, getGroupTotals, getGroupActivities } from "../data";
+
+function formatDateRangeLabel(
+  start: Date | null,
+  end: Date | null
+): string {
+  if (!start && !end) return "—";
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("de-CH", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  if (start && end) {
+    if (start.getTime() === end.getTime()) return fmt(start);
+    return `${fmt(start)} – ${fmt(end)}`;
+  }
+  return fmt((start ?? end)!);
+}
 
 export default async function GroupDetailPage({
   params,
@@ -50,22 +59,10 @@ export default async function GroupDetailPage({
       type: a.type,
     }));
 
-  const dateRange = (() => {
-    const start = group.startDate ?? totals?.startDate ?? null;
-    const end = group.endDate ?? totals?.endDate ?? null;
-    if (!start && !end) return "—";
-    const fmt = (d: Date) =>
-      d.toLocaleDateString("de-CH", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    if (start && end) {
-      if (start.getTime() === end.getTime()) return fmt(start);
-      return `${fmt(start)} – ${fmt(end)}`;
-    }
-    return fmt((start ?? end)!);
-  })();
+  const dateRangeLabel = formatDateRangeLabel(
+    group.startDate ?? totals?.startDate ?? null,
+    group.endDate ?? totals?.endDate ?? null
+  );
 
   return (
     <BentoPageShell>
@@ -111,110 +108,11 @@ export default async function GroupDetailPage({
         <p className="text-sm text-[#a3a3a3]">{group.description}</p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi label="Aktivitäten" value={String(totals?.count ?? 0)} />
-        <Kpi
-          label="Distanz"
-          value={formatDistanceAuto(totals?.totalDistance ?? 0, 1)}
-        />
-        <Kpi
-          label="Höhenmeter"
-          value={`${Math.round(totals?.totalAscent ?? 0)} m`}
-        />
-        <Kpi
-          label="Bewegungszeit"
-          value={
-            totals?.totalMovingTime
-              ? formatDurationWordsSpaced(totals.totalMovingTime)
-              : "—"
-          }
-        />
+      <div className="grid grid-cols-1 gap-4">
+        <BentoGroupStats totals={totals} dateRangeLabel={dateRangeLabel} />
+        <BentoGroupMap routes={routes} />
+        <BentoGroupActivities members={members} groupId={group.id} />
       </div>
-
-      <div
-        className={`${spaceMono.className} text-[11px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
-      >
-        {dateRange}
-      </div>
-
-      {routes.length > 0 ? (
-        <div className="h-[420px] overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#0a0a0a]">
-          <MultiRouteMapSection routes={routes} />
-        </div>
-      ) : null}
-
-      <section className="space-y-2">
-        <h2
-          className={`${spaceMono.className} text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
-        >
-          Aktivitäten ({members.length})
-        </h2>
-        {members.length === 0 ? (
-          <div className="rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-6 text-center text-sm text-[#a3a3a3]">
-            Noch keine Aktivitäten zugeordnet.{" "}
-            <Link
-              href={`/groups/${group.id}/edit`}
-              className="text-[#ff6a00] hover:underline"
-            >
-              Aktivitäten hinzufügen
-            </Link>
-          </div>
-        ) : (
-          <ul className="divide-y divide-[#1a1a1a] rounded-xl border border-[#2a2a2a] bg-[#0a0a0a]">
-            {members.map((m, idx) => {
-              const color = sportColor(m.type, idx);
-              return (
-                <li key={m.id}>
-                  <Link
-                    href={`/activity/${m.id}`}
-                    className="flex items-center gap-3 p-3 hover:bg-[#111]"
-                  >
-                    <span
-                      className="h-3 w-1 shrink-0 rounded-sm"
-                      style={{ backgroundColor: color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-white">
-                        {m.name}
-                      </div>
-                      <div
-                        className={`${spaceMono.className} flex flex-wrap items-center gap-x-3 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
-                      >
-                        <span>{formatDateLabel(m.startTime)}</span>
-                        <span>{formatTimeLabel(m.startTime)}</span>
-                        {m.distance ? (
-                          <span>{formatDistanceAuto(m.distance, 1)}</span>
-                        ) : null}
-                        {m.movingTime ? (
-                          <span>
-                            {formatDurationWordsSpaced(m.movingTime)}
-                          </span>
-                        ) : null}
-                        {m.ascent ? (
-                          <span>{Math.round(m.ascent)} m ↑</span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
     </BentoPageShell>
-  );
-}
-
-function Kpi({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-4">
-      <div
-        className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
-      >
-        {label}
-      </div>
-      <div className="mt-1 text-2xl font-semibold text-white">{value}</div>
-    </div>
   );
 }
