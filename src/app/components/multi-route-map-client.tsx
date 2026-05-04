@@ -85,9 +85,11 @@ export default function MultiRouteMapClient({
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map());
+  const baseColorsRef = useRef<Map<string, string>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
   const [layer, setLayer] = useState<LayerType>("outdoors");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   // Treat selectedId as null when it points to a route that no longer exists
   const effectiveSelectedId =
@@ -128,6 +130,7 @@ export default function MultiRouteMapClient({
 
     for (const p of polylinesRef.current.values()) p.remove();
     polylinesRef.current.clear();
+    baseColorsRef.current.clear();
 
     const allPositions: L.LatLngExpression[] = [];
 
@@ -156,8 +159,13 @@ export default function MultiRouteMapClient({
           prev === route.activityId ? null : route.activityId
         );
       });
+      polyline.on("mouseover", () => setHoveredId(route.activityId));
+      polyline.on("mouseout", () =>
+        setHoveredId((prev) => (prev === route.activityId ? null : prev))
+      );
 
       polylinesRef.current.set(route.activityId, polyline);
+      baseColorsRef.current.set(route.activityId, color);
     });
 
     if (allPositions.length > 0) {
@@ -166,29 +174,39 @@ export default function MultiRouteMapClient({
     }
   }, [routes]);
 
-  // Re-style polylines on selection change
+  // Re-style polylines on selection change (auto-fit bounds to selection)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || effectiveSelectedId == null) return;
+    const polyline = polylinesRef.current.get(effectiveSelectedId);
+    if (!polyline) return;
+    try {
+      map.fitBounds(polyline.getBounds(), {
+        padding: [50, 50],
+        maxZoom: 15,
+      });
+    } catch {}
+  }, [effectiveSelectedId]);
+
+  // Re-style polylines on selection or hover change
+  useEffect(() => {
+    if (!mapRef.current) return;
 
     for (const [id, polyline] of polylinesRef.current.entries()) {
       const isSelected = id === effectiveSelectedId;
-      const dimmed = effectiveSelectedId !== null && !isSelected;
+      const isHovered = id === hoveredId && !isSelected;
+      const dimmed =
+        effectiveSelectedId !== null && !isSelected && !isHovered;
+
+      const baseColor = baseColorsRef.current.get(id) ?? "#ffffff";
       polyline.setStyle({
-        weight: isSelected ? 6 : dimmed ? 2 : 4,
-        opacity: isSelected ? 1 : dimmed ? 0.35 : 0.85,
+        color: isHovered ? "#ffffff" : baseColor,
+        weight: isSelected ? 6 : isHovered ? 6 : dimmed ? 2 : 4,
+        opacity: isSelected ? 1 : isHovered ? 1 : dimmed ? 0.35 : 0.85,
       });
-      if (isSelected) {
-        polyline.bringToFront();
-        try {
-          map.fitBounds(polyline.getBounds(), {
-            padding: [50, 50],
-            maxZoom: 15,
-          });
-        } catch {}
-      }
+      if (isSelected || isHovered) polyline.bringToFront();
     }
-  }, [effectiveSelectedId]);
+  }, [effectiveSelectedId, hoveredId]);
 
   useEffect(() => {
     if (!mapRef.current || !tileLayerRef.current) return;
@@ -338,6 +356,18 @@ export default function MultiRouteMapClient({
                     onClick={() =>
                       setSelectedId((prev) =>
                         prev === route.activityId ? null : route.activityId
+                      )
+                    }
+                    onMouseEnter={() => setHoveredId(route.activityId)}
+                    onMouseLeave={() =>
+                      setHoveredId((prev) =>
+                        prev === route.activityId ? null : prev
+                      )
+                    }
+                    onFocus={() => setHoveredId(route.activityId)}
+                    onBlur={() =>
+                      setHoveredId((prev) =>
+                        prev === route.activityId ? null : prev
                       )
                     }
                     className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
