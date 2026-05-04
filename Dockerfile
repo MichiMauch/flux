@@ -44,7 +44,7 @@ COPY --from=builder /app/scripts ./scripts
 # IMPORTANT: Mount a Coolify persistent volume at /data so uploads
 # survive container rebuilds. Without it, uploaded files are wiped on
 # every deploy.
-RUN mkdir -p /data/fit-files /data/photos /data/portraits && chown -R nextjs:nodejs /data
+RUN mkdir -p /data/fit-files /data/photos /data/portraits /data/group-covers && chown -R nextjs:nodejs /data
 VOLUME ["/data"]
 
 USER nextjs
