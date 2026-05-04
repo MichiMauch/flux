@@ -7,6 +7,7 @@ import {
   json,
   primaryKey,
   boolean,
+  index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
@@ -443,3 +444,38 @@ export const notifications = pgTable("notifications", {
   readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ── Activity Groups (Sammlungen mehrerer Aktivitäten) ─────────────────────
+
+export const activityGroups = pgTable("activity_groups", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  coverPhotoPath: text("cover_photo_path"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const activityGroupMembers = pgTable(
+  "activity_group_members",
+  {
+    groupId: text("group_id")
+      .notNull()
+      .references(() => activityGroups.id, { onDelete: "cascade" }),
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at").defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.groupId, t.activityId] }),
+    index("activity_group_members_activity_idx").on(t.activityId),
+  ]
+);
