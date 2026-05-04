@@ -75,7 +75,6 @@ export default function MultiRouteMapClient({
     const map = L.map(containerRef.current, {
       zoomControl: true,
       attributionControl: true,
-      preferCanvas: true,
     });
     mapRef.current = map;
 
