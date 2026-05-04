@@ -30,6 +30,8 @@ export interface GroupSummary {
   name: string;
   description: string | null;
   coverPhotoPath: string | null;
+  coverOffsetX: number;
+  coverOffsetY: number;
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;
@@ -185,6 +187,8 @@ export async function listGroupsForUser(
       name: activityGroups.name,
       description: activityGroups.description,
       coverPhotoPath: activityGroups.coverPhotoPath,
+      coverOffsetX: activityGroups.coverOffsetX,
+      coverOffsetY: activityGroups.coverOffsetY,
       startDate: activityGroups.startDate,
       endDate: activityGroups.endDate,
       createdAt: activityGroups.createdAt,

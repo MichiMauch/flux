@@ -159,3 +159,30 @@ export async function removeActivityFromGroup(
   revalidatePath(`/groups/${groupId}`);
   revalidatePath(`/groups/${groupId}/edit`);
 }
+
+function clampPercent(n: number): number {
+  if (!Number.isFinite(n)) return 50;
+  return Math.max(0, Math.min(100, n));
+}
+
+export async function updateGroupCoverPosition(
+  groupId: string,
+  x: number,
+  y: number
+): Promise<void> {
+  const userId = await requireUserId();
+  await requireOwnedGroup(userId, groupId);
+
+  await db
+    .update(activityGroups)
+    .set({
+      coverOffsetX: clampPercent(x),
+      coverOffsetY: clampPercent(y),
+      updatedAt: new Date(),
+    })
+    .where(eq(activityGroups.id, groupId));
+
+  revalidatePath("/groups");
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/edit`);
+}

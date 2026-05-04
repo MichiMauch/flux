@@ -91,9 +91,9 @@ export async function POST(
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const optimized = await sharp(buffer)
+  const optimized = await sharp(buffer, { failOn: "none" })
     .rotate()
-    .resize(1200, 630, { fit: "cover", position: "attention" })
+    .resize(2400, 2400, { fit: "inside", withoutEnlargement: true })
     .webp({ quality: 85 })
     .toBuffer();
 
@@ -104,6 +104,8 @@ export async function POST(
     .update(activityGroups)
     .set({
       coverPhotoPath: getGroupCoverUrl(groupId),
+      coverOffsetX: 50,
+      coverOffsetY: 50,
       updatedAt: new Date(),
     })
     .where(eq(activityGroups.id, groupId));

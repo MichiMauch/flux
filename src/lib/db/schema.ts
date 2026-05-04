@@ -457,6 +457,8 @@ export const activityGroups = pgTable("activity_groups", {
   name: text("name").notNull(),
   description: text("description"),
   coverPhotoPath: text("cover_photo_path"),
+  coverOffsetX: real("cover_offset_x").default(50).notNull(), // 0..100 percent
+  coverOffsetY: real("cover_offset_y").default(50).notNull(), // 0..100 percent
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

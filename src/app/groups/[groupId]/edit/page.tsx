@@ -200,6 +200,8 @@ export default async function EditGroupPage({
           <GroupCoverUploader
             groupId={group.id}
             initialUrl={group.coverPhotoPath}
+            initialOffsetX={group.coverOffsetX}
+            initialOffsetY={group.coverOffsetY}
           />
         </div>
       </div>

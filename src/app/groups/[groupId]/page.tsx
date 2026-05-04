@@ -100,6 +100,9 @@ export default async function GroupDetailPage({
             sizes="(min-width: 1280px) 1280px, 100vw"
             priority
             className="object-cover"
+            style={{
+              objectPosition: `${group.coverOffsetX}% ${group.coverOffsetY}%`,
+            }}
           />
           <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
           {group.description ? (
