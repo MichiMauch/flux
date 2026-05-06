@@ -5,20 +5,20 @@ import Image from "next/image";
 import { BentoPageShell } from "../../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../../components/bento/bento-page-header";
 import { spaceMono } from "../../components/bento/bento-fonts";
-import { BentoGroupStats } from "../../components/bento/groups/bento-group-stats";
-import { BentoGroupMap } from "../../components/bento/groups/bento-group-map";
-import { BentoGroupActivities } from "../../components/bento/groups/bento-group-activities";
-import { BentoGroupPhotos } from "../../components/bento/groups/bento-group-photos";
+import { BentoTourStats } from "../../components/bento/tours/bento-tour-stats";
+import { BentoTourMap } from "../../components/bento/tours/bento-tour-map";
+import { BentoTourActivities } from "../../components/bento/tours/bento-tour-activities";
+import { BentoTourPhotos } from "../../components/bento/tours/bento-tour-photos";
 import { PhotoLightbox } from "../../components/photo-lightbox";
 import type { MultiRouteEntry } from "../../components/multi-route-map-client";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
-  getGroup,
-  getGroupTotals,
-  getGroupActivities,
-  getGroupPhotos,
+  getTour,
+  getTourTotals,
+  getTourActivities,
+  getTourPhotos,
 } from "../data";
 
 function formatDateRangeLabel(
@@ -39,32 +39,32 @@ function formatDateRangeLabel(
   return fmt((start ?? end)!);
 }
 
-export default async function GroupDetailPage({
+export default async function TourDetailPage({
   params,
 }: {
-  params: Promise<{ groupId: string }>;
+  params: Promise<{ tourId: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const { groupId } = await params;
-  const [group, totals, members, photos] = await Promise.all([
-    getGroup(userId, groupId),
-    getGroupTotals(userId, groupId),
-    getGroupActivities(userId, groupId),
-    getGroupPhotos(userId, groupId),
+  const { tourId } = await params;
+  const [tour, totals, members, photos] = await Promise.all([
+    getTour(userId, tourId),
+    getTourTotals(userId, tourId),
+    getTourActivities(userId, tourId),
+    getTourPhotos(userId, tourId),
   ]);
 
-  if (!group) notFound();
+  if (!tour) notFound();
 
-  const isOwner = group.userId === userId;
+  const isOwner = tour.userId === userId;
   let ownerName: string | null = null;
   if (!isOwner) {
     const ownerRow = await db
       .select({ name: users.name })
       .from(users)
-      .where(eq(users.id, group.userId))
+      .where(eq(users.id, tour.userId))
       .limit(1);
     ownerName = ownerRow[0]?.name ?? null;
   }
@@ -86,27 +86,27 @@ export default async function GroupDetailPage({
     }));
 
   const dateRangeLabel = formatDateRangeLabel(
-    group.startDate ?? totals?.startDate ?? null,
-    group.endDate ?? totals?.endDate ?? null
+    tour.startDate ?? totals?.startDate ?? null,
+    tour.endDate ?? totals?.endDate ?? null
   );
 
   return (
     <BentoPageShell>
       <BentoPageHeader
-        section="Gruppe"
-        title={group.name}
+        section="Tour"
+        title={tour.name}
         right={
           <div className="flex items-center gap-3">
             {isOwner ? (
               <Link
-                href={`/groups/${group.id}/edit`}
+                href={`/tours/${tour.id}/edit`}
                 className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
               >
                 Bearbeiten
               </Link>
             ) : null}
             <Link
-              href="/groups"
+              href="/tours"
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
             >
               ← Übersicht
@@ -123,36 +123,36 @@ export default async function GroupDetailPage({
         </div>
       ) : null}
 
-      {group.coverPhotoPath ? (
+      {tour.coverPhotoPath ? (
         <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-[#2a2a2a]">
           <Image
-            src={group.coverPhotoPath}
-            alt={group.name}
+            src={tour.coverPhotoPath}
+            alt={tour.name}
             fill
             sizes="(min-width: 1280px) 1280px, 100vw"
             priority
             unoptimized
             className="object-cover"
             style={{
-              objectPosition: `${group.coverOffsetX}% ${group.coverOffsetY}%`,
+              objectPosition: `${tour.coverOffsetX}% ${tour.coverOffsetY}%`,
             }}
           />
           <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
-          {group.description ? (
+          {tour.description ? (
             <div className="absolute inset-x-0 bottom-0 p-5 text-sm text-white">
-              {group.description}
+              {tour.description}
             </div>
           ) : null}
         </div>
-      ) : group.description ? (
-        <p className="text-sm text-[#a3a3a3]">{group.description}</p>
+      ) : tour.description ? (
+        <p className="text-sm text-[#a3a3a3]">{tour.description}</p>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4">
-        <BentoGroupStats totals={totals} dateRangeLabel={dateRangeLabel} />
-        <BentoGroupMap routes={routes} />
-        <BentoGroupActivities members={members} groupId={group.id} />
-        <BentoGroupPhotos photos={photos} />
+        <BentoTourStats totals={totals} dateRangeLabel={dateRangeLabel} />
+        <BentoTourMap routes={routes} />
+        <BentoTourActivities members={members} tourId={tour.id} />
+        <BentoTourPhotos photos={photos} />
       </div>
 
       {photos.length > 0 && (

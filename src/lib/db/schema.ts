@@ -445,9 +445,12 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// ── Activity Groups (Sammlungen mehrerer Aktivitäten) ─────────────────────
+// ── Activity Tours (Sammlungen mehrerer Aktivitäten) ──────────────────────
+// Physische Tabellen heissen aus Legacy-Gründen weiterhin activity_groups /
+// activity_group_members und Spalte group_id — TS-seitig sind sie als Tour
+// modelliert.
 
-export const activityGroups = pgTable("activity_groups", {
+export const activityTours = pgTable("activity_groups", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -466,19 +469,19 @@ export const activityGroups = pgTable("activity_groups", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const activityGroupMembers = pgTable(
+export const activityTourMembers = pgTable(
   "activity_group_members",
   {
-    groupId: text("group_id")
+    tourId: text("group_id")
       .notNull()
-      .references(() => activityGroups.id, { onDelete: "cascade" }),
+      .references(() => activityTours.id, { onDelete: "cascade" }),
     activityId: text("activity_id")
       .notNull()
       .references(() => activities.id, { onDelete: "cascade" }),
     addedAt: timestamp("added_at").defaultNow().notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.groupId, t.activityId] }),
+    primaryKey({ columns: [t.tourId, t.activityId] }),
     index("activity_group_members_activity_idx").on(t.activityId),
   ]
 );

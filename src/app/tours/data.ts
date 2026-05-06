@@ -2,14 +2,14 @@ import "server-only";
 import { db } from "@/lib/db";
 import {
   activities,
-  activityGroups,
-  activityGroupMembers,
+  activityTours,
+  activityTourMembers,
   activityPhotos,
   users,
 } from "@/lib/db/schema";
 import { and, eq, or, sql, desc, asc } from "drizzle-orm";
 
-export interface GroupTotals {
+export interface TourTotals {
   count: number;
   totalDistance: number;
   totalDuration: number;
@@ -20,14 +20,14 @@ export interface GroupTotals {
   endDate: Date | null;
 }
 
-export interface GroupSportBucket {
+export interface TourSportBucket {
   type: string;
   count: number;
   totalDistance: number;
   totalDuration: number;
 }
 
-export interface GroupSummary {
+export interface TourSummary {
   id: string;
   name: string;
   description: string | null;
@@ -48,7 +48,7 @@ export interface GroupSummary {
   ownerName: string | null;
 }
 
-export interface GroupActivity {
+export interface TourActivity {
   id: string;
   name: string;
   type: string;
@@ -64,23 +64,23 @@ export interface GroupActivity {
 }
 
 /**
- * Returns the group owner's userId if the calling user has read access,
+ * Returns the tour owner's userId if the calling user has read access,
  * else null. Read access = owner OR (sharedWithPartner AND user is the
  * owner's configured partner).
  */
 async function getReadableOwnerId(
   userId: string,
-  groupId: string
+  tourId: string
 ): Promise<string | null> {
   const rows = await db
     .select({
-      ownerId: activityGroups.userId,
-      sharedWithPartner: activityGroups.sharedWithPartner,
+      ownerId: activityTours.userId,
+      sharedWithPartner: activityTours.sharedWithPartner,
       ownerPartnerId: users.partnerId,
     })
-    .from(activityGroups)
-    .innerJoin(users, eq(users.id, activityGroups.userId))
-    .where(eq(activityGroups.id, groupId))
+    .from(activityTours)
+    .innerJoin(users, eq(users.id, activityTours.userId))
+    .where(eq(activityTours.id, tourId))
     .limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -89,22 +89,22 @@ async function getReadableOwnerId(
   return null;
 }
 
-export async function getGroup(userId: string, groupId: string) {
-  const ownerId = await getReadableOwnerId(userId, groupId);
+export async function getTour(userId: string, tourId: string) {
+  const ownerId = await getReadableOwnerId(userId, tourId);
   if (!ownerId) return null;
   const rows = await db
     .select()
-    .from(activityGroups)
-    .where(eq(activityGroups.id, groupId))
+    .from(activityTours)
+    .where(eq(activityTours.id, tourId))
     .limit(1);
   return rows[0] ?? null;
 }
 
-export async function getGroupTotals(
+export async function getTourTotals(
   userId: string,
-  groupId: string
-): Promise<GroupTotals | null> {
-  const ownerId = await getReadableOwnerId(userId, groupId);
+  tourId: string
+): Promise<TourTotals | null> {
+  const ownerId = await getReadableOwnerId(userId, tourId);
   if (!ownerId) return null;
 
   const rows = await db
@@ -118,25 +118,25 @@ export async function getGroupTotals(
       startDate: sql<Date | null>`min(${activities.startTime})`,
       endDate: sql<Date | null>`max(${activities.startTime})`,
     })
-    .from(activityGroupMembers)
+    .from(activityTourMembers)
     .innerJoin(
       activities,
-      eq(activityGroupMembers.activityId, activities.id)
+      eq(activityTourMembers.activityId, activities.id)
     )
     .where(
       and(
-        eq(activityGroupMembers.groupId, groupId),
+        eq(activityTourMembers.tourId, tourId),
         eq(activities.userId, ownerId)
       )
     );
   return rows[0];
 }
 
-export async function getGroupActivities(
+export async function getTourActivities(
   userId: string,
-  groupId: string
-): Promise<GroupActivity[]> {
-  const ownerId = await getReadableOwnerId(userId, groupId);
+  tourId: string
+): Promise<TourActivity[]> {
+  const ownerId = await getReadableOwnerId(userId, tourId);
   if (!ownerId) return [];
 
   const rows = await db
@@ -154,14 +154,14 @@ export async function getGroupActivities(
       locality: activities.locality,
       country: activities.country,
     })
-    .from(activityGroupMembers)
+    .from(activityTourMembers)
     .innerJoin(
       activities,
-      eq(activityGroupMembers.activityId, activities.id)
+      eq(activityTourMembers.activityId, activities.id)
     )
     .where(
       and(
-        eq(activityGroupMembers.groupId, groupId),
+        eq(activityTourMembers.tourId, tourId),
         eq(activities.userId, ownerId)
       )
     )
@@ -169,15 +169,15 @@ export async function getGroupActivities(
 
   return rows.map((r) => ({
     ...r,
-    routeData: r.routeData as GroupActivity["routeData"],
+    routeData: r.routeData as TourActivity["routeData"],
   }));
 }
 
-export async function getGroupSportBreakdown(
+export async function getTourSportBreakdown(
   userId: string,
-  groupId: string
-): Promise<GroupSportBucket[]> {
-  const ownerId = await getReadableOwnerId(userId, groupId);
+  tourId: string
+): Promise<TourSportBucket[]> {
+  const ownerId = await getReadableOwnerId(userId, tourId);
   if (!ownerId) return [];
 
   return db
@@ -187,14 +187,14 @@ export async function getGroupSportBreakdown(
       totalDistance: sql<number>`coalesce(sum(${activities.distance}), 0)`,
       totalDuration: sql<number>`coalesce(sum(${activities.duration}), 0)`,
     })
-    .from(activityGroupMembers)
+    .from(activityTourMembers)
     .innerJoin(
       activities,
-      eq(activityGroupMembers.activityId, activities.id)
+      eq(activityTourMembers.activityId, activities.id)
     )
     .where(
       and(
-        eq(activityGroupMembers.groupId, groupId),
+        eq(activityTourMembers.tourId, tourId),
         eq(activities.userId, ownerId)
       )
     )
@@ -202,10 +202,10 @@ export async function getGroupSportBreakdown(
     .orderBy(desc(sql`sum(${activities.distance})`));
 }
 
-export async function listGroupsForUser(
+export async function listToursForUser(
   userId: string
-): Promise<GroupSummary[]> {
-  // Step 1: collect all visible group ids — own + shared by partner
+): Promise<TourSummary[]> {
+  // Step 1: collect all visible tour ids — own + shared by partner
   const me = await db
     .select({ partnerId: users.partnerId })
     .from(users)
@@ -215,27 +215,27 @@ export async function listGroupsForUser(
 
   const visibilityWhere = partnerId
     ? or(
-        eq(activityGroups.userId, userId),
+        eq(activityTours.userId, userId),
         and(
-          eq(activityGroups.userId, partnerId),
-          eq(activityGroups.sharedWithPartner, true)
+          eq(activityTours.userId, partnerId),
+          eq(activityTours.sharedWithPartner, true)
         )
       )!
-    : eq(activityGroups.userId, userId);
+    : eq(activityTours.userId, userId);
 
   const rows = await db
     .select({
-      id: activityGroups.id,
-      name: activityGroups.name,
-      description: activityGroups.description,
-      coverPhotoPath: activityGroups.coverPhotoPath,
-      coverOffsetX: activityGroups.coverOffsetX,
-      coverOffsetY: activityGroups.coverOffsetY,
-      sharedWithPartner: activityGroups.sharedWithPartner,
-      startDate: activityGroups.startDate,
-      endDate: activityGroups.endDate,
-      createdAt: activityGroups.createdAt,
-      ownerId: activityGroups.userId,
+      id: activityTours.id,
+      name: activityTours.name,
+      description: activityTours.description,
+      coverPhotoPath: activityTours.coverPhotoPath,
+      coverOffsetX: activityTours.coverOffsetX,
+      coverOffsetY: activityTours.coverOffsetY,
+      sharedWithPartner: activityTours.sharedWithPartner,
+      startDate: activityTours.startDate,
+      endDate: activityTours.endDate,
+      createdAt: activityTours.createdAt,
+      ownerId: activityTours.userId,
       ownerName: users.name,
       count: sql<number>`count(${activities.id})::int`,
       totalDistance: sql<number>`coalesce(sum(${activities.distance}), 0)`,
@@ -243,22 +243,22 @@ export async function listGroupsForUser(
       firstActivityStart: sql<Date | null>`min(${activities.startTime})`,
       lastActivityStart: sql<Date | null>`max(${activities.startTime})`,
     })
-    .from(activityGroups)
-    .innerJoin(users, eq(users.id, activityGroups.userId))
+    .from(activityTours)
+    .innerJoin(users, eq(users.id, activityTours.userId))
     .leftJoin(
-      activityGroupMembers,
-      eq(activityGroups.id, activityGroupMembers.groupId)
+      activityTourMembers,
+      eq(activityTours.id, activityTourMembers.tourId)
     )
     .leftJoin(
       activities,
       and(
-        eq(activityGroupMembers.activityId, activities.id),
-        eq(activities.userId, activityGroups.userId)
+        eq(activityTourMembers.activityId, activities.id),
+        eq(activities.userId, activityTours.userId)
       )
     )
     .where(visibilityWhere)
-    .groupBy(activityGroups.id, users.name)
-    .orderBy(desc(activityGroups.createdAt));
+    .groupBy(activityTours.id, users.name)
+    .orderBy(desc(activityTours.createdAt));
 
   return rows.map((r) => ({
     id: r.id,
@@ -281,18 +281,18 @@ export async function listGroupsForUser(
   }));
 }
 
-export interface GroupPhoto {
+export interface TourPhoto {
   id: string;
   activityId: string;
   takenAt: Date | null;
   location: string | null;
 }
 
-export async function getGroupPhotos(
+export async function getTourPhotos(
   userId: string,
-  groupId: string
-): Promise<GroupPhoto[]> {
-  const ownerId = await getReadableOwnerId(userId, groupId);
+  tourId: string
+): Promise<TourPhoto[]> {
+  const ownerId = await getReadableOwnerId(userId, tourId);
   if (!ownerId) return [];
 
   const rows = await db
@@ -302,10 +302,10 @@ export async function getGroupPhotos(
       takenAt: activityPhotos.takenAt,
       location: activityPhotos.location,
     })
-    .from(activityGroupMembers)
+    .from(activityTourMembers)
     .innerJoin(
       activities,
-      eq(activityGroupMembers.activityId, activities.id)
+      eq(activityTourMembers.activityId, activities.id)
     )
     .innerJoin(
       activityPhotos,
@@ -313,7 +313,7 @@ export async function getGroupPhotos(
     )
     .where(
       and(
-        eq(activityGroupMembers.groupId, groupId),
+        eq(activityTourMembers.tourId, tourId),
         eq(activities.userId, ownerId)
       )
     )
@@ -322,25 +322,25 @@ export async function getGroupPhotos(
   return rows;
 }
 
-export async function getGroupsForActivity(
+export async function getToursForActivity(
   userId: string,
   activityId: string
 ) {
   return db
     .select({
-      id: activityGroups.id,
-      name: activityGroups.name,
+      id: activityTours.id,
+      name: activityTours.name,
     })
-    .from(activityGroupMembers)
+    .from(activityTourMembers)
     .innerJoin(
-      activityGroups,
-      eq(activityGroupMembers.groupId, activityGroups.id)
+      activityTours,
+      eq(activityTourMembers.tourId, activityTours.id)
     )
     .where(
       and(
-        eq(activityGroupMembers.activityId, activityId),
-        eq(activityGroups.userId, userId)
+        eq(activityTourMembers.activityId, activityId),
+        eq(activityTours.userId, userId)
       )
     )
-    .orderBy(asc(activityGroups.name));
+    .orderBy(asc(activityTours.name));
 }

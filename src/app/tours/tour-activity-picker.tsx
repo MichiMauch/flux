@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { toast } from "sonner";
-import { addActivitiesToGroup } from "./actions";
+import { addActivitiesToTour } from "./actions";
 import { formatDistanceAuto } from "@/lib/activity-format";
 
 export interface PickableActivity {
@@ -16,13 +16,13 @@ export interface PickableActivity {
 }
 
 interface Props {
-  groupId: string;
+  tourId: string;
   candidates: PickableActivity[];
   availableSports: string[];
 }
 
-export function GroupActivityPicker({
-  groupId,
+export function TourActivityPicker({
+  tourId,
   candidates,
   availableSports,
 }: Props) {
@@ -86,7 +86,7 @@ export function GroupActivityPicker({
     setBusy(true);
     const count = selected.size;
     try {
-      await addActivitiesToGroup(groupId, Array.from(selected));
+      await addActivitiesToTour(tourId, Array.from(selected));
       toast.success(
         `${count} ${count === 1 ? "Aktivität" : "Aktivitäten"} hinzugefügt`
       );
@@ -175,7 +175,7 @@ export function GroupActivityPicker({
 
       {candidates.length === 0 ? (
         <p className="text-sm text-[#a3a3a3]">
-          Alle deine Aktivitäten sind bereits in dieser Gruppe.
+          Alle deine Aktivitäten sind bereits in dieser Tour.
         </p>
       ) : filtered.length === 0 ? (
         <p className="p-3 text-center text-xs text-[#a3a3a3]">Keine Treffer.</p>

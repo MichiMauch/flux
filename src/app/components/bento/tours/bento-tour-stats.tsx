@@ -4,14 +4,14 @@ import {
   formatDistanceAuto,
   formatDurationWordsSpaced,
 } from "@/lib/activity-format";
-import type { GroupTotals } from "@/app/groups/data";
+import type { TourTotals } from "@/app/tours/data";
 
-interface BentoGroupStatsProps {
-  totals: GroupTotals | null;
+interface BentoTourStatsProps {
+  totals: TourTotals | null;
   dateRangeLabel: string;
 }
 
-export function BentoGroupStats({ totals, dateRangeLabel }: BentoGroupStatsProps) {
+export function BentoTourStats({ totals, dateRangeLabel }: BentoTourStatsProps) {
   return (
     <BentoTile label="Übersicht" title="Kennzahlen">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

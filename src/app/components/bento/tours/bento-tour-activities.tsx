@@ -11,17 +11,17 @@ import {
   formatTimeLabel,
 } from "@/lib/activity-format";
 import { sportColor, NEON } from "@/lib/sport-colors";
-import type { GroupActivity } from "@/app/groups/data";
+import type { TourActivity } from "@/app/tours/data";
 
-interface BentoGroupActivitiesProps {
-  members: GroupActivity[];
-  groupId: string;
+interface BentoTourActivitiesProps {
+  members: TourActivity[];
+  tourId: string;
 }
 
-export function BentoGroupActivities({
+export function BentoTourActivities({
   members,
-  groupId,
-}: BentoGroupActivitiesProps) {
+  tourId,
+}: BentoTourActivitiesProps) {
   return (
     <BentoTile
       label="Aktivitäten"
@@ -32,7 +32,7 @@ export function BentoGroupActivities({
         <div className="p-6 text-center text-sm text-[#a3a3a3]">
           Noch keine Aktivitäten zugeordnet.{" "}
           <Link
-            href={`/groups/${groupId}/edit`}
+            href={`/tours/${tourId}/edit`}
             className="text-[#ff6a00] hover:underline"
           >
             Aktivitäten hinzufügen

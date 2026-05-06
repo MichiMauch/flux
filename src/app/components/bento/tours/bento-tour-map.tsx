@@ -2,12 +2,12 @@ import { spaceMono } from "../bento-fonts";
 import { MultiRouteMapSection } from "../../multi-route-map-section";
 import type { MultiRouteEntry } from "../../multi-route-map-client";
 
-interface BentoGroupMapProps {
+interface BentoTourMapProps {
   routes: MultiRouteEntry[];
   height?: number;
 }
 
-export function BentoGroupMap({ routes, height = 420 }: BentoGroupMapProps) {
+export function BentoTourMap({ routes, height = 420 }: BentoTourMapProps) {
   return (
     <section className="overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#0f0f0f]">
       <header className="flex items-center justify-between gap-3 border-b border-[#2a2a2a] bg-[#0a0a0a] px-4 py-2">
@@ -24,7 +24,7 @@ export function BentoGroupMap({ routes, height = 420 }: BentoGroupMapProps) {
       </header>
       {routes.length === 0 ? (
         <div className="flex h-48 items-center justify-center text-sm text-[#a3a3a3]">
-          Keine Aktivitäten mit Route-Daten in dieser Gruppe.
+          Keine Aktivitäten mit Route-Daten in dieser Tour.
         </div>
       ) : (
         <div style={{ height: `${height}px` }}>

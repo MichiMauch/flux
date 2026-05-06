@@ -4,29 +4,29 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { spaceMono } from "../components/bento/bento-fonts";
-import { deleteGroup } from "./actions";
+import { deleteTour } from "./actions";
 
 interface Props {
-  groupId: string;
-  groupName: string;
+  tourId: string;
+  tourName: string;
 }
 
-export function GroupDeleteButton({ groupId, groupName }: Props) {
+export function TourDeleteButton({ tourId, tourName }: Props) {
   const [busy, setBusy] = useState(false);
   const router = useRouter();
 
   async function handleDelete() {
     if (
       !confirm(
-        `Gruppe "${groupName}" wirklich löschen? Die Aktivitäten bleiben erhalten.`
+        `Tour "${tourName}" wirklich löschen? Die Aktivitäten bleiben erhalten.`
       )
     )
       return;
     setBusy(true);
     try {
-      await deleteGroup(groupId);
-      toast.success("Gruppe gelöscht");
-      router.push("/groups");
+      await deleteTour(tourId);
+      toast.success("Tour gelöscht");
+      router.push("/tours");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Löschen fehlgeschlagen"
@@ -42,7 +42,7 @@ export function GroupDeleteButton({ groupId, groupName }: Props) {
       onClick={handleDelete}
       className={`${spaceMono.className} inline-flex items-center rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-red-300 hover:border-red-700 hover:text-red-200 disabled:opacity-60`}
     >
-      {busy ? "Löschen …" : "Gruppe löschen"}
+      {busy ? "Löschen …" : "Tour löschen"}
     </button>
   );
 }

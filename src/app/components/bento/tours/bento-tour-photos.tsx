@@ -3,13 +3,13 @@
 import { useCallback } from "react";
 import Image from "next/image";
 import { BentoTile } from "../bento-tile";
-import type { GroupPhoto } from "@/app/groups/data";
+import type { TourPhoto } from "@/app/tours/data";
 
-interface BentoGroupPhotosProps {
-  photos: GroupPhoto[];
+interface BentoTourPhotosProps {
+  photos: TourPhoto[];
 }
 
-export function BentoGroupPhotos({ photos }: BentoGroupPhotosProps) {
+export function BentoTourPhotos({ photos }: BentoTourPhotosProps) {
   const openPhoto = useCallback((id: string) => {
     if (typeof window !== "undefined") {
       window.location.hash = `photo=${id}`;

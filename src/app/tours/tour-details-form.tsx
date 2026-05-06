@@ -4,10 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { spaceMono } from "../components/bento/bento-fonts";
-import { updateGroup } from "./actions";
+import { updateTour } from "./actions";
 
 interface Props {
-  groupId: string;
+  tourId: string;
   initial: {
     name: string;
     description: string | null;
@@ -18,7 +18,7 @@ interface Props {
   partnerName: string | null;
 }
 
-export function GroupDetailsForm({ groupId, initial, partnerName }: Props) {
+export function TourDetailsForm({ tourId, initial, partnerName }: Props) {
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
   const router = useRouter();
@@ -29,8 +29,8 @@ export function GroupDetailsForm({ groupId, initial, partnerName }: Props) {
     setBusy(true);
     const fd = new FormData(e.currentTarget);
     try {
-      await updateGroup(groupId, fd);
-      toast.success("Gruppe gespeichert");
+      await updateTour(tourId, fd);
+      toast.success("Tour gespeichert");
       startTransition(() => router.refresh());
     } catch (err) {
       toast.error(

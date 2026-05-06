@@ -3,42 +3,42 @@ import { writeFile, mkdir, unlink, readFile } from "fs/promises";
 import sharp from "sharp";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { activityGroups, users } from "@/lib/db/schema";
+import { activityTours, users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
-  GROUP_COVERS_PATH,
-  getGroupCoverPath,
-  getGroupCoverUrl,
-} from "@/lib/group-covers";
+  TOUR_COVERS_PATH,
+  getTourCoverPath,
+  getTourCoverUrl,
+} from "@/lib/tour-covers";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
-async function loadOwnedGroup(userId: string, groupId: string) {
+async function loadOwnedTour(userId: string, tourId: string) {
   const rows = await db
     .select({
-      id: activityGroups.id,
-      coverPhotoPath: activityGroups.coverPhotoPath,
+      id: activityTours.id,
+      coverPhotoPath: activityTours.coverPhotoPath,
     })
-    .from(activityGroups)
+    .from(activityTours)
     .where(
-      and(eq(activityGroups.id, groupId), eq(activityGroups.userId, userId))
+      and(eq(activityTours.id, tourId), eq(activityTours.userId, userId))
     )
     .limit(1);
   return rows[0] ?? null;
 }
 
-async function loadReadableGroup(userId: string, groupId: string) {
+async function loadReadableTour(userId: string, tourId: string) {
   const rows = await db
     .select({
-      id: activityGroups.id,
-      coverPhotoPath: activityGroups.coverPhotoPath,
-      ownerId: activityGroups.userId,
-      sharedWithPartner: activityGroups.sharedWithPartner,
+      id: activityTours.id,
+      coverPhotoPath: activityTours.coverPhotoPath,
+      ownerId: activityTours.userId,
+      sharedWithPartner: activityTours.sharedWithPartner,
       ownerPartnerId: users.partnerId,
     })
-    .from(activityGroups)
-    .innerJoin(users, eq(users.id, activityGroups.userId))
-    .where(eq(activityGroups.id, groupId))
+    .from(activityTours)
+    .innerJoin(users, eq(users.id, activityTours.userId))
+    .where(eq(activityTours.id, tourId))
     .limit(1);
   if (rows.length === 0) return null;
   const r = rows[0];
@@ -49,23 +49,23 @@ async function loadReadableGroup(userId: string, groupId: string) {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ groupId: string }> }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { groupId } = await params;
-  const group = await loadReadableGroup(session.user.id, groupId);
-  if (!group) {
+  const { tourId } = await params;
+  const tour = await loadReadableTour(session.user.id, tourId);
+  if (!tour) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (!group.coverPhotoPath) {
+  if (!tour.coverPhotoPath) {
     return NextResponse.json({ error: "No cover" }, { status: 404 });
   }
 
   try {
-    const buf = await readFile(getGroupCoverPath(groupId));
+    const buf = await readFile(getTourCoverPath(tourId));
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
@@ -80,15 +80,15 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ groupId: string }> }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { groupId } = await params;
-  const group = await loadOwnedGroup(session.user.id, groupId);
-  if (!group) {
+  const { tourId } = await params;
+  const tour = await loadOwnedTour(session.user.id, tourId);
+  if (!tour) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -117,41 +117,41 @@ export async function POST(
     .webp({ quality: 85 })
     .toBuffer();
 
-  await mkdir(GROUP_COVERS_PATH, { recursive: true });
-  await writeFile(getGroupCoverPath(groupId), optimized);
+  await mkdir(TOUR_COVERS_PATH, { recursive: true });
+  await writeFile(getTourCoverPath(tourId), optimized);
 
   await db
-    .update(activityGroups)
+    .update(activityTours)
     .set({
-      coverPhotoPath: getGroupCoverUrl(groupId),
+      coverPhotoPath: getTourCoverUrl(tourId),
       coverOffsetX: 50,
       coverOffsetY: 50,
       updatedAt: new Date(),
     })
-    .where(eq(activityGroups.id, groupId));
+    .where(eq(activityTours.id, tourId));
 
-  return NextResponse.json({ ok: true, url: getGroupCoverUrl(groupId) });
+  return NextResponse.json({ ok: true, url: getTourCoverUrl(tourId) });
 }
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ groupId: string }> }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { groupId } = await params;
-  const group = await loadOwnedGroup(session.user.id, groupId);
-  if (!group) {
+  const { tourId } = await params;
+  const tour = await loadOwnedTour(session.user.id, tourId);
+  if (!tour) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await unlink(getGroupCoverPath(groupId)).catch(() => {});
+  await unlink(getTourCoverPath(tourId)).catch(() => {});
   await db
-    .update(activityGroups)
+    .update(activityTours)
     .set({ coverPhotoPath: null, updatedAt: new Date() })
-    .where(eq(activityGroups.id, groupId));
+    .where(eq(activityTours.id, tourId));
 
   return NextResponse.json({ ok: true });
 }

@@ -4,13 +4,13 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import {
   activities,
-  activityGroups,
-  activityGroupMembers,
+  activityTours,
+  activityTourMembers,
 } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { unlink } from "fs/promises";
-import { getGroupCoverPath } from "@/lib/group-covers";
+import { getTourCoverPath } from "@/lib/tour-covers";
 
 const NAME_MAX = 120;
 const DESC_MAX = 2000;
@@ -22,15 +22,15 @@ async function requireUserId() {
   return id;
 }
 
-async function requireOwnedGroup(userId: string, groupId: string) {
+async function requireOwnedTour(userId: string, tourId: string) {
   const rows = await db
-    .select({ id: activityGroups.id })
-    .from(activityGroups)
+    .select({ id: activityTours.id })
+    .from(activityTours)
     .where(
-      and(eq(activityGroups.id, groupId), eq(activityGroups.userId, userId))
+      and(eq(activityTours.id, tourId), eq(activityTours.userId, userId))
     )
     .limit(1);
-  if (rows.length === 0) throw new Error("Group not found");
+  if (rows.length === 0) throw new Error("Tour not found");
 }
 
 function parseDate(v: FormDataEntryValue | null): Date | null {
@@ -55,7 +55,7 @@ function parseDescription(v: FormDataEntryValue | null): string | null {
   return trimmed;
 }
 
-export async function createGroup(formData: FormData): Promise<string> {
+export async function createTour(formData: FormData): Promise<string> {
   const userId = await requireUserId();
 
   const name = parseName(formData.get("name"));
@@ -64,20 +64,20 @@ export async function createGroup(formData: FormData): Promise<string> {
   const endDate = parseDate(formData.get("endDate"));
 
   const [created] = await db
-    .insert(activityGroups)
+    .insert(activityTours)
     .values({ userId, name, description, startDate, endDate })
-    .returning({ id: activityGroups.id });
+    .returning({ id: activityTours.id });
 
-  revalidatePath("/groups");
+  revalidatePath("/tours");
   return created.id;
 }
 
-export async function updateGroup(
-  groupId: string,
+export async function updateTour(
+  tourId: string,
   formData: FormData
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedGroup(userId, groupId);
+  await requireOwnedTour(userId, tourId);
 
   const name = parseName(formData.get("name"));
   const description = parseDescription(formData.get("description"));
@@ -86,7 +86,7 @@ export async function updateGroup(
   const sharedWithPartner = formData.get("sharedWithPartner") === "on";
 
   await db
-    .update(activityGroups)
+    .update(activityTours)
     .set({
       name,
       description,
@@ -95,29 +95,29 @@ export async function updateGroup(
       sharedWithPartner,
       updatedAt: new Date(),
     })
-    .where(eq(activityGroups.id, groupId));
+    .where(eq(activityTours.id, tourId));
 
-  revalidatePath("/groups");
-  revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/edit`);
+  revalidatePath("/tours");
+  revalidatePath(`/tours/${tourId}`);
+  revalidatePath(`/tours/${tourId}/edit`);
 }
 
-export async function deleteGroup(groupId: string): Promise<void> {
+export async function deleteTour(tourId: string): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedGroup(userId, groupId);
+  await requireOwnedTour(userId, tourId);
 
-  await db.delete(activityGroups).where(eq(activityGroups.id, groupId));
-  await unlink(getGroupCoverPath(groupId)).catch(() => {});
+  await db.delete(activityTours).where(eq(activityTours.id, tourId));
+  await unlink(getTourCoverPath(tourId)).catch(() => {});
 
-  revalidatePath("/groups");
+  revalidatePath("/tours");
 }
 
-export async function addActivitiesToGroup(
-  groupId: string,
+export async function addActivitiesToTour(
+  tourId: string,
   activityIds: string[]
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedGroup(userId, groupId);
+  await requireOwnedTour(userId, tourId);
 
   if (activityIds.length === 0) return;
 
@@ -130,36 +130,36 @@ export async function addActivitiesToGroup(
 
   if (owned.length === 0) return;
 
-  const rows = owned.map((a) => ({ groupId, activityId: a.id }));
+  const rows = owned.map((a) => ({ tourId, activityId: a.id }));
   await db
-    .insert(activityGroupMembers)
+    .insert(activityTourMembers)
     .values(rows)
     .onConflictDoNothing({
-      target: [activityGroupMembers.groupId, activityGroupMembers.activityId],
+      target: [activityTourMembers.tourId, activityTourMembers.activityId],
     });
 
-  revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/edit`);
+  revalidatePath(`/tours/${tourId}`);
+  revalidatePath(`/tours/${tourId}/edit`);
 }
 
-export async function removeActivityFromGroup(
-  groupId: string,
+export async function removeActivityFromTour(
+  tourId: string,
   activityId: string
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedGroup(userId, groupId);
+  await requireOwnedTour(userId, tourId);
 
   await db
-    .delete(activityGroupMembers)
+    .delete(activityTourMembers)
     .where(
       and(
-        eq(activityGroupMembers.groupId, groupId),
-        eq(activityGroupMembers.activityId, activityId)
+        eq(activityTourMembers.tourId, tourId),
+        eq(activityTourMembers.activityId, activityId)
       )
     );
 
-  revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/edit`);
+  revalidatePath(`/tours/${tourId}`);
+  revalidatePath(`/tours/${tourId}/edit`);
 }
 
 function clampPercent(n: number): number {
@@ -167,24 +167,24 @@ function clampPercent(n: number): number {
   return Math.max(0, Math.min(100, n));
 }
 
-export async function updateGroupCoverPosition(
-  groupId: string,
+export async function updateTourCoverPosition(
+  tourId: string,
   x: number,
   y: number
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedGroup(userId, groupId);
+  await requireOwnedTour(userId, tourId);
 
   await db
-    .update(activityGroups)
+    .update(activityTours)
     .set({
       coverOffsetX: clampPercent(x),
       coverOffsetY: clampPercent(y),
       updatedAt: new Date(),
     })
-    .where(eq(activityGroups.id, groupId));
+    .where(eq(activityTours.id, tourId));
 
-  revalidatePath("/groups");
-  revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/edit`);
+  revalidatePath("/tours");
+  revalidatePath(`/tours/${tourId}`);
+  revalidatePath(`/tours/${tourId}/edit`);
 }

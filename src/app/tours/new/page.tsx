@@ -4,26 +4,26 @@ import Link from "next/link";
 import { BentoPageShell } from "../../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../../components/bento/bento-page-header";
 import { spaceMono } from "../../components/bento/bento-fonts";
-import { createGroup } from "../actions";
+import { createTour } from "../actions";
 
-export default async function NewGroupPage() {
+export default async function NewTourPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
   async function action(formData: FormData) {
     "use server";
-    const id = await createGroup(formData);
-    redirect(`/groups/${id}/edit`);
+    const id = await createTour(formData);
+    redirect(`/tours/${id}/edit`);
   }
 
   return (
     <BentoPageShell>
       <BentoPageHeader
-        section="Gruppen"
-        title="Neue Gruppe"
+        section="Touren"
+        title="Neue Tour"
         right={
           <Link
-            href="/groups"
+            href="/tours"
             className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
           >
             ← Zurück
@@ -65,7 +65,7 @@ export default async function NewGroupPage() {
             name="description"
             rows={3}
             maxLength={2000}
-            placeholder="Worum geht es bei dieser Gruppe?"
+            placeholder="Worum geht es bei dieser Tour?"
             className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
           />
         </div>
@@ -107,7 +107,7 @@ export default async function NewGroupPage() {
 
         <div className="flex items-center justify-end gap-2 pt-2">
           <Link
-            href="/groups"
+            href="/tours"
             className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#2a2a2a] px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
           >
             Abbrechen
@@ -116,7 +116,7 @@ export default async function NewGroupPage() {
             type="submit"
             className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#ff6a00] bg-[#ff6a00] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-black hover:bg-[#ff8030]`}
           >
-            Gruppe anlegen
+            Tour anlegen
           </button>
         </div>
       </form>

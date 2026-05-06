@@ -5,7 +5,7 @@ import Image from "next/image";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { spaceMono } from "../components/bento/bento-fonts";
-import { listGroupsForUser } from "./data";
+import { listToursForUser } from "./data";
 import { formatDistanceAuto } from "@/lib/activity-format";
 
 function formatDateRange(start: Date | null, end: Date | null): string {
@@ -23,25 +23,25 @@ function formatDateRange(start: Date | null, end: Date | null): string {
   return fmt((start ?? end)!);
 }
 
-export default async function GroupsPage() {
+export default async function ToursPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const groups = await listGroupsForUser(userId);
+  const tours = await listToursForUser(userId);
 
   return (
     <BentoPageShell>
       <BentoPageHeader
-        section="Gruppen"
-        title="Aktivitäts-Gruppen"
+        section="Touren"
+        title="Aktivitäts-Touren"
         right={
           <div className="flex items-center gap-3">
             <Link
-              href="/groups/new"
+              href="/tours/new"
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#ff6a00] bg-[#ff6a00] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:bg-[#ff8030]`}
             >
-              + Neue Gruppe
+              + Neue Tour
             </Link>
             <Link
               href="/"
@@ -53,26 +53,26 @@ export default async function GroupsPage() {
         }
       />
 
-      {groups.length === 0 ? (
+      {tours.length === 0 ? (
         <div className="rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-10 text-center">
-          <p className="text-lg text-white">Noch keine Gruppen angelegt.</p>
+          <p className="text-lg text-white">Noch keine Touren angelegt.</p>
           <p className="mt-2 text-sm text-[#a3a3a3]">
-            Bündle mehrere Aktivitäten zu einer Sammlung — z.B. eine
-            Mehrtages-Tour oder einen Trainingsblock.
+            Bündle mehrere Aktivitäten zu einer Tour — z.B. eine
+            Mehrtages-Reise oder einen Trainingsblock.
           </p>
           <Link
-            href="/groups/new"
+            href="/tours/new"
             className={`${spaceMono.className} mt-6 inline-flex items-center gap-1 rounded-md border border-[#ff6a00] bg-[#ff6a00] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-black hover:bg-[#ff8030]`}
           >
-            Erste Gruppe anlegen
+            Erste Tour anlegen
           </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((g) => (
+          {tours.map((g) => (
             <Link
               key={g.id}
-              href={`/groups/${g.id}`}
+              href={`/tours/${g.id}`}
               className="group overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] transition-colors hover:border-[#4a4a4a]"
             >
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#1a1a1a]">

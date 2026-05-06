@@ -3,17 +3,17 @@
 import { useState, useRef, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updateGroupCoverPosition } from "./actions";
+import { updateTourCoverPosition } from "./actions";
 
 interface Props {
-  groupId: string;
+  tourId: string;
   initialUrl: string | null;
   initialOffsetX: number;
   initialOffsetY: number;
 }
 
-export function GroupCoverUploader({
-  groupId,
+export function TourCoverUploader({
+  tourId,
   initialUrl,
   initialOffsetX,
   initialOffsetY,
@@ -49,7 +49,7 @@ export function GroupCoverUploader({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`/api/groups/${groupId}/cover`, {
+      const res = await fetch(`/api/tours/${tourId}/cover`, {
         method: "POST",
         body: fd,
       });
@@ -78,7 +78,7 @@ export function GroupCoverUploader({
     setError(null);
     setBusy(true);
     try {
-      const res = await fetch(`/api/groups/${groupId}/cover`, {
+      const res = await fetch(`/api/tours/${tourId}/cover`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -101,7 +101,7 @@ export function GroupCoverUploader({
   async function persistPosition(x: number, y: number) {
     setSavingPosition(true);
     try {
-      await updateGroupCoverPosition(groupId, x, y);
+      await updateTourCoverPosition(tourId, x, y);
       toast.success("Position gespeichert");
       startTransition(() => router.refresh());
     } catch (e) {

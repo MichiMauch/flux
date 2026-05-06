@@ -4,16 +4,16 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { spaceMono } from "../components/bento/bento-fonts";
-import { removeActivityFromGroup } from "./actions";
+import { removeActivityFromTour } from "./actions";
 
 interface Props {
-  groupId: string;
+  tourId: string;
   activityId: string;
   activityName: string;
 }
 
-export function GroupMemberRemoveButton({
-  groupId,
+export function TourMemberRemoveButton({
+  tourId,
   activityId,
   activityName,
 }: Props) {
@@ -24,7 +24,7 @@ export function GroupMemberRemoveButton({
   async function handleRemove() {
     setBusy(true);
     try {
-      await removeActivityFromGroup(groupId, activityId);
+      await removeActivityFromTour(tourId, activityId);
       toast.success(`"${activityName}" entfernt`);
       startTransition(() => router.refresh());
     } catch (err) {

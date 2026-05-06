@@ -20,7 +20,7 @@ import type { HrSample, RoutePoint } from "@/lib/splits";
 import { dimColor, km } from "./helpers";
 import { ActivityDetailBody } from "./activity-detail-body";
 import { ActivityDetailHero } from "./activity-detail-hero";
-import { getGroupsForActivity } from "@/app/groups/data";
+import { getToursForActivity } from "@/app/tours/data";
 import { getActivityPersonalBests } from "@/lib/personal-bests";
 
 export default async function ActivityBentoPage({
@@ -103,8 +103,8 @@ export default async function ActivityBentoPage({
   });
 
   const isOwner = activity.userId === session.user.id;
-  const [groupMemberships, personalBests] = await Promise.all([
-    isOwner ? getGroupsForActivity(session.user.id, id) : Promise.resolve([]),
+  const [tourMemberships, personalBests] = await Promise.all([
+    isOwner ? getToursForActivity(session.user.id, id) : Promise.resolve([]),
     isOwner ? getActivityPersonalBests(session.user.id, id) : Promise.resolve([]),
   ]);
 
@@ -162,16 +162,16 @@ export default async function ActivityBentoPage({
           </Link>
         </div>
 
-        {groupMemberships.length > 0 && (
+        {tourMemberships.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 [font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]">
-            <span>In Gruppen:</span>
-            {groupMemberships.map((g) => (
+            <span>In Touren:</span>
+            {tourMemberships.map((t) => (
               <Link
-                key={g.id}
-                href={`/groups/${g.id}`}
+                key={t.id}
+                href={`/tours/${t.id}`}
                 className="rounded border border-[#2a2a2a] px-2 py-0.5 text-white hover:border-[#4a4a4a]"
               >
-                {g.name}
+                {t.name}
               </Link>
             ))}
           </div>

@@ -8,17 +8,17 @@ import { BentoPageShell } from "../../../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../../../components/bento/bento-page-header";
 import { spaceMono } from "../../../components/bento/bento-fonts";
 import {
-  getGroup,
-  getGroupActivities,
+  getTour,
+  getTourActivities,
 } from "../../data";
-import { GroupCoverUploader } from "../../group-cover-uploader";
+import { TourCoverUploader } from "../../tour-cover-uploader";
 import {
-  GroupActivityPicker,
+  TourActivityPicker,
   type PickableActivity,
-} from "../../group-activity-picker";
-import { GroupDetailsForm } from "../../group-details-form";
-import { GroupDeleteButton } from "../../group-delete-button";
-import { GroupMemberRemoveButton } from "../../group-member-remove-button";
+} from "../../tour-activity-picker";
+import { TourDetailsForm } from "../../tour-details-form";
+import { TourDeleteButton } from "../../tour-delete-button";
+import { TourMemberRemoveButton } from "../../tour-member-remove-button";
 import {
   formatDistanceAuto,
   formatDateLabel,
@@ -31,21 +31,21 @@ function toDateInput(d: Date | null): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function EditGroupPage({
+export default async function EditTourPage({
   params,
 }: {
-  params: Promise<{ groupId: string }>;
+  params: Promise<{ tourId: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const { groupId } = await params;
-  const group = await getGroup(userId, groupId);
-  if (!group) notFound();
-  if (group.userId !== userId) {
+  const { tourId } = await params;
+  const tour = await getTour(userId, tourId);
+  if (!tour) notFound();
+  if (tour.userId !== userId) {
     // Read-only sharing — non-owners can't edit
-    redirect(`/groups/${groupId}`);
+    redirect(`/tours/${tourId}`);
   }
 
   const meRow = await db
@@ -63,7 +63,7 @@ export default async function EditGroupPage({
       )[0] ?? null
     : null;
 
-  const members = await getGroupActivities(userId, groupId);
+  const members = await getTourActivities(userId, tourId);
 
   const memberIds = members.map((m) => m.id);
   const candidateWhere =
@@ -98,29 +98,29 @@ export default async function EditGroupPage({
   return (
     <BentoPageShell>
       <BentoPageHeader
-        section="Gruppe bearbeiten"
-        title={group.name}
+        section="Tour bearbeiten"
+        title={tour.name}
         right={
           <div className="flex items-center gap-3">
             <Link
-              href={`/groups/${group.id}`}
+              href={`/tours/${tour.id}`}
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
             >
-              ← Zur Gruppe
+              ← Zur Tour
             </Link>
           </div>
         }
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <GroupDetailsForm
-          groupId={group.id}
+        <TourDetailsForm
+          tourId={tour.id}
           initial={{
-            name: group.name,
-            description: group.description,
-            startDate: toDateInput(group.startDate),
-            endDate: toDateInput(group.endDate),
-            sharedWithPartner: group.sharedWithPartner,
+            name: tour.name,
+            description: tour.description,
+            startDate: toDateInput(tour.startDate),
+            endDate: toDateInput(tour.endDate),
+            sharedWithPartner: tour.sharedWithPartner,
           }}
           partnerName={partner?.name ?? null}
         />
@@ -131,11 +131,11 @@ export default async function EditGroupPage({
           >
             Cover
           </h2>
-          <GroupCoverUploader
-            groupId={group.id}
-            initialUrl={group.coverPhotoPath}
-            initialOffsetX={group.coverOffsetX}
-            initialOffsetY={group.coverOffsetY}
+          <TourCoverUploader
+            tourId={tour.id}
+            initialUrl={tour.coverPhotoPath}
+            initialOffsetX={tour.coverOffsetX}
+            initialOffsetY={tour.coverOffsetY}
           />
         </div>
       </div>
@@ -144,7 +144,7 @@ export default async function EditGroupPage({
         <h2
           className={`${spaceMono.className} text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
         >
-          Aktivitäten in dieser Gruppe ({members.length})
+          Aktivitäten in dieser Tour ({members.length})
         </h2>
 
         {members.length === 0 ? (
@@ -167,8 +167,8 @@ export default async function EditGroupPage({
                     ) : null}
                   </div>
                 </div>
-                <GroupMemberRemoveButton
-                  groupId={group.id}
+                <TourMemberRemoveButton
+                  tourId={tour.id}
                   activityId={m.id}
                   activityName={m.name}
                 />
@@ -177,8 +177,8 @@ export default async function EditGroupPage({
           </ul>
         )}
 
-        <GroupActivityPicker
-          groupId={group.id}
+        <TourActivityPicker
+          tourId={tour.id}
           candidates={candidates}
           availableSports={availableSports}
         />
@@ -191,10 +191,10 @@ export default async function EditGroupPage({
           Gefahrenzone
         </h2>
         <p className="text-sm text-[#a3a3a3]">
-          Die Gruppe wird unwiderruflich gelöscht. Die zugeordneten Aktivitäten
+          Die Tour wird unwiderruflich gelöscht. Die zugeordneten Aktivitäten
           bleiben erhalten.
         </p>
-        <GroupDeleteButton groupId={group.id} groupName={group.name} />
+        <TourDeleteButton tourId={tour.id} tourName={tour.name} />
       </section>
     </BentoPageShell>
   );
