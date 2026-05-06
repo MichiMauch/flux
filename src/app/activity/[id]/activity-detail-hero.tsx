@@ -2,7 +2,9 @@ import { Clock, Flame, Mountain, Ruler } from "lucide-react";
 import { ActivityActionsMenu } from "@/app/components/activity-actions-menu";
 import { BoostButton, type Booster } from "@/app/components/boost-button";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
+import { PersonalBestLine } from "@/app/components/personal-best-line";
 import { formatDurationHMS } from "@/lib/activity-format";
+import type { PrBadge } from "@/lib/personal-bests";
 import { fmt } from "./helpers";
 import { SevenSegTile } from "./tiles";
 
@@ -36,6 +38,7 @@ interface Props {
   boostedByMe: boolean;
   boosters: Booster[];
   color: string;
+  personalBests?: PrBadge[];
 }
 
 export function ActivityDetailHero({
@@ -53,6 +56,7 @@ export function ActivityDetailHero({
   boostedByMe,
   boosters,
   color,
+  personalBests,
 }: Props) {
   const showBoost = boostable || boosters.length > 0;
   return (
@@ -80,6 +84,9 @@ export function ActivityDetailHero({
         >
           {name}
         </h1>
+        {personalBests && personalBests.length > 0 && (
+          <PersonalBestLine items={personalBests} />
+        )}
         {isOwner && (
           <div className="absolute top-3 right-3">
             <ActivityActionsMenu

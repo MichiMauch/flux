@@ -21,6 +21,7 @@ import { dimColor, km } from "./helpers";
 import { ActivityDetailBody } from "./activity-detail-body";
 import { ActivityDetailHero } from "./activity-detail-hero";
 import { getGroupsForActivity } from "@/app/groups/data";
+import { getActivityPersonalBests } from "@/lib/personal-bests";
 
 export default async function ActivityBentoPage({
   params,
@@ -102,9 +103,10 @@ export default async function ActivityBentoPage({
   });
 
   const isOwner = activity.userId === session.user.id;
-  const groupMemberships = isOwner
-    ? await getGroupsForActivity(session.user.id, id)
-    : [];
+  const [groupMemberships, personalBests] = await Promise.all([
+    isOwner ? getGroupsForActivity(session.user.id, id) : Promise.resolve([]),
+    isOwner ? getActivityPersonalBests(session.user.id, id) : Promise.resolve([]),
+  ]);
 
   const duration = activity.movingTime ?? activity.duration ?? 0;
   const totalDuration =
@@ -197,6 +199,7 @@ export default async function ActivityBentoPage({
           boostedByMe={boostedByMe}
           boosters={boosterDtos}
           color={color}
+          personalBests={personalBests}
         />
 
         <ActivityDetailBody
