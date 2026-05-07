@@ -32,7 +32,7 @@ export function TourSortToggle({ tourId, current }: Props) {
         <Toggle
           href={`/tours/${tourId}?sort=manual`}
           active={current === "manual"}
-          label="Manuell"
+          label="Nach Etappen"
         />
       </div>
     </div>
