@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ChevronDown, Loader2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, X } from "lucide-react";
 import { spaceMono } from "../components/bento/bento-fonts";
 
 const NEON = "#FF6A00";
@@ -66,14 +66,14 @@ export function ActivitiesDateFilter({
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // No useTransition here on purpose: transitions suppress the Suspense
+  // fallback (skeleton) in the feed. We want the skeleton to show while
+  // the new list query streams in, so we navigate directly.
   const navigate = (next: string | null) => {
     setOpen(false);
-    startTransition(() => {
-      router.push(buildHref(basePath, sport, next), { scroll: false });
-    });
+    router.push(buildHref(basePath, sport, next), { scroll: false });
   };
 
   // Close on outside click
@@ -154,16 +154,12 @@ export function ActivitiesDateFilter({
         >
           <span aria-hidden>📅</span>
           <span>{triggerLabel}</span>
-          {pending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <ChevronDown
-              className="h-3 w-3 transition-transform"
-              style={{ transform: open ? "rotate(180deg)" : undefined }}
-            />
-          )}
+          <ChevronDown
+            className="h-3 w-3 transition-transform"
+            style={{ transform: open ? "rotate(180deg)" : undefined }}
+          />
         </button>
-        {monthKey && !pending && (
+        {monthKey && (
           <button
             type="button"
             onClick={() => navigate(null)}
