@@ -7,8 +7,9 @@ import { LevelWidget } from "@/app/components/level-widget";
 import { EarnedTrophies } from "@/app/components/earned-trophies";
 import { ActivityFeedCard } from "@/app/components/activity-feed-card";
 import { db } from "@/lib/db";
-import { activities, activityPhotos } from "@/lib/db/schema";
-import { desc, eq, and, sql } from "drizzle-orm";
+import { activities } from "@/lib/db/schema";
+import { desc, eq, and } from "drizzle-orm";
+import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
 import { Activity } from "lucide-react";
 import Link from "next/link";
 
@@ -30,13 +31,7 @@ export default async function ClassicHomePage({
 
   const conditions = [eq(activities.userId, session.user.id)];
 
-  const photoCountSql = sql<number>`(
-    SELECT COUNT(*)::int
-    FROM ${activityPhotos}
-    WHERE ${activityPhotos.activityId} = ${activities.id}
-  )`;
-
-  const myActivities = await db
+  const rawRows = await db
     .select({
       id: activities.id,
       name: activities.name,
@@ -48,12 +43,17 @@ export default async function ClassicHomePage({
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
       routeData: activities.routeData,
-      photoCount: photoCountSql,
     })
     .from(activities)
     .where(and(...conditions))
     .orderBy(desc(activities.startTime))
     .limit(take + 1);
+
+  const photoCounts = await getPhotoCountsByActivity(rawRows.map((r) => r.id));
+  const myActivities = rawRows.map((r) => ({
+    ...r,
+    photoCount: photoCounts.get(r.id) ?? 0,
+  }));
 
   const hasMore = myActivities.length > take;
   const items = hasMore ? myActivities.slice(0, take) : myActivities;

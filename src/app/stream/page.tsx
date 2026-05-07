@@ -1,13 +1,9 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import {
-  activities,
-  activityBoosts,
-  activityPhotos,
-  users,
-} from "@/lib/db/schema";
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { activities, activityBoosts, users } from "@/lib/db/schema";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoSyncButton } from "../components/bento/home/bento-sync-button";
@@ -51,13 +47,7 @@ export default async function StreamPage() {
   const since = new Date();
   since.setDate(since.getDate() - DAYS_BACK);
 
-  const photoCountSql = sql<number>`(
-    SELECT COUNT(*)::int
-    FROM ${activityPhotos}
-    WHERE ${activityPhotos.activityId} = ${activities.id}
-  )`;
-
-  const rows = await db
+  const rawRows = await db
     .select({
       id: activities.id,
       userId: activities.userId,
@@ -70,7 +60,6 @@ export default async function StreamPage() {
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
       routeData: activities.routeData,
-      photoCount: photoCountSql,
     })
     .from(activities)
     .where(
@@ -80,6 +69,12 @@ export default async function StreamPage() {
       ),
     )
     .orderBy(desc(activities.startTime));
+
+  const photoCounts = await getPhotoCountsByActivity(rawRows.map((r) => r.id));
+  const rows = rawRows.map((r) => ({
+    ...r,
+    photoCount: photoCounts.get(r.id) ?? 0,
+  }));
 
   const ownerById = new Map<string, { id: string; name: string; image: string | null }>();
   if (partner) {

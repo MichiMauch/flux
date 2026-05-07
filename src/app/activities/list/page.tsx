@@ -2,8 +2,9 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { activities, activityPhotos } from "@/lib/db/schema";
+import { activities } from "@/lib/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
+import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
 import { BentoPageShell } from "../../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../../components/bento/bento-page-header";
 import { BentoSyncButton } from "../../components/bento/home/bento-sync-button";
@@ -31,13 +32,7 @@ export default async function ActivitiesListPage({
     ? and(eq(activities.userId, userId), eq(activities.type, sport))
     : eq(activities.userId, userId);
 
-  const photoCountSql = sql<number>`(
-    SELECT COUNT(*)::int
-    FROM ${activityPhotos}
-    WHERE ${activityPhotos.activityId} = ${activities.id}
-  )`;
-
-  const [initialRows, availableSports, monthRows] = await Promise.all([
+  const [rawRows, availableSports, monthRows] = await Promise.all([
     db
       .select({
         id: activities.id,
@@ -50,7 +45,6 @@ export default async function ActivitiesListPage({
         avgHeartRate: activities.avgHeartRate,
         ascent: activities.ascent,
         routeData: activities.routeData,
-        photoCount: photoCountSql,
       })
       .from(activities)
       .where(whereUserAndSport)
@@ -70,6 +64,12 @@ export default async function ActivitiesListPage({
       .orderBy(desc(sql`to_char(${activities.startTime}, 'YYYY-MM')`))
       .then((rs) => rs.map((r) => r.key)),
   ]);
+
+  const photoCounts = await getPhotoCountsByActivity(rawRows.map((r) => r.id));
+  const initialRows = rawRows.map((r) => ({
+    ...r,
+    photoCount: photoCounts.get(r.id) ?? 0,
+  }));
 
   const hasMore = initialRows.length > INITIAL_PAGE_SIZE;
   const initial = hasMore ? initialRows.slice(0, INITIAL_PAGE_SIZE) : initialRows;
