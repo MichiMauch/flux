@@ -54,18 +54,19 @@ export default async function TourDetailPage({
 
   const { tourId } = await params;
   const sp = await searchParams;
-  const hasManualOrder = await tourHasManualOrder(userId, tourId);
-  // If a manual order exists, default to it (it represents the owner's intent).
-  // The viewer can override via ?sort=date.
+  // Without an explicit ?sort=, default to "manual": when no member has a
+  // sortOrder set, the query's NULLS LAST + asc(startTime) tiebreaker produces
+  // the same result as date mode — so we don't need to know hasManualOrder
+  // before fetching, and can run that probe in parallel with everything else.
   const requestedMode = sp.sort === "date" ? "date" : sp.sort === "manual" ? "manual" : null;
-  const sortMode: "date" | "manual" =
-    requestedMode ?? (hasManualOrder ? "manual" : "date");
+  const sortMode: "date" | "manual" = requestedMode ?? "manual";
 
-  const [tour, totals, members, photos] = await Promise.all([
+  const [tour, totals, members, photos, hasManualOrder] = await Promise.all([
     getTour(userId, tourId),
     getTourTotals(userId, tourId),
     getTourActivities(userId, tourId, sortMode),
     getTourPhotos(userId, tourId),
+    tourHasManualOrder(userId, tourId),
   ]);
 
   if (!tour) notFound();

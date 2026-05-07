@@ -37,32 +37,34 @@ export default async function EditTourPage({
   const userId = session.user.id;
 
   const { tourId } = await params;
-  const tour = await getTour(userId, tourId);
+
+  // Kick off all userId/tourId-scoped queries in parallel. getTourActivities
+  // and the per-user lookups don't depend on the tour ownership check, and
+  // even if the user turns out not to own the tour we'd waste at most a few
+  // cheap user-scoped reads (no data leak — getTourActivities gates on
+  // getReadableOwnerId internally).
+  // Edit page always shows members in date order so DnD has a stable starting
+  // baseline; the viewer-side toggle on /tours/[id] decides whether to honour
+  // the saved manual order.
+  const [tour, members, meRow, sportRows] = await Promise.all([
+    getTour(userId, tourId),
+    getTourActivities(userId, tourId, "date"),
+    db
+      .select({ partnerId: users.partnerId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1),
+    db
+      .selectDistinct({ type: activities.type })
+      .from(activities)
+      .where(eq(activities.userId, userId)),
+  ]);
+
   if (!tour) notFound();
   if (tour.userId !== userId) {
     // Read-only sharing — non-owners can't edit
     redirect(`/tours/${tourId}`);
   }
-
-  const meRow = await db
-    .select({ partnerId: users.partnerId })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  const partner = meRow[0]?.partnerId
-    ? (
-        await db
-          .select({ id: users.id, name: users.name })
-          .from(users)
-          .where(eq(users.id, meRow[0].partnerId))
-          .limit(1)
-      )[0] ?? null
-    : null;
-
-  // Edit page always shows members in date order so DnD has a stable starting
-  // baseline. The viewer-side toggle on /tours/[id] decides whether to honour
-  // the saved manual order.
-  const members = await getTourActivities(userId, tourId, "date");
 
   const memberIds = members.map((m) => m.id);
   const candidateWhere =
@@ -73,7 +75,10 @@ export default async function EditTourPage({
         )
       : eq(activities.userId, userId);
 
-  const [candidatesRaw, sportRows] = await Promise.all([
+  // Second wave: partner detail (depends on meRow) + candidates (depends on
+  // memberIds). Independent of each other, so still parallel.
+  const partnerId = meRow[0]?.partnerId ?? null;
+  const [candidatesRaw, partnerRows] = await Promise.all([
     db
       .select({
         id: activities.id,
@@ -86,11 +91,15 @@ export default async function EditTourPage({
       .where(candidateWhere)
       .orderBy(desc(activities.startTime))
       .limit(PICKER_LIMIT),
-    db
-      .selectDistinct({ type: activities.type })
-      .from(activities)
-      .where(eq(activities.userId, userId)),
+    partnerId
+      ? db
+          .select({ id: users.id, name: users.name })
+          .from(users)
+          .where(eq(users.id, partnerId))
+          .limit(1)
+      : Promise.resolve([] as { id: string; name: string | null }[]),
   ]);
+  const partner = partnerRows[0] ?? null;
   const candidates: PickableActivity[] = candidatesRaw;
   const availableSports = sportRows.map((r) => r.type).sort();
 
