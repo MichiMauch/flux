@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
-import { formatXp, getTrophy, tierColor } from "@/lib/trophies";
-import { TrophyIcon } from "@/app/components/trophy-icon";
+import { formatXp } from "@/lib/trophies";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import { getLevelTrophies } from "@/lib/cache/home-stats";
+import { TrophiesGridCollapsible } from "./trophies-grid-collapsible";
 
 const NEON = "#FF6A00";
 
@@ -12,22 +12,22 @@ export async function BentoHomeLevelTrophies({ userId }: { userId: string }) {
   const { level, trophies } = await getLevelTrophies(userId);
 
   return (
-    <Link
-      href="/trophies"
-      className="flex h-full flex-col rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3 hover:border-[#4a4a4a] transition-colors"
-    >
+    <div className="flex h-full flex-col rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3">
       <div className="flex items-center justify-between mb-3">
-        <span
-          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
+        <Link
+          href="/trophies"
+          className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] hover:text-white transition-colors`}
         >
           <Trophy className="h-3 w-3" style={{ color: NEON }} /> Level & Trophäen
-        </span>
-        <span
-          className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.14em]`}
+        </Link>
+        <Link
+          href="/trophies"
+          aria-label="Alle Trophäen ansehen"
+          className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.14em] hover:underline`}
           style={{ color: NEON }}
         >
           →
-        </span>
+        </Link>
       </div>
 
       <div className="flex flex-col items-center gap-2 mb-3">
@@ -69,36 +69,7 @@ export async function BentoHomeLevelTrophies({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {trophies.length > 0 && (
-        <div className="flex-1 min-h-0 grid grid-cols-6 gap-1.5 content-start">
-          {trophies.map((r) => {
-            const def = getTrophy(r.code);
-            if (!def) return null;
-            const color = tierColor(def.tier);
-            const glow = color.includes("amber")
-              ? "#D97706"
-              : color.includes("slate")
-                ? "#94A3B8"
-                : color.includes("yellow")
-                  ? "#FDE047"
-                  : NEON;
-            return (
-              <span
-                key={r.code}
-                title={`${def.title} · ${new Date(r.unlockedAtIso).toLocaleDateString("de-CH")}`}
-                className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] p-0.5"
-                style={{ boxShadow: `inset 0 0 6px ${glow}22` }}
-              >
-                <TrophyIcon
-                  code={def.code}
-                  alt={def.title}
-                  className="h-full w-full object-contain"
-                />
-              </span>
-            );
-          })}
-        </div>
-      )}
-    </Link>
+      <TrophiesGridCollapsible trophies={trophies} />
+    </div>
   );
 }
