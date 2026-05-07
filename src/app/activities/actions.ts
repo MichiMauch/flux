@@ -1,10 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
-import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
+import { fetchActivityRowsUncached } from "@/lib/cache/activity-filters";
 
 export interface ActivityFeedItem {
   id: string;
@@ -33,43 +30,23 @@ export interface LoadMoreResult {
   hasMore: boolean;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
 export async function loadMoreActivities(
   offset: number,
-  sport: string | null
+  sport: string | null,
+  monthKey: string | null = null,
 ): Promise<LoadMoreResult> {
   const session = await auth();
   if (!session?.user?.id) return { items: [], hasMore: false };
 
-  const where = sport
-    ? and(eq(activities.userId, session.user.id), eq(activities.type, sport))
-    : eq(activities.userId, session.user.id);
-
-  const rawRows = await db
-    .select({
-      id: activities.id,
-      name: activities.name,
-      type: activities.type,
-      startTime: activities.startTime,
-      distance: activities.distance,
-      duration: activities.duration,
-      movingTime: activities.movingTime,
-      avgHeartRate: activities.avgHeartRate,
-      ascent: activities.ascent,
-      routeData: activities.routeData,
-    })
-    .from(activities)
-    .where(where)
-    .orderBy(desc(activities.startTime))
-    .offset(offset)
-    .limit(PAGE_SIZE + 1);
-
-  const photoCounts = await getPhotoCountsByActivity(rawRows.map((r) => r.id));
-  const rows = rawRows.map((r) => ({
-    ...r,
-    photoCount: photoCounts.get(r.id) ?? 0,
-  }));
+  const rows = await fetchActivityRowsUncached(
+    session.user.id,
+    sport,
+    monthKey,
+    offset,
+    PAGE_SIZE + 1,
+  );
 
   const hasMore = rows.length > PAGE_SIZE;
   const items = hasMore ? rows.slice(0, PAGE_SIZE) : rows;

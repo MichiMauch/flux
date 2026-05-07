@@ -1,25 +1,26 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
-import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
+import {
+  getActivityListPage,
+  getActivityMonthCounts,
+  getAvailableSports,
+} from "@/lib/cache/activity-filters";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoSyncButton } from "../components/bento/home/bento-sync-button";
 import { spaceMono } from "../components/bento/bento-fonts";
 import { ActivitiesSportFilter } from "./activities-sport-filter";
-import { ActivitiesTimelineRibbon } from "./activities-timeline-ribbon";
-import { parseSport } from "./filters";
+import { ActivitiesDateFilter } from "./activities-date-filter";
+import { parseMonthKey, parseSport } from "./filters";
 import { EditorialFeed } from "./editorial/editorial-feed";
 
-const INITIAL_PAGE_SIZE = 20;
+const INITIAL_PAGE_SIZE = 15;
 
 export default async function ActivitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sport?: string }>;
+  searchParams: Promise<{ sport?: string; month?: string }>;
 }) {
   const session = await auth();
   if (!session) redirect("/login");
@@ -27,54 +28,20 @@ export default async function ActivitiesPage({
 
   const params = await searchParams;
   const sport = parseSport(params.sport);
+  const monthKey = parseMonthKey(params.month);
 
-  const whereUserAndSport = sport
-    ? and(eq(activities.userId, userId), eq(activities.type, sport))
-    : eq(activities.userId, userId);
-
-  const [rawRows, availableSports, monthRows] = await Promise.all([
-    db
-      .select({
-        id: activities.id,
-        name: activities.name,
-        type: activities.type,
-        startTime: activities.startTime,
-        distance: activities.distance,
-        duration: activities.duration,
-        movingTime: activities.movingTime,
-        avgHeartRate: activities.avgHeartRate,
-        ascent: activities.ascent,
-        routeData: activities.routeData,
-      })
-      .from(activities)
-      .where(whereUserAndSport)
-      .orderBy(desc(activities.startTime))
-      .limit(INITIAL_PAGE_SIZE + 1),
-    db
-      .selectDistinct({ type: activities.type })
-      .from(activities)
-      .where(eq(activities.userId, userId))
-      .then((rs) => rs.map((r) => r.type).sort()),
-    db
-      .selectDistinct({
-        key: sql<string>`to_char(${activities.startTime}, 'YYYY-MM')`,
-      })
-      .from(activities)
-      .where(whereUserAndSport)
-      .orderBy(desc(sql`to_char(${activities.startTime}, 'YYYY-MM')`))
-      .then((rs) => rs.map((r) => r.key)),
+  // All three are cached + tagged with homeCacheTag(userId), so a revisit to
+  // a previously-rendered (sport, monthKey) combo is instant. The list
+  // query itself folds photoCount in via a correlated subquery — no second
+  // roundtrip.
+  const [listRows, availableSports, monthRows] = await Promise.all([
+    getActivityListPage(userId, sport, monthKey, INITIAL_PAGE_SIZE),
+    getAvailableSports(userId),
+    getActivityMonthCounts(userId, sport),
   ]);
 
-  const photoCounts = await getPhotoCountsByActivity(rawRows.map((r) => r.id));
-  const initialRows = rawRows.map((r) => ({
-    ...r,
-    photoCount: photoCounts.get(r.id) ?? 0,
-  }));
-
-  const hasMore = initialRows.length > INITIAL_PAGE_SIZE;
-  const initial = hasMore
-    ? initialRows.slice(0, INITIAL_PAGE_SIZE)
-    : initialRows;
+  const hasMore = listRows.length > INITIAL_PAGE_SIZE;
+  const initial = hasMore ? listRows.slice(0, INITIAL_PAGE_SIZE) : listRows;
 
   return (
     <BentoPageShell>
@@ -105,15 +72,19 @@ export default async function ActivitiesPage({
           sport={sport}
           availableSports={availableSports}
         />
-        <div className="flex-1 min-w-0">
-          <ActivitiesTimelineRibbon months={monthRows} />
-        </div>
+        <ActivitiesDateFilter
+          months={monthRows}
+          monthKey={monthKey}
+          basePath="/activities"
+          sport={sport}
+        />
       </div>
 
       <EditorialFeed
         initial={initial}
         initialHasMore={hasMore}
         sport={sport}
+        monthKey={monthKey}
       />
     </BentoPageShell>
   );

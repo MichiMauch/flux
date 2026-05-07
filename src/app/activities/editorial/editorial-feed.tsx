@@ -12,17 +12,24 @@ interface Props {
   initial: ActivityFeedItem[];
   initialHasMore: boolean;
   sport: string | null;
+  monthKey?: string | null;
 }
 
 function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function EditorialFeed({ initial, initialHasMore, sport }: Props) {
+export function EditorialFeed({
+  initial,
+  initialHasMore,
+  sport,
+  monthKey: filterMonthKey = null,
+}: Props) {
   const { items, hasMore, loading, sentinelRef } = useInfiniteActivities(
     initial,
     initialHasMore,
     sport,
+    filterMonthKey,
     "600px 0px"
   );
 

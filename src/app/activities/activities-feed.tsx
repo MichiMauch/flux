@@ -12,6 +12,7 @@ interface ActivitiesFeedProps {
   initial: ActivityFeedItem[];
   initialHasMore: boolean;
   sport: string | null;
+  monthKey?: string | null;
 }
 
 function monthKey(d: Date): string {
@@ -35,11 +36,13 @@ export function ActivitiesFeed({
   initial,
   initialHasMore,
   sport,
+  monthKey: filterMonthKey = null,
 }: ActivitiesFeedProps) {
   const { items, hasMore, loading, sentinelRef } = useInfiniteActivities(
     initial,
     initialHasMore,
-    sport
+    sport,
+    filterMonthKey
   );
 
   const grouped = useMemo(() => {
