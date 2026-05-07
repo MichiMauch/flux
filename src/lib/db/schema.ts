@@ -91,51 +91,58 @@ export const verificationTokens = pgTable(
 
 // ── Activities (Polar) ─────────────────────────────────────────────────────
 
-export const activities = pgTable("activities", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  polarId: text("polar_id").unique(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
-  name: text("name").notNull(),
-  type: text("type").notNull(), // RUNNING, CYCLING, SWIMMING, etc.
-  startTime: timestamp("start_time").notNull(),
-  duration: integer("duration"), // seconds (elapsed time, incl. pauses)
-  movingTime: integer("moving_time"), // seconds (timer time, excl. pauses)
-  distance: real("distance"), // meters
-  calories: integer("calories"),
-  avgHeartRate: integer("avg_heart_rate"),
-  maxHeartRate: integer("max_heart_rate"),
-  ascent: real("ascent"),
-  descent: real("descent"),
-  routeData: json("route_data"), // [{lat, lng, time}]
-  heartRateData: json("heart_rate_data"), // [{time, bpm}]
-  speedData: json("speed_data"), // [{time, speed}]
-  fatPercentage: integer("fat_percentage"),
-  carbPercentage: integer("carb_percentage"),
-  proteinPercentage: integer("protein_percentage"),
-  minAltitude: real("min_altitude"),
-  maxAltitude: real("max_altitude"),
-  avgCadence: integer("avg_cadence"),
-  maxCadence: integer("max_cadence"),
-  totalSteps: integer("total_steps"),
-  avgSpeed: real("avg_speed"),
-  maxSpeed: real("max_speed"),
-  cardioLoad: real("cardio_load"),
-  cardioLoadInterpretation: text("cardio_load_interpretation"),
-  trimp: real("trimp"),
-  notes: text("notes"),
-  device: text("device"),
-  fitFilePath: text("fit_file_path"),
-  weather: json("weather"), // {temp, feelsLike, windSpeed, windDeg, clouds, description, icon, humidity}
-  weatherFetchedAt: timestamp("weather_fetched_at"),
-  locality: text("locality"), // Stadt/Stadtteil aus routeData[0] via Mapbox
-  country: text("country"), // ISO-2 Country-Code (z.B. "CH", "FR")
-  geocodedAt: timestamp("geocoded_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const activities = pgTable(
+  "activities",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    polarId: text("polar_id").unique(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull(),
+    type: text("type").notNull(), // RUNNING, CYCLING, SWIMMING, etc.
+    startTime: timestamp("start_time").notNull(),
+    duration: integer("duration"), // seconds (elapsed time, incl. pauses)
+    movingTime: integer("moving_time"), // seconds (timer time, excl. pauses)
+    distance: real("distance"), // meters
+    calories: integer("calories"),
+    avgHeartRate: integer("avg_heart_rate"),
+    maxHeartRate: integer("max_heart_rate"),
+    ascent: real("ascent"),
+    descent: real("descent"),
+    routeData: json("route_data"), // [{lat, lng, time}]
+    heartRateData: json("heart_rate_data"), // [{time, bpm}]
+    speedData: json("speed_data"), // [{time, speed}]
+    fatPercentage: integer("fat_percentage"),
+    carbPercentage: integer("carb_percentage"),
+    proteinPercentage: integer("protein_percentage"),
+    minAltitude: real("min_altitude"),
+    maxAltitude: real("max_altitude"),
+    avgCadence: integer("avg_cadence"),
+    maxCadence: integer("max_cadence"),
+    totalSteps: integer("total_steps"),
+    avgSpeed: real("avg_speed"),
+    maxSpeed: real("max_speed"),
+    cardioLoad: real("cardio_load"),
+    cardioLoadInterpretation: text("cardio_load_interpretation"),
+    trimp: real("trimp"),
+    notes: text("notes"),
+    device: text("device"),
+    fitFilePath: text("fit_file_path"),
+    weather: json("weather"), // {temp, feelsLike, windSpeed, windDeg, clouds, description, icon, humidity}
+    weatherFetchedAt: timestamp("weather_fetched_at"),
+    locality: text("locality"), // Stadt/Stadtteil aus routeData[0] via Mapbox
+    country: text("country"), // ISO-2 Country-Code (z.B. "CH", "FR")
+    geocodedAt: timestamp("geocoded_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("activities_user_start_idx").on(t.userId, t.startTime),
+    index("activities_user_type_start_idx").on(t.userId, t.type, t.startTime),
+  ],
+);
 
 // ── Deleted Polar Activities (Blacklist for Re-Sync) ───────────────────────
 
@@ -152,23 +159,27 @@ export const deletedPolarActivities = pgTable("deleted_polar_activities", {
 
 // ── Activity Photos ────────────────────────────────────────────────────────
 
-export const activityPhotos = pgTable("activity_photos", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  activityId: text("activity_id")
-    .notNull()
-    .references(() => activities.id, { onDelete: "cascade" }),
-  filePath: text("file_path").notNull(),
-  thumbnailPath: text("thumbnail_path").notNull(),
-  lat: real("lat"),
-  lng: real("lng"),
-  takenAt: timestamp("taken_at"),
-  location: text("location"),
-  width: integer("width"),
-  height: integer("height"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const activityPhotos = pgTable(
+  "activity_photos",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    filePath: text("file_path").notNull(),
+    thumbnailPath: text("thumbnail_path").notNull(),
+    lat: real("lat"),
+    lng: real("lng"),
+    takenAt: timestamp("taken_at"),
+    location: text("location"),
+    width: integer("width"),
+    height: integer("height"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("activity_photos_activity_idx").on(t.activityId)],
+);
 
 // ── Activity Boosts (Likes / Kudos) ────────────────────────────────────────
 
@@ -196,22 +207,26 @@ export const activityBoosts = pgTable(
 
 // ── Goals ──────────────────────────────────────────────────────────────────
 
-export const goals = pgTable("goals", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title"),
-  metric: text("metric").notNull(), // 'distance' | 'duration' | 'ascent' | 'count'
-  activityType: text("activity_type"), // null = alle Typen
-  timeframe: text("timeframe").notNull(), // 'week' | 'month' | 'year'
-  targetValue: real("target_value").notNull(),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const goals = pgTable(
+  "goals",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title"),
+    metric: text("metric").notNull(), // 'distance' | 'duration' | 'ascent' | 'count'
+    activityType: text("activity_type"), // null = alle Typen
+    timeframe: text("timeframe").notNull(), // 'week' | 'month' | 'year'
+    targetValue: real("target_value").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("goals_user_active_idx").on(t.userId, t.active)],
+);
 
 // ── Trophies ───────────────────────────────────────────────────────────────
 
@@ -242,111 +257,127 @@ export const pendingUnlocks = pgTable("pending_unlocks", {
 
 // ── Daily Activity (Polar Activity Transactions) ───────────────────────────
 
-export const dailyActivity = pgTable("daily_activity", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  date: text("date").notNull(), // YYYY-MM-DD local to device
-  polarActivityId: text("polar_activity_id"),
-  steps: integer("steps"),
-  activeSteps: integer("active_steps"),
-  calories: integer("calories"),
-  activeCalories: integer("active_calories"),
-  durationSec: integer("duration_sec"),
-  distance: real("distance"), // meters
-  activeTimeGoalSec: integer("active_time_goal_sec"),
-  activeGoalCompletion: real("active_goal_completion"), // 0-1
-  activeTimeZones: json("active_time_zones"), // raw array from Polar
-  inactivityStamps: json("inactivity_stamps"), // array of ISO strings
-  raw: json("raw"), // full Polar response for debug
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const dailyActivity = pgTable(
+  "daily_activity",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD local to device
+    polarActivityId: text("polar_activity_id"),
+    steps: integer("steps"),
+    activeSteps: integer("active_steps"),
+    calories: integer("calories"),
+    activeCalories: integer("active_calories"),
+    durationSec: integer("duration_sec"),
+    distance: real("distance"), // meters
+    activeTimeGoalSec: integer("active_time_goal_sec"),
+    activeGoalCompletion: real("active_goal_completion"), // 0-1
+    activeTimeZones: json("active_time_zones"), // raw array from Polar
+    inactivityStamps: json("inactivity_stamps"), // array of ISO strings
+    raw: json("raw"), // full Polar response for debug
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("daily_activity_user_date_idx").on(t.userId, t.date)],
+);
 
 // ── Weight (Withings) ──────────────────────────────────────────────────────
 
-export const weightMeasurements = pgTable("weight_measurements", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
-  withingsId: text("withings_id").unique(),
-  date: timestamp("date").notNull(),
-  weight: real("weight").notNull(), // kg
-  fatMass: real("fat_mass"), // kg
-  muscleMass: real("muscle_mass"), // kg
-  bmi: real("bmi"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const weightMeasurements = pgTable(
+  "weight_measurements",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    withingsId: text("withings_id").unique(),
+    date: timestamp("date").notNull(),
+    weight: real("weight").notNull(), // kg
+    fatMass: real("fat_mass"), // kg
+    muscleMass: real("muscle_mass"), // kg
+    bmi: real("bmi"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("weight_measurements_user_date_idx").on(t.userId, t.date)],
+);
 
 // ── Sleep Sessions (Polar AccessLink /v3/users/sleep) ─────────────────────
 
-export const sleepSessions = pgTable("sleep_sessions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  date: text("date").notNull(), // YYYY-MM-DD (wake-up day per Polar)
-  polarUserId: text("polar_user_id"),
-  deviceId: text("device_id"),
-  sleepStartTime: timestamp("sleep_start_time"),
-  sleepEndTime: timestamp("sleep_end_time"),
-  totalSleepSec: integer("total_sleep_sec"),
-  continuity: real("continuity"),
-  continuityClass: integer("continuity_class"),
-  lightSleepSec: integer("light_sleep_sec"),
-  deepSleepSec: integer("deep_sleep_sec"),
-  remSleepSec: integer("rem_sleep_sec"),
-  unrecognizedSleepSec: integer("unrecognized_sleep_sec"),
-  sleepScore: integer("sleep_score"),
-  sleepCharge: integer("sleep_charge"),
-  sleepRating: integer("sleep_rating"),
-  sleepGoalSec: integer("sleep_goal_sec"),
-  shortInterruptionSec: integer("short_interruption_sec"),
-  longInterruptionSec: integer("long_interruption_sec"),
-  totalInterruptionSec: integer("total_interruption_sec"),
-  sleepCycles: integer("sleep_cycles"),
-  groupDurationScore: integer("group_duration_score"),
-  groupSolidityScore: integer("group_solidity_score"),
-  groupRegenerationScore: integer("group_regeneration_score"),
-  hypnogram: json("hypnogram"),
-  heartRateSamples: json("heart_rate_samples"),
-  raw: json("raw"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const sleepSessions = pgTable(
+  "sleep_sessions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD (wake-up day per Polar)
+    polarUserId: text("polar_user_id"),
+    deviceId: text("device_id"),
+    sleepStartTime: timestamp("sleep_start_time"),
+    sleepEndTime: timestamp("sleep_end_time"),
+    totalSleepSec: integer("total_sleep_sec"),
+    continuity: real("continuity"),
+    continuityClass: integer("continuity_class"),
+    lightSleepSec: integer("light_sleep_sec"),
+    deepSleepSec: integer("deep_sleep_sec"),
+    remSleepSec: integer("rem_sleep_sec"),
+    unrecognizedSleepSec: integer("unrecognized_sleep_sec"),
+    sleepScore: integer("sleep_score"),
+    sleepCharge: integer("sleep_charge"),
+    sleepRating: integer("sleep_rating"),
+    sleepGoalSec: integer("sleep_goal_sec"),
+    shortInterruptionSec: integer("short_interruption_sec"),
+    longInterruptionSec: integer("long_interruption_sec"),
+    totalInterruptionSec: integer("total_interruption_sec"),
+    sleepCycles: integer("sleep_cycles"),
+    groupDurationScore: integer("group_duration_score"),
+    groupSolidityScore: integer("group_solidity_score"),
+    groupRegenerationScore: integer("group_regeneration_score"),
+    hypnogram: json("hypnogram"),
+    heartRateSamples: json("heart_rate_samples"),
+    raw: json("raw"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("sleep_sessions_user_date_idx").on(t.userId, t.date)],
+);
 
 // ── Nightly Recharge (Polar AccessLink /v3/users/nights) ──────────────────
 
-export const nightlyRecharge = pgTable("nightly_recharge", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  date: text("date").notNull(),
-  polarUserId: text("polar_user_id"),
-  heartRateAvg: real("heart_rate_avg"),
-  beatToBeatAvg: real("beat_to_beat_avg"),
-  heartRateVariabilityAvg: real("heart_rate_variability_avg"),
-  breathingRateAvg: real("breathing_rate_avg"),
-  nightlyRechargeStatus: integer("nightly_recharge_status"),
-  ansCharge: real("ans_charge"),
-  ansChargeStatus: integer("ans_charge_status"),
-  sleepCharge: integer("sleep_charge"),
-  sleepChargeStatus: integer("sleep_charge_status"),
-  raw: json("raw"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const nightlyRecharge = pgTable(
+  "nightly_recharge",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    polarUserId: text("polar_user_id"),
+    heartRateAvg: real("heart_rate_avg"),
+    beatToBeatAvg: real("beat_to_beat_avg"),
+    heartRateVariabilityAvg: real("heart_rate_variability_avg"),
+    breathingRateAvg: real("breathing_rate_avg"),
+    nightlyRechargeStatus: integer("nightly_recharge_status"),
+    ansCharge: real("ans_charge"),
+    ansChargeStatus: integer("ans_charge_status"),
+    sleepCharge: integer("sleep_charge"),
+    sleepChargeStatus: integer("sleep_charge_status"),
+    raw: json("raw"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("nightly_recharge_user_date_idx").on(t.userId, t.date)],
+);
 
 // ── Push Subscriptions (Web Push / VAPID) ─────────────────────────────────
 
@@ -367,23 +398,32 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 
 // ── Blood Pressure (from blood-pressure-tracker) ───────────────────────────
 
-export const bloodPressureSessions = pgTable("blood_pressure_sessions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
-  sourceId: integer("source_id").unique(), // ID from blood-pressure-tracker
-  measuredAt: timestamp("measured_at"), // real timestamp for sorting
-  date: text("date").notNull(),
-  time: text("time"),
-  systolicAvg: real("systolic_avg").notNull(),
-  diastolicAvg: real("diastolic_avg").notNull(),
-  pulseAvg: real("pulse_avg"),
-  note: text("note"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const bloodPressureSessions = pgTable(
+  "blood_pressure_sessions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    sourceId: integer("source_id").unique(), // ID from blood-pressure-tracker
+    measuredAt: timestamp("measured_at"), // real timestamp for sorting
+    date: text("date").notNull(),
+    time: text("time"),
+    systolicAvg: real("systolic_avg").notNull(),
+    diastolicAvg: real("diastolic_avg").notNull(),
+    pulseAvg: real("pulse_avg"),
+    note: text("note"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("blood_pressure_sessions_user_measured_idx").on(
+      t.userId,
+      t.measuredAt,
+    ),
+  ],
+);
 
 // ── Coach Suggestions (AI-generated training recommendations) ─────────────
 
@@ -429,21 +469,25 @@ export const weeklyBriefings = pgTable(
 
 // ── In-App Notifications (mirror of Web-Push pushes) ──────────────────────
 
-export const notifications = pgTable("notifications", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  body: text("body").notNull(),
-  url: text("url").notNull().default("/"),
-  kind: text("kind"),
-  tag: text("tag"),
-  readAt: timestamp("read_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    url: text("url").notNull().default("/"),
+    kind: text("kind"),
+    tag: text("tag"),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("notifications_user_created_idx").on(t.userId, t.createdAt)],
+);
 
 // ── Activity Tours (Sammlungen mehrerer Aktivitäten) ──────────────────────
 // Physische Tabellen heissen aus Legacy-Gründen weiterhin activity_groups /
