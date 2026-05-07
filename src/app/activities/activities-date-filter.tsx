@@ -1,9 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { spaceMono } from "../components/bento/bento-fonts";
+import { useActivitiesNav } from "./activities-nav-guard";
 
 const NEON = "#FF6A00";
 const DIM = "#a3a3a3";
@@ -64,16 +64,17 @@ export function ActivitiesDateFilter({
   basePath,
   sport,
 }: Props) {
-  const router = useRouter();
+  const { navigate: guardNavigate } = useActivitiesNav();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // No useTransition here on purpose: transitions suppress the Suspense
-  // fallback (skeleton) in the feed. We want the skeleton to show while
-  // the new list query streams in, so we navigate directly.
+  // We delegate navigation to ActivitiesNavGuard so its useTransition
+  // pending flag flips, which the NavGuardFeed wrapper reads to swap in
+  // the skeleton during the navigation (Suspense alone doesn't fire on
+  // searchParams-only nav because Next.js auto-wraps in a transition).
   const navigate = (next: string | null) => {
     setOpen(false);
-    router.push(buildHref(basePath, sport, next), { scroll: false });
+    guardNavigate(buildHref(basePath, sport, next));
   };
 
   // Close on outside click

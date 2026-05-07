@@ -15,6 +15,10 @@ import { ActivitiesDateFilter } from "./activities-date-filter";
 import { parseMonthKey, parseSport } from "./filters";
 import { EditorialFeedSection } from "./editorial/editorial-feed-section";
 import { FeedSkeleton } from "./feed-skeleton";
+import {
+  ActivitiesNavGuard,
+  NavGuardFeed,
+} from "./activities-nav-guard";
 
 const INITIAL_PAGE_SIZE = 15;
 
@@ -64,30 +68,34 @@ export default async function ActivitiesPage({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <ActivitiesSportFilter
-          sport={sport}
-          availableSports={availableSports}
-        />
-        <ActivitiesDateFilter
-          months={monthRows}
-          monthKey={monthKey}
-          basePath="/activities"
-          sport={sport}
-        />
-      </div>
+      <ActivitiesNavGuard>
+        <div className="flex flex-wrap items-center gap-3">
+          <ActivitiesSportFilter
+            sport={sport}
+            availableSports={availableSports}
+          />
+          <ActivitiesDateFilter
+            months={monthRows}
+            monthKey={monthKey}
+            basePath="/activities"
+            sport={sport}
+          />
+        </div>
 
-      <Suspense
-        key={`${sport ?? "all"}:${monthKey ?? "all"}`}
-        fallback={<FeedSkeleton variant="editorial" />}
-      >
-        <EditorialFeedSection
-          userId={userId}
-          sport={sport}
-          monthKey={monthKey}
-          pageSize={INITIAL_PAGE_SIZE}
-        />
-      </Suspense>
+        <NavGuardFeed variant="editorial">
+          <Suspense
+            key={`${sport ?? "all"}:${monthKey ?? "all"}`}
+            fallback={<FeedSkeleton variant="editorial" />}
+          >
+            <EditorialFeedSection
+              userId={userId}
+              sport={sport}
+              monthKey={monthKey}
+              pageSize={INITIAL_PAGE_SIZE}
+            />
+          </Suspense>
+        </NavGuardFeed>
+      </ActivitiesNavGuard>
     </BentoPageShell>
   );
 }

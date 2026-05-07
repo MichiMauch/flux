@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { HelpCircle } from "lucide-react";
 import { spaceMono } from "../components/bento/bento-fonts";
 import { ChipLottie } from "../stats/chip-lottie";
 import { activityTypeLabel } from "@/lib/activity-types";
 import { sportLottie } from "./filters";
+import { useActivitiesNav } from "./activities-nav-guard";
 
 const NEON = "#FF6A00";
 const DIM = "#a3a3a3";
@@ -85,10 +85,11 @@ function Chip({
   label: string;
   icon?: React.ReactNode;
 }) {
+  const { navigate } = useActivitiesNav();
   return (
-    <Link
-      href={href}
-      prefetch={false}
+    <button
+      type="button"
+      onClick={() => navigate(href)}
       className="shrink-0 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] transition"
       style={
         active
@@ -108,6 +109,6 @@ function Chip({
     >
       {icon}
       <span>{label}</span>
-    </Link>
+    </button>
   );
 }

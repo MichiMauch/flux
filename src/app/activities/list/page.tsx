@@ -14,6 +14,10 @@ import { ActivitiesSportFilter } from "../activities-sport-filter";
 import { ActivitiesDateFilter } from "../activities-date-filter";
 import { ActivitiesFeedSection } from "../activities-feed-section";
 import { FeedSkeleton } from "../feed-skeleton";
+import {
+  ActivitiesNavGuard,
+  NavGuardFeed,
+} from "../activities-nav-guard";
 import { parseMonthKey, parseSport } from "../filters";
 
 const INITIAL_PAGE_SIZE = 15;
@@ -60,35 +64,39 @@ export default async function ActivitiesListPage({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
-        <div className="min-w-0 md:max-w-[55%]">
-          <ActivitiesSportFilter
-            sport={sport}
-            availableSports={availableSports}
-            basePath="/activities/list"
-          />
+      <ActivitiesNavGuard>
+        <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
+          <div className="min-w-0 md:max-w-[55%]">
+            <ActivitiesSportFilter
+              sport={sport}
+              availableSports={availableSports}
+              basePath="/activities/list"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <ActivitiesDateFilter
+              months={monthRows}
+              monthKey={monthKey}
+              basePath="/activities/list"
+              sport={sport}
+            />
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <ActivitiesDateFilter
-            months={monthRows}
-            monthKey={monthKey}
-            basePath="/activities/list"
-            sport={sport}
-          />
-        </div>
-      </div>
 
-      <Suspense
-        key={`${sport ?? "all"}:${monthKey ?? "all"}`}
-        fallback={<FeedSkeleton variant="list" />}
-      >
-        <ActivitiesFeedSection
-          userId={userId}
-          sport={sport}
-          monthKey={monthKey}
-          pageSize={INITIAL_PAGE_SIZE}
-        />
-      </Suspense>
+        <NavGuardFeed variant="list">
+          <Suspense
+            key={`${sport ?? "all"}:${monthKey ?? "all"}`}
+            fallback={<FeedSkeleton variant="list" />}
+          >
+            <ActivitiesFeedSection
+              userId={userId}
+              sport={sport}
+              monthKey={monthKey}
+              pageSize={INITIAL_PAGE_SIZE}
+            />
+          </Suspense>
+        </NavGuardFeed>
+      </ActivitiesNavGuard>
     </BentoPageShell>
   );
 }
