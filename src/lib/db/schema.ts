@@ -510,6 +510,9 @@ export const activityTours = pgTable("activity_groups", {
   sharedWithPartner: boolean("shared_with_partner").default(false).notNull(),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
+  // 'date' = sort members by activity start_time (default, legacy behaviour)
+  // 'manual' = sort by activityTourMembers.sortOrder (user-curated via DnD)
+  sortMode: text("sort_mode").default("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -523,10 +526,12 @@ export const activityTourMembers = pgTable(
     activityId: text("activity_id")
       .notNull()
       .references(() => activities.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order"),
     addedAt: timestamp("added_at").defaultNow().notNull(),
   },
   (t) => [
     primaryKey({ columns: [t.tourId, t.activityId] }),
     index("activity_group_members_activity_idx").on(t.activityId),
+    index("activity_group_members_tour_sort_idx").on(t.tourId, t.sortOrder),
   ]
 );

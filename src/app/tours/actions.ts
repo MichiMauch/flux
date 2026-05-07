@@ -7,7 +7,7 @@ import {
   activityTours,
   activityTourMembers,
 } from "@/lib/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { unlink } from "fs/promises";
 import { getTourCoverPath } from "@/lib/tour-covers";
@@ -55,6 +55,11 @@ function parseDescription(v: FormDataEntryValue | null): string | null {
   return trimmed;
 }
 
+function parseSortMode(v: FormDataEntryValue | null): "date" | "manual" {
+  if (v === "manual") return "manual";
+  return "date";
+}
+
 export async function createTour(formData: FormData): Promise<string> {
   const userId = await requireUserId();
 
@@ -84,6 +89,13 @@ export async function updateTour(
   const startDate = parseDate(formData.get("startDate"));
   const endDate = parseDate(formData.get("endDate"));
   const sharedWithPartner = formData.get("sharedWithPartner") === "on";
+  const sortMode = parseSortMode(formData.get("sortMode"));
+
+  const [prev] = await db
+    .select({ sortMode: activityTours.sortMode })
+    .from(activityTours)
+    .where(eq(activityTours.id, tourId))
+    .limit(1);
 
   await db
     .update(activityTours)
@@ -93,9 +105,52 @@ export async function updateTour(
       startDate,
       endDate,
       sharedWithPartner,
+      sortMode,
       updatedAt: new Date(),
     })
     .where(eq(activityTours.id, tourId));
+
+  // First switch to manual: seed sort_order chronologically for any members
+  // that don't have one yet, so the DnD list starts in a sensible order.
+  if (sortMode === "manual" && prev?.sortMode !== "manual") {
+    const unordered = await db
+      .select({ activityId: activityTourMembers.activityId })
+      .from(activityTourMembers)
+      .innerJoin(
+        activities,
+        eq(activityTourMembers.activityId, activities.id)
+      )
+      .where(
+        and(
+          eq(activityTourMembers.tourId, tourId),
+          isNull(activityTourMembers.sortOrder)
+        )
+      )
+      .orderBy(asc(activities.startTime));
+
+    if (unordered.length > 0) {
+      const [{ baseOrder }] = await db
+        .select({
+          baseOrder: sql<number>`coalesce(max(${activityTourMembers.sortOrder}), -1)`,
+        })
+        .from(activityTourMembers)
+        .where(eq(activityTourMembers.tourId, tourId));
+
+      await db.transaction(async (tx) => {
+        for (let i = 0; i < unordered.length; i++) {
+          await tx
+            .update(activityTourMembers)
+            .set({ sortOrder: baseOrder + 1 + i })
+            .where(
+              and(
+                eq(activityTourMembers.tourId, tourId),
+                eq(activityTourMembers.activityId, unordered[i].activityId)
+              )
+            );
+        }
+      });
+    }
+  }
 
   revalidatePath("/tours");
   revalidatePath(`/tours/${tourId}`);
@@ -130,7 +185,28 @@ export async function addActivitiesToTour(
 
   if (owned.length === 0) return;
 
-  const rows = owned.map((a) => ({ tourId, activityId: a.id }));
+  const [tour] = await db
+    .select({ sortMode: activityTours.sortMode })
+    .from(activityTours)
+    .where(eq(activityTours.id, tourId))
+    .limit(1);
+
+  let nextOrder: number | null = null;
+  if (tour?.sortMode === "manual") {
+    const [{ maxOrder }] = await db
+      .select({
+        maxOrder: sql<number>`coalesce(max(${activityTourMembers.sortOrder}), -1)`,
+      })
+      .from(activityTourMembers)
+      .where(eq(activityTourMembers.tourId, tourId));
+    nextOrder = maxOrder + 1;
+  }
+
+  const rows = owned.map((a, i) => ({
+    tourId,
+    activityId: a.id,
+    sortOrder: nextOrder == null ? null : nextOrder + i,
+  }));
   await db
     .insert(activityTourMembers)
     .values(rows)
@@ -158,6 +234,63 @@ export async function removeActivityFromTour(
       )
     );
 
+  revalidatePath(`/tours/${tourId}`);
+  revalidatePath(`/tours/${tourId}/edit`);
+}
+
+export async function setTourMemberOrder(
+  tourId: string,
+  activityIds: string[]
+): Promise<void> {
+  const userId = await requireUserId();
+  await requireOwnedTour(userId, tourId);
+
+  if (activityIds.length === 0) return;
+
+  const seen = new Set<string>();
+  for (const id of activityIds) {
+    if (seen.has(id)) throw new Error("Duplikat in der Reihenfolge");
+    seen.add(id);
+  }
+
+  const current = await db
+    .select({ activityId: activityTourMembers.activityId })
+    .from(activityTourMembers)
+    .where(eq(activityTourMembers.tourId, tourId));
+
+  if (current.length !== activityIds.length) {
+    throw new Error(
+      "Die Tour wurde anderweitig geändert. Bitte Seite neu laden."
+    );
+  }
+  const currentSet = new Set(current.map((r) => r.activityId));
+  for (const id of activityIds) {
+    if (!currentSet.has(id)) {
+      throw new Error(
+        "Eine Aktivität ist nicht (mehr) Teil der Tour. Bitte neu laden."
+      );
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < activityIds.length; i++) {
+      await tx
+        .update(activityTourMembers)
+        .set({ sortOrder: i })
+        .where(
+          and(
+            eq(activityTourMembers.tourId, tourId),
+            eq(activityTourMembers.activityId, activityIds[i])
+          )
+        );
+    }
+    await tx
+      .update(activityTours)
+      .set({ updatedAt: new Date() })
+      .where(eq(activityTours.id, tourId));
+  });
+
+  revalidatePath("/tours");
   revalidatePath(`/tours/${tourId}`);
   revalidatePath(`/tours/${tourId}/edit`);
 }

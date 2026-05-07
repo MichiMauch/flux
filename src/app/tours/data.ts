@@ -61,6 +61,7 @@ export interface TourActivity {
   routeData: { lat: number; lng: number }[] | null;
   locality: string | null;
   country: string | null;
+  sortOrder: number | null;
 }
 
 /**
@@ -139,7 +140,14 @@ export async function getTourActivities(
   const ownerId = await getReadableOwnerId(userId, tourId);
   if (!ownerId) return [];
 
-  const rows = await db
+  const tourRows = await db
+    .select({ sortMode: activityTours.sortMode })
+    .from(activityTours)
+    .where(eq(activityTours.id, tourId))
+    .limit(1);
+  const sortMode = tourRows[0]?.sortMode ?? "date";
+
+  const baseQuery = db
     .select({
       id: activities.id,
       name: activities.name,
@@ -153,6 +161,7 @@ export async function getTourActivities(
       routeData: activities.routeData,
       locality: activities.locality,
       country: activities.country,
+      sortOrder: activityTourMembers.sortOrder,
     })
     .from(activityTourMembers)
     .innerJoin(
@@ -164,8 +173,16 @@ export async function getTourActivities(
         eq(activityTourMembers.tourId, tourId),
         eq(activities.userId, ownerId)
       )
-    )
-    .orderBy(asc(activities.startTime));
+    );
+
+  const rows =
+    sortMode === "manual"
+      ? await baseQuery.orderBy(
+          // NULLS LAST so newly added (un-ordered) members go to the end.
+          sql`${activityTourMembers.sortOrder} ASC NULLS LAST`,
+          asc(activities.startTime)
+        )
+      : await baseQuery.orderBy(asc(activities.startTime));
 
   return rows.map((r) => ({
     ...r,

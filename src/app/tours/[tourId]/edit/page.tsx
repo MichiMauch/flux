@@ -18,11 +18,7 @@ import {
 } from "../../tour-activity-picker";
 import { TourDetailsForm } from "../../tour-details-form";
 import { TourDeleteButton } from "../../tour-delete-button";
-import { TourMemberRemoveButton } from "../../tour-member-remove-button";
-import {
-  formatDistanceAuto,
-  formatDateLabel,
-} from "@/lib/activity-format";
+import { TourMembersOrderEditor } from "../../tour-members-order-editor";
 
 const PICKER_LIMIT = 1000;
 
@@ -121,6 +117,7 @@ export default async function EditTourPage({
             startDate: toDateInput(tour.startDate),
             endDate: toDateInput(tour.endDate),
             sharedWithPartner: tour.sharedWithPartner,
+            sortMode: tour.sortMode === "manual" ? "manual" : "date",
           }}
           partnerName={partner?.name ?? null}
         />
@@ -147,35 +144,11 @@ export default async function EditTourPage({
           Aktivitäten in dieser Tour ({members.length})
         </h2>
 
-        {members.length === 0 ? (
-          <p className="text-sm text-[#a3a3a3]">
-            Noch keine Aktivitäten zugeordnet.
-          </p>
-        ) : (
-          <ul className="divide-y divide-[#1a1a1a] rounded-md border border-[#1a1a1a]">
-            {members.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 p-3">
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-white">{m.name}</div>
-                  <div
-                    className={`${spaceMono.className} flex flex-wrap items-center gap-x-3 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
-                  >
-                    <span>{m.type}</span>
-                    <span>{formatDateLabel(m.startTime)}</span>
-                    {m.distance ? (
-                      <span>{formatDistanceAuto(m.distance, 1)}</span>
-                    ) : null}
-                  </div>
-                </div>
-                <TourMemberRemoveButton
-                  tourId={tour.id}
-                  activityId={m.id}
-                  activityName={m.name}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
+        <TourMembersOrderEditor
+          tourId={tour.id}
+          sortMode={tour.sortMode === "manual" ? "manual" : "date"}
+          members={members}
+        />
 
         <TourActivityPicker
           tourId={tour.id}

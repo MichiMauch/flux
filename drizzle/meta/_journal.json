@@ -183,6 +183,13 @@
       "when": 1778133734850,
       "tag": "0025_fat_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1778189950147,
+      "tag": "0026_strong_dragon_man",
+      "breakpoints": true
     }
   ]
 }

@@ -14,6 +14,7 @@ interface Props {
     startDate: string;
     endDate: string;
     sharedWithPartner: boolean;
+    sortMode: "date" | "manual";
   };
   partnerName: string | null;
 }
@@ -118,6 +119,28 @@ export function TourDetailsForm({ tourId, initial, partnerName }: Props) {
             className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="sortMode"
+          className={`${spaceMono.className} block text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]`}
+        >
+          Reihenfolge
+        </label>
+        <select
+          id="sortMode"
+          name="sortMode"
+          defaultValue={initial.sortMode}
+          className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
+        >
+          <option value="date">Nach Datum (älteste zuerst)</option>
+          <option value="manual">Manuell sortiert</option>
+        </select>
+        <p className="text-[11px] text-[#7a7a7a]">
+          Bei „Manuell": Aktivitäten unten per Drag &amp; Drop in die gewünschte
+          Reihenfolge ziehen.
+        </p>
       </div>
 
       {partnerName ? (
