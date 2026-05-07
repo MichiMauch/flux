@@ -1,25 +1,12 @@
 import { Flame } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
-import { currentStreak, dayKey, longestStreak } from "@/lib/streak";
+import { getStreak } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 
 export async function BentoDashboardStreak({ userId }: { userId: string }) {
-  const acts = await db
-    .select({ startTime: activities.startTime })
-    .from(activities)
-    .where(eq(activities.userId, userId))
-    .orderBy(desc(activities.startTime));
-
-  const activeDays = new Set<string>();
-  for (const a of acts) activeDays.add(dayKey(a.startTime));
-
-  const current = currentStreak(activeDays);
-  const longest = longestStreak(activeDays);
+  const { current, longest } = await getStreak(userId);
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3 h-full flex flex-col">

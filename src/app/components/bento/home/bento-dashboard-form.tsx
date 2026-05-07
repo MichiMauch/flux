@@ -3,36 +3,19 @@ import { Sparkles } from "lucide-react";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import { FormSparkline } from "./form-sparkline";
-import { getDailyTrimp } from "@/lib/training-load-query";
-import {
-  computeReadiness,
-  computeTrainingLoadSeries,
-  interpretReadiness,
-} from "@/lib/training-load";
+import { computeReadiness, interpretReadiness } from "@/lib/training-load";
+import { getForm } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 
 export async function BentoDashboardForm({ userId }: { userId: string }) {
-  const visibleDays = 30;
-  const preRoll = 42;
-
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  const visibleStart = new Date(end);
-  visibleStart.setDate(visibleStart.getDate() - (visibleDays - 1));
-  visibleStart.setHours(0, 0, 0, 0);
-  const computeStart = new Date(visibleStart);
-  computeStart.setDate(computeStart.getDate() - preRoll);
-
-  const daily = await getDailyTrimp(userId, computeStart, end);
-  const full = computeTrainingLoadSeries(daily, computeStart, end);
-  const series = full.slice(preRoll);
+  const { series, hasData, visibleDays } = await getForm(userId);
   const latest = series[series.length - 1];
 
   const cardClass =
     "rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col hover:border-[#3a3a3a] transition-colors";
 
-  if (!latest || daily.size === 0) {
+  if (!latest || !hasData) {
     return (
       <Link href="/training-load" className={cardClass}>
         <Header />

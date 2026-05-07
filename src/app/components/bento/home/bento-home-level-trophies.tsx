@@ -1,28 +1,15 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
-import { db } from "@/lib/db";
-import { userTrophies } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
-import { computeLevel } from "@/lib/trophies-server";
 import { formatXp, getTrophy, tierColor } from "@/lib/trophies";
 import { TrophyIcon } from "@/app/components/trophy-icon";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import { getLevelTrophies } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 
 export async function BentoHomeLevelTrophies({ userId }: { userId: string }) {
-  const [level, trophies] = await Promise.all([
-    computeLevel(userId),
-    db
-      .select({
-        code: userTrophies.trophyCode,
-        unlockedAt: userTrophies.unlockedAt,
-      })
-      .from(userTrophies)
-      .where(eq(userTrophies.userId, userId))
-      .orderBy(desc(userTrophies.unlockedAt)),
-  ]);
+  const { level, trophies } = await getLevelTrophies(userId);
 
   return (
     <Link
@@ -98,7 +85,7 @@ export async function BentoHomeLevelTrophies({ userId }: { userId: string }) {
             return (
               <span
                 key={r.code}
-                title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH")}`}
+                title={`${def.title} · ${new Date(r.unlockedAtIso).toLocaleDateString("de-CH")}`}
                 className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] p-0.5"
                 style={{ boxShadow: `inset 0 0 6px ${glow}22` }}
               >

@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { Target, CheckCircle2 } from "lucide-react";
-import { db } from "@/lib/db";
-import { goals } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
-import { defaultTitle, formatGoalValue, type Goal } from "@/lib/goals";
-import { computeGoalProgress } from "@/lib/goals-server";
+import { defaultTitle, formatGoalValue } from "@/lib/goals";
 import { activityTypeLabel } from "@/lib/activity-types";
 import { spaceMono } from "../bento-fonts";
+import { getGoalsProgress } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 const NEON_GREEN = "#39FF14";
@@ -18,28 +15,8 @@ const GOAL_COLORS = [NEON_GREEN, NEON_BLUE, NEON_GOLD];
 const MAX_GOALS = 3;
 
 export async function BentoHomeGoals({ userId }: { userId: string }) {
-  const rows = await db
-    .select()
-    .from(goals)
-    .where(eq(goals.userId, userId))
-    .orderBy(desc(goals.createdAt));
-
-  if (rows.length === 0) return null;
-
-  const withProgress = await Promise.all(
-    rows.map(async (g) => ({
-      goal: g as Goal,
-      progress: await computeGoalProgress(g as Goal),
-    }))
-  );
-
-  withProgress.sort((a, b) => {
-    const aBehind = a.progress.deltaPct < 0 ? 1 : 0;
-    const bBehind = b.progress.deltaPct < 0 ? 1 : 0;
-    if (aBehind !== bBehind) return bBehind - aBehind;
-    return b.progress.progressPct - a.progress.progressPct;
-  });
-
+  const withProgress = await getGoalsProgress(userId);
+  if (withProgress.length === 0) return null;
   const visible = withProgress.slice(0, MAX_GOALS);
 
   return (

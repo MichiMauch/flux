@@ -8,6 +8,8 @@ import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
 import { buildRouteGeometry } from "@/lib/activities/route-geometry";
+import { revalidateTag } from "next/cache";
+import { homeCacheTag } from "@/lib/cache/home-stats";
 import { reverseGeocodeStructured } from "@/lib/geocode";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
@@ -188,6 +190,10 @@ export async function POST() {
       nightsSynced = r.nightsSynced;
     } catch (e) {
       console.error("Sleep sync failed:", e);
+    }
+
+    if (synced > 0 || dailySynced > 0 || sleepSynced > 0 || nightsSynced > 0) {
+      revalidateTag(homeCacheTag(user.id), "default");
     }
 
     return NextResponse.json({

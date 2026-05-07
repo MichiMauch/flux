@@ -1,35 +1,12 @@
 import { Ruler } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { MonthLineChart } from "./month-line-chart";
+import { getMonthlyKm } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 
 export async function BentoDashboardMonthlyKm({ userId }: { userId: string }) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const from = new Date(year, 0, 1);
-  const to = new Date(year + 1, 0, 1);
-
-  const rows = await db
-    .select({
-      startTime: activities.startTime,
-      distance: activities.distance,
-    })
-    .from(activities)
-    .where(
-      and(
-        eq(activities.userId, userId),
-        gte(activities.startTime, from),
-        lt(activities.startTime, to)
-      )
-    );
-
-  const km: number[] = Array.from({ length: 12 }, () => 0);
-  for (const a of rows) km[a.startTime.getMonth()] += (a.distance ?? 0) / 1000;
-  const totalKm = km.reduce((s, v) => s + v, 0);
+  const { km, totalKm, currentMonth } = await getMonthlyKm(userId);
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
@@ -50,7 +27,7 @@ export async function BentoDashboardMonthlyKm({ userId }: { userId: string }) {
       <MonthLineChart
         values={km}
         color={NEON}
-        currentMonth={now.getMonth()}
+        currentMonth={currentMonth}
         formattedValues={km.map((v) =>
           v >= 100 ? Math.round(v).toLocaleString("de-CH") : v.toFixed(1)
         )}

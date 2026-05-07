@@ -1,33 +1,13 @@
 import { Activity } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { MonthLineChart } from "./month-line-chart";
+import { getMonthlyActivities } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 const LINE = "#00D4FF";
 
 export async function BentoDashboardMonthlyActivities({ userId }: { userId: string }) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const from = new Date(year, 0, 1);
-  const to = new Date(year + 1, 0, 1);
-
-  const rows = await db
-    .select({ startTime: activities.startTime })
-    .from(activities)
-    .where(
-      and(
-        eq(activities.userId, userId),
-        gte(activities.startTime, from),
-        lt(activities.startTime, to)
-      )
-    );
-
-  const counts: number[] = Array.from({ length: 12 }, () => 0);
-  for (const a of rows) counts[a.startTime.getMonth()] += 1;
-  const total = counts.reduce((s, v) => s + v, 0);
+  const { counts, total, currentMonth } = await getMonthlyActivities(userId);
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
@@ -48,7 +28,7 @@ export async function BentoDashboardMonthlyActivities({ userId }: { userId: stri
       <MonthLineChart
         values={counts}
         color={LINE}
-        currentMonth={now.getMonth()}
+        currentMonth={currentMonth}
         formattedValues={counts.map((v) => String(v))}
         unit="Aktiv."
       />

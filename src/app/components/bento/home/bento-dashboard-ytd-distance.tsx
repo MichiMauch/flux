@@ -1,58 +1,18 @@
 import { Ruler } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import { getYtdDistance } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 const EARTH_CIRCUMFERENCE_KM = 40075;
 
-function ytdRange(now: Date): { from: Date; to: Date } {
-  return { from: new Date(now.getFullYear(), 0, 1), to: now };
-}
-
-function lastYearSameRange(now: Date): { from: Date; to: Date } {
-  const from = new Date(now.getFullYear() - 1, 0, 1);
-  const to = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate(), now.getHours(), now.getMinutes());
-  return { from, to };
-}
-
-async function sumDistance(userId: string, from: Date, to: Date): Promise<number> {
-  const rows = await db
-    .select({ distance: activities.distance })
-    .from(activities)
-    .where(
-      and(
-        eq(activities.userId, userId),
-        gte(activities.startTime, from),
-        lt(activities.startTime, to)
-      )
-    );
-  return rows.reduce((s, r) => s + (r.distance ?? 0), 0);
-}
-
 export async function BentoDashboardYtdDistance({ userId }: { userId: string }) {
-  const now = new Date();
-  const ytd = ytdRange(now);
-  const lastYear = lastYearSameRange(now);
-
-  const [metersYtd, metersLastYear, latestRow] = await Promise.all([
-    sumDistance(userId, ytd.from, ytd.to),
-    sumDistance(userId, lastYear.from, lastYear.to),
-    db
-      .select({ distance: activities.distance })
-      .from(activities)
-      .where(and(eq(activities.userId, userId), gte(activities.startTime, ytd.from)))
-      .orderBy(desc(activities.startTime))
-      .limit(1),
-  ]);
-
-  const kmYtd = metersYtd / 1000;
-  const kmLast = metersLastYear / 1000;
+  const data = await getYtdDistance(userId);
+  const kmYtd = data.metersYtd / 1000;
+  const kmLast = data.metersLastYear / 1000;
   const pctOfLast = kmLast > 0 ? (kmYtd / kmLast) * 100 : 0;
   const equatorPct = (kmYtd / EARTH_CIRCUMFERENCE_KM) * 100;
-  const lastKm = latestRow[0]?.distance != null ? latestRow[0].distance / 1000 : null;
+  const lastKm = data.latestMeters != null ? data.latestMeters / 1000 : null;
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3 h-full flex flex-col">
@@ -61,7 +21,7 @@ export async function BentoDashboardYtdDistance({ userId }: { userId: string }) 
           className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Ruler className="h-3 w-3" style={{ color: NEON }} />
-          Distanz · {now.getFullYear()}
+          Distanz · {data.year}
         </span>
       </div>
 

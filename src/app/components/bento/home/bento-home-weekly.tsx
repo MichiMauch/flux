@@ -1,7 +1,3 @@
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
-import { currentWeekRange, isoWeek } from "@/lib/activity-week";
 import { Activity, Ruler, Clock, Mountain } from "lucide-react";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
@@ -9,6 +5,7 @@ import {
   formatDistanceKm as sharedFormatDistanceKm,
   formatDurationHmSplit,
 } from "@/lib/activity-format";
+import { getWeeklyStats } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 const UP = "#39FF14";
@@ -30,63 +27,17 @@ export async function BentoHomeWeekly({
   userId: string;
   layout?: "grid" | "row";
 }) {
-  const { from, to } = currentWeekRange();
-  const prevFrom = new Date(from);
-  prevFrom.setDate(prevFrom.getDate() - 7);
-  const prevTo = from;
-
-  const [rows, prevRows] = await Promise.all([
-    db
-      .select({
-        distance: activities.distance,
-        duration: activities.duration,
-        movingTime: activities.movingTime,
-        ascent: activities.ascent,
-      })
-      .from(activities)
-      .where(
-        and(
-          eq(activities.userId, userId),
-          gte(activities.startTime, from),
-          lt(activities.startTime, to)
-        )
-      ),
-    db
-      .select({
-        distance: activities.distance,
-        duration: activities.duration,
-        movingTime: activities.movingTime,
-        ascent: activities.ascent,
-      })
-      .from(activities)
-      .where(
-        and(
-          eq(activities.userId, userId),
-          gte(activities.startTime, prevFrom),
-          lt(activities.startTime, prevTo)
-        )
-      ),
-  ]);
-
-  const count = rows.length;
-  const distance = rows.reduce((s, r) => s + (r.distance ?? 0), 0);
-  const duration = rows.reduce(
-    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
-    0,
-  );
-  const ascent = Math.round(rows.reduce((s, r) => s + (r.ascent ?? 0), 0));
-
-  const prevCount = prevRows.length;
-  const prevDistance = prevRows.reduce((s, r) => s + (r.distance ?? 0), 0);
-  const prevDuration = prevRows.reduce(
-    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
-    0,
-  );
-  const prevAscent = Math.round(
-    prevRows.reduce((s, r) => s + (r.ascent ?? 0), 0),
-  );
-
-  const weekNo = isoWeek(from);
+  const {
+    count,
+    distance,
+    duration,
+    ascent,
+    prevCount,
+    prevDistance,
+    prevDuration,
+    prevAscent,
+    weekNo,
+  } = await getWeeklyStats(userId);
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3">

@@ -1,47 +1,19 @@
 import { Mountain } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import { getYtdAscent } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 const MATTERHORN_M = 4478;
 const EVEREST_M = 8848;
 
-function ytdRange(now: Date): { from: Date; to: Date } {
-  return { from: new Date(now.getFullYear(), 0, 1), to: now };
-}
-
 export async function BentoDashboardYtdAscent({ userId }: { userId: string }) {
-  const now = new Date();
-  const { from, to } = ytdRange(now);
-
-  const [rows, latestRow] = await Promise.all([
-    db
-      .select({ ascent: activities.ascent })
-      .from(activities)
-      .where(
-        and(
-          eq(activities.userId, userId),
-          gte(activities.startTime, from),
-          lt(activities.startTime, to)
-        )
-      ),
-    db
-      .select({ ascent: activities.ascent })
-      .from(activities)
-      .where(and(eq(activities.userId, userId), gte(activities.startTime, from)))
-      .orderBy(desc(activities.startTime))
-      .limit(1),
-  ]);
-
-  const totalMeters = Math.round(rows.reduce((s, r) => s + (r.ascent ?? 0), 0));
-  const mountain = totalMeters >= EVEREST_M
-    ? { label: "Everest", m: EVEREST_M }
-    : { label: "Matterhorn", m: MATTERHORN_M };
+  const { totalMeters, latestAscent: lastAscent, year } = await getYtdAscent(userId);
+  const mountain =
+    totalMeters >= EVEREST_M
+      ? { label: "Everest", m: EVEREST_M }
+      : { label: "Matterhorn", m: MATTERHORN_M };
   const mountainCount = totalMeters / mountain.m;
-  const lastAscent = latestRow[0]?.ascent != null ? Math.round(latestRow[0].ascent) : null;
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3 h-full flex flex-col">
@@ -50,7 +22,7 @@ export async function BentoDashboardYtdAscent({ userId }: { userId: string }) {
           className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Mountain className="h-3 w-3" style={{ color: NEON }} />
-          Höhenmeter · {now.getFullYear()}
+          Höhenmeter · {year}
         </span>
       </div>
 

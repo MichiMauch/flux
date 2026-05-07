@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
+import { homeCacheTag } from "@/lib/cache/home-stats";
 
 export async function PATCH(
   req: NextRequest,
@@ -40,6 +42,7 @@ export async function PATCH(
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  revalidateTag(homeCacheTag(session.user.id), "default");
   return NextResponse.json({ goal: row });
 }
 
@@ -55,5 +58,6 @@ export async function DELETE(
   await db
     .delete(goals)
     .where(and(eq(goals.id, id), eq(goals.userId, session.user.id)));
+  revalidateTag(homeCacheTag(session.user.id), "default");
   return NextResponse.json({ deleted: true });
 }

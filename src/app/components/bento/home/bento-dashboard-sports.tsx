@@ -1,10 +1,8 @@
 import { Activity as ActivityIcon } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import { ActivityLottie } from "@/app/components/activity-lottie";
+import { getSportsYtd } from "@/lib/cache/home-stats";
 
 interface TypeConfig {
   label: string;
@@ -53,24 +51,11 @@ function classify(type: string): TypeConfig {
 }
 
 export async function BentoDashboardSports({ userId }: { userId: string }) {
-  const now = new Date();
-  const from = new Date(now.getFullYear(), 0, 1);
-  const to = new Date(now.getFullYear() + 1, 0, 1);
-
-  const rows = await db
-    .select({ type: activities.type })
-    .from(activities)
-    .where(
-      and(
-        eq(activities.userId, userId),
-        gte(activities.startTime, from),
-        lt(activities.startTime, to)
-      )
-    );
+  const { types, year } = await getSportsYtd(userId);
 
   const counts = new Map<string, number>();
-  for (const r of rows) {
-    const label = classify(r.type).label;
+  for (const t of types) {
+    const label = classify(t).label;
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
 
@@ -88,7 +73,7 @@ export async function BentoDashboardSports({ userId }: { userId: string }) {
           className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <ActivityIcon className="h-3 w-3 text-white" />
-          Sportarten · {now.getFullYear()}
+          Sportarten · {year}
         </span>
         <span
           className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-white tabular-nums`}

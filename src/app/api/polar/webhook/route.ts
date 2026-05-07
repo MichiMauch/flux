@@ -4,6 +4,8 @@ import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
 import { buildRouteGeometry } from "@/lib/activities/route-geometry";
+import { revalidateTag } from "next/cache";
+import { homeCacheTag } from "@/lib/cache/home-stats";
 import { reverseGeocodeStructured } from "@/lib/geocode";
 import { db } from "@/lib/db";
 import { users, activities, deletedPolarActivities } from "@/lib/db/schema";
@@ -255,6 +257,10 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
     } catch (e) {
       console.error("Trophy evaluation error:", e);
     }
+  }
+
+  if (synced > 0) {
+    revalidateTag(homeCacheTag(user.id), "default");
   }
 
   console.log(`[webhook] EXERCISE: ${synced} new activities for user ${user.name}`);

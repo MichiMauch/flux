@@ -1,46 +1,21 @@
 import { Calendar } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte } from "drizzle-orm";
-import { dayKey, isoWeek, startOfWeek } from "@/lib/activity-week";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
-import { WeeklyBarsScope, type WeekBar } from "./weekly-bars-scope";
+import { WeeklyBarsScope } from "./weekly-bars-scope";
+import { getConsistency } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 const OK = "#39FF14";
 const WARN = "#FFD700";
 const BAD = "#FF3B30";
 
-function daysBetween(a: Date, b: Date): number {
-  const dayMs = 86400000;
-  const da = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
-  const db2 = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
-  return Math.round((da - db2) / dayMs);
-}
+const WEEKS = 12;
 
 export async function BentoDashboardConsistency({ userId }: { userId: string }) {
-  const now = new Date();
-  const jan1 = new Date(now.getFullYear(), 0, 1);
-
-  const rows = await db
-    .select({ startTime: activities.startTime })
-    .from(activities)
-    .where(
-      and(eq(activities.userId, userId), gte(activities.startTime, jan1))
-    );
-
-  const activeDays = new Set<string>();
-  let latest: Date | null = null;
-  for (const r of rows) {
-    activeDays.add(dayKey(r.startTime));
-    if (!latest || r.startTime.getTime() > latest.getTime()) latest = r.startTime;
-  }
-
-  const daysSinceLast = latest ? daysBetween(now, latest) : null;
-  const daysYtd = daysBetween(now, jan1) + 1;
-  const activeCount = activeDays.size;
+  const { daysSinceLast, activeCount, daysYtd, weeks, weekNo } =
+    await getConsistency(userId);
   const activeRate = daysYtd > 0 ? (activeCount / daysYtd) * 100 : 0;
+  const maxWeek = Math.max(...weeks.map((w) => w.count), 1);
 
   const sinceColor =
     daysSinceLast == null
@@ -52,28 +27,6 @@ export async function BentoDashboardConsistency({ userId }: { userId: string }) 
           : daysSinceLast <= 4
             ? WARN
             : BAD;
-
-  // Weekly buckets for last 12 weeks
-  const WEEKS = 12;
-  const weekStarts: Date[] = [];
-  for (let i = WEEKS - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i * 7);
-    weekStarts.push(startOfWeek(d));
-  }
-  const weeks: WeekBar[] = weekStarts.map((ws) => {
-    const weekEnd = new Date(ws);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-    const count = rows.filter(
-      (r) => r.startTime >= ws && r.startTime < weekEnd
-    ).length;
-    return {
-      start: ws.toISOString(),
-      count,
-      week: isoWeek(ws),
-    };
-  });
-  const maxWeek = Math.max(...weeks.map((w) => w.count), 1);
 
   return (
     <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 h-full flex flex-col">
@@ -88,7 +41,7 @@ export async function BentoDashboardConsistency({ userId }: { userId: string }) 
           className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] tabular-nums`}
           style={{ color: NEON }}
         >
-          KW {isoWeek(now)}
+          KW {weekNo}
         </span>
       </div>
 

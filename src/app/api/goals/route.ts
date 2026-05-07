@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import type { GoalMetric, GoalTimeframe } from "@/lib/goals";
+import { revalidateTag } from "next/cache";
+import { homeCacheTag } from "@/lib/cache/home-stats";
 
 const VALID_METRICS: GoalMetric[] = ["distance", "duration", "ascent", "count"];
 const VALID_TIMEFRAMES: GoalTimeframe[] = ["week", "month", "year"];
@@ -59,5 +61,6 @@ export async function POST(req: NextRequest) {
     })
     .returning();
 
+  revalidateTag(homeCacheTag(session.user.id), "default");
   return NextResponse.json({ goal: row });
 }

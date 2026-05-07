@@ -1,25 +1,12 @@
 import Link from "next/link";
 import { Trophy, Ruler, Mountain, Zap, Gauge } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
+import { getRecordsYtd, type RecordRow } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 
-type ActivityRow = {
-  id: string;
-  name: string;
-  type: string;
-  startTime: Date;
-  distance: number | null;
-  ascent: number | null;
-  avgSpeed: number | null;
-  trimp: number | null;
-};
-
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString("de-CH", {
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("de-CH", {
     day: "2-digit",
     month: "2-digit",
   });
@@ -35,53 +22,14 @@ function shortSport(type: string): string {
   return "Sonst.";
 }
 
-function pickMax<K extends keyof ActivityRow>(
-  rows: ActivityRow[],
-  key: K
-): ActivityRow | null {
-  let best: ActivityRow | null = null;
-  let bestVal = -Infinity;
-  for (const r of rows) {
-    const v = r[key] as number | null;
-    if (v == null) continue;
-    if (v > bestVal) {
-      bestVal = v;
-      best = r;
-    }
-  }
-  return best;
-}
-
 export async function BentoDashboardRecords({ userId }: { userId: string }) {
-  const now = new Date();
-  const jan1 = new Date(now.getFullYear(), 0, 1);
-
-  const rows = (await db
-    .select({
-      id: activities.id,
-      name: activities.name,
-      type: activities.type,
-      startTime: activities.startTime,
-      distance: activities.distance,
-      ascent: activities.ascent,
-      avgSpeed: activities.avgSpeed,
-      trimp: activities.trimp,
-    })
-    .from(activities)
-    .where(
-      and(eq(activities.userId, userId), gte(activities.startTime, jan1))
-    )) as ActivityRow[];
-
-  const longest = pickMax(rows, "distance");
-  const highest = pickMax(rows, "ascent");
-  const fastest = pickMax(rows, "avgSpeed");
-  const hardest = pickMax(rows, "trimp");
+  const { longest, highest, fastest, hardest, year } = await getRecordsYtd(userId);
 
   const records: Array<{
     icon: React.ReactNode;
     label: string;
-    row: ActivityRow | null;
-    format: (r: ActivityRow) => string;
+    row: RecordRow | null;
+    format: (r: RecordRow) => string;
   }> = [
     {
       icon: <Ruler className="h-3 w-3" />,
@@ -118,7 +66,7 @@ export async function BentoDashboardRecords({ userId }: { userId: string }) {
           className={`inline-flex items-center gap-1.5 ${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]`}
         >
           <Trophy className="h-3 w-3" style={{ color: NEON }} />
-          Rekorde · {now.getFullYear()}
+          Rekorde · {year}
         </span>
         <span
           className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] tabular-nums`}
@@ -153,7 +101,7 @@ export async function BentoDashboardRecords({ userId }: { userId: string }) {
                     href={`/activity/${rec.row.id}`}
                     className={`${spaceMono.className} text-[10px] text-[#9ca3af] hover:text-white truncate block tabular-nums`}
                   >
-                    {shortSport(rec.row.type)} · {fmtDate(rec.row.startTime)}
+                    {shortSport(rec.row.type)} · {fmtDate(rec.row.startTimeIso)}
                   </Link>
                 ) : (
                   <span

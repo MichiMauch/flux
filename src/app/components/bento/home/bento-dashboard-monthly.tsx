@@ -1,23 +1,15 @@
 import { Activity, Ruler, Clock, Mountain } from "lucide-react";
-import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import {
   formatDistanceKm as sharedFormatDistanceKm,
   formatDurationHours,
 } from "@/lib/activity-format";
+import { getMonthlyStats } from "@/lib/cache/home-stats";
 
 const NEON = "#FF6A00";
 const UP = "#39FF14";
 const DOWN = "#FF3B30";
-
-function monthRange(year: number, month: number): { from: Date; to: Date } {
-  const from = new Date(year, month, 1);
-  const to = new Date(year, month + 1, 1);
-  return { from, to };
-}
 
 const formatDistanceKm = (m: number) => sharedFormatDistanceKm(m, 0);
 const formatDurationH = formatDurationHours;
@@ -34,62 +26,19 @@ const MONTHS = [
 ];
 
 export async function BentoDashboardMonthly({ userId }: { userId: string }) {
-  const now = new Date();
-  const current = monthRange(now.getFullYear(), now.getMonth());
-  const previousYear = monthRange(now.getFullYear() - 1, now.getMonth());
+  const {
+    count,
+    distance,
+    duration,
+    ascent,
+    prevCount,
+    prevDistance,
+    prevDuration,
+    prevAscent,
+    currentMonth,
+  } = await getMonthlyStats(userId);
 
-  const [rows, prevRows] = await Promise.all([
-    db
-      .select({
-        distance: activities.distance,
-        duration: activities.duration,
-        movingTime: activities.movingTime,
-        ascent: activities.ascent,
-      })
-      .from(activities)
-      .where(
-        and(
-          eq(activities.userId, userId),
-          gte(activities.startTime, current.from),
-          lt(activities.startTime, current.to)
-        )
-      ),
-    db
-      .select({
-        distance: activities.distance,
-        duration: activities.duration,
-        movingTime: activities.movingTime,
-        ascent: activities.ascent,
-      })
-      .from(activities)
-      .where(
-        and(
-          eq(activities.userId, userId),
-          gte(activities.startTime, previousYear.from),
-          lt(activities.startTime, previousYear.to)
-        )
-      ),
-  ]);
-
-  const count = rows.length;
-  const distance = rows.reduce((s, r) => s + (r.distance ?? 0), 0);
-  const duration = rows.reduce(
-    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
-    0,
-  );
-  const ascent = Math.round(rows.reduce((s, r) => s + (r.ascent ?? 0), 0));
-
-  const prevCount = prevRows.length;
-  const prevDistance = prevRows.reduce((s, r) => s + (r.distance ?? 0), 0);
-  const prevDuration = prevRows.reduce(
-    (s, r) => s + (r.movingTime ?? r.duration ?? 0),
-    0,
-  );
-  const prevAscent = Math.round(
-    prevRows.reduce((s, r) => s + (r.ascent ?? 0), 0),
-  );
-
-  const monthLabel = MONTHS[current.from.getMonth()];
+  const monthLabel = MONTHS[currentMonth];
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-3">

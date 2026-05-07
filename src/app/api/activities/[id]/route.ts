@@ -8,6 +8,8 @@ import {
   deletedPolarActivities,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
+import { homeCacheTag } from "@/lib/cache/home-stats";
 
 export async function PATCH(
   request: NextRequest,
@@ -74,6 +76,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  revalidateTag(homeCacheTag(session.user.id), "default");
   return NextResponse.json({ activity: result[0] });
 }
 
@@ -123,6 +126,7 @@ export async function DELETE(
       await unlink(activity.fitFilePath).catch(() => {});
     }
 
+    revalidateTag(homeCacheTag(session.user.id), "default");
     return NextResponse.json({ deleted: true });
   } catch (error) {
     console.error("DELETE /api/activities/[id] failed:", error);
