@@ -3,12 +3,33 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
-import type { GoalMetric, GoalTimeframe } from "@/lib/goals";
+import { joinActivityTypes, type GoalMetric, type GoalTimeframe } from "@/lib/goals";
 import { revalidateTag } from "next/cache";
 import { homeCacheTag } from "@/lib/cache/home-stats";
 
 const VALID_METRICS: GoalMetric[] = ["distance", "duration", "ascent", "count"];
 const VALID_TIMEFRAMES: GoalTimeframe[] = ["week", "month", "year"];
+
+/**
+ * Accept either `activityTypes: string[]` (multi-select, current API)
+ * or legacy `activityType: string` (single).
+ * Returns CSV string for storage in `goals.activity_type`, or null = alle.
+ */
+function readActivityTypes(body: {
+  activityTypes?: unknown;
+  activityType?: unknown;
+}): string | null {
+  if (Array.isArray(body.activityTypes)) {
+    const arr = body.activityTypes.filter(
+      (t): t is string => typeof t === "string"
+    );
+    return joinActivityTypes(arr);
+  }
+  if (typeof body.activityType === "string" && body.activityType.trim()) {
+    return joinActivityTypes([body.activityType]);
+  }
+  return null;
+}
 
 export async function GET() {
   const session = await auth();
@@ -42,10 +63,7 @@ export async function POST(req: NextRequest) {
   if (!Number.isFinite(target) || target <= 0) {
     return NextResponse.json({ error: "Zielwert muss > 0 sein" }, { status: 400 });
   }
-  const activityType =
-    typeof body.activityType === "string" && body.activityType.trim()
-      ? body.activityType.trim().toUpperCase()
-      : null;
+  const activityType = readActivityTypes(body);
   const title =
     typeof body.title === "string" && body.title.trim() ? body.title.trim() : null;
 

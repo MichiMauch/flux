@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Target, CheckCircle2 } from "lucide-react";
-import { defaultTitle, formatGoalValue } from "@/lib/goals";
-import { activityTypeLabel } from "@/lib/activity-types";
+import { activityTypesLabel, defaultTitle, formatGoalValue } from "@/lib/goals";
 import { spaceMono } from "../bento-fonts";
 import { getGoalsProgress } from "@/lib/cache/home-stats";
 
@@ -38,9 +37,7 @@ export async function BentoHomeGoals({ userId }: { userId: string }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {visible.map(({ goal, progress }, i) => {
           const title = goal.title ?? defaultTitle(goal);
-          const typeLabel = goal.activityType
-            ? activityTypeLabel(goal.activityType)
-            : "Alle";
+          const typeLabel = activityTypesLabel(goal.activityType);
           const achieved = progress.progressPct >= 100;
           const pct = Math.min(100, Math.round(progress.progressPct));
           const elapsedCapped = Math.min(100, progress.elapsedPct);

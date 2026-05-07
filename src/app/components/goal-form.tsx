@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Loader2 } from "lucide-react";
 import { BottomSheet } from "./bottom-sheet";
-import type { GoalMetric, GoalTimeframe } from "@/lib/goals";
+import {
+  parseActivityTypes,
+  type GoalMetric,
+  type GoalTimeframe,
+} from "@/lib/goals";
 
 const METRICS: { value: GoalMetric; label: string; unit: string }[] = [
   { value: "distance", label: "Distanz", unit: "km" },
@@ -17,8 +21,7 @@ const TIMEFRAMES: { value: GoalTimeframe; label: string }[] = [
   { value: "month", label: "Pro Monat" },
   { value: "year", label: "Pro Jahr" },
 ];
-const TYPES = [
-  { value: "", label: "Alle Sportarten" },
+const TYPES: { value: string; label: string }[] = [
   { value: "RUNNING", label: "Laufen" },
   { value: "CYCLING", label: "Rad" },
   { value: "HIKING", label: "Wandern" },
@@ -51,7 +54,9 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
   const [timeframe, setTimeframe] = useState<GoalTimeframe>(
     existing?.timeframe ?? "week"
   );
-  const [activityType, setActivityType] = useState(existing?.activityType ?? "");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    parseActivityTypes(existing?.activityType ?? null)
+  );
   const [targetValue, setTargetValue] = useState(
     existing ? String(existing.targetValue) : ""
   );
@@ -63,12 +68,20 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
     if (open) {
       setMetric(existing?.metric ?? "distance");
       setTimeframe(existing?.timeframe ?? "week");
-      setActivityType(existing?.activityType ?? "");
+      setSelectedTypes(parseActivityTypes(existing?.activityType ?? null));
       setTargetValue(existing ? String(existing.targetValue) : "");
       setTitle(existing?.title ?? "");
       setError(null);
     }
   }, [open, existing]);
+
+  function toggleType(value: string) {
+    setSelectedTypes((prev) =>
+      prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]
+    );
+  }
+
+  const allTypesSelected = selectedTypes.length === 0;
 
   async function handleSave() {
     setError(null);
@@ -86,7 +99,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
             body: JSON.stringify({
               targetValue: n,
               title: title || "",
-              activityType: activityType || null,
+              activityTypes: selectedTypes,
             }),
           })
         : await fetch("/api/goals", {
@@ -95,7 +108,7 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
             body: JSON.stringify({
               metric,
               timeframe,
-              activityType: activityType || null,
+              activityTypes: selectedTypes,
               targetValue: n,
               title: title || null,
             }),
@@ -142,22 +155,53 @@ function GoalFormSheet({ open, onClose, existing }: GoalFormSheetProps) {
       }
     >
       <div className="p-4 space-y-5">
-        <label className="block">
-          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] mb-1.5">
-            Sportart
-          </span>
-          <select
-            value={activityType}
-            onChange={(e) => setActivityType(e.target.value)}
-            className={inputCls}
-          >
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <div className="flex items-baseline justify-between mb-1.5">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba]">
+              Sportart{selectedTypes.length > 1 ? "en" : ""}
+            </span>
+            <span className="text-[10px] text-[#9ca3af]">
+              {allTypesSelected
+                ? "Alle Sportarten"
+                : `${selectedTypes.length} ausgewählt`}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Sportarten">
+            <button
+              type="button"
+              onClick={() => setSelectedTypes([])}
+              aria-pressed={allTypesSelected}
+              className={`h-11 rounded-md border text-sm font-semibold transition-colors ${
+                allTypesSelected
+                  ? "border-[#FF6A00]/70 bg-[#FF6A00]/15 text-white"
+                  : "border-[#3a3128] bg-black/40 text-[#9ca3af] hover:text-white"
+              }`}
+            >
+              Alle Sportarten
+            </button>
+            {TYPES.map((t) => {
+              const active = selectedTypes.includes(t.value);
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => toggleType(t.value)}
+                  aria-pressed={active}
+                  className={`h-11 rounded-md border text-sm font-semibold transition-colors ${
+                    active
+                      ? "border-[#FF6A00]/70 bg-[#FF6A00]/15 text-white"
+                      : "border-[#3a3128] bg-black/40 text-[#9ca3af] hover:text-white"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[10px] text-[#9ca3af]">
+            Tipp: Mehrere Sportarten kombinieren — z. B. Wandern + Gehen.
+          </p>
+        </div>
 
         <label className="block">
           <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#d0c5ba] mb-1.5">

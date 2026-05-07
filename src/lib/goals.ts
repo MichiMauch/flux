@@ -1,4 +1,5 @@
 import { startOfWeek, endOfWeek } from "./activity-week";
+import { activityTypeLabel } from "./activity-types";
 
 export type GoalMetric = "distance" | "duration" | "ascent" | "count";
 export type GoalTimeframe = "week" | "month" | "year";
@@ -8,12 +9,39 @@ export interface Goal {
   userId: string;
   title: string | null;
   metric: GoalMetric;
+  /**
+   * Persisted as CSV (single column `activity_type`). Null = alle Sportarten.
+   * Beispiele: "WALKING", "WALKING,HIKING".
+   */
   activityType: string | null;
   timeframe: GoalTimeframe;
   targetValue: number;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export function parseActivityTypes(csv: string | null | undefined): string[] {
+  if (!csv) return [];
+  return csv
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => s.length > 0);
+}
+
+export function joinActivityTypes(types: readonly string[]): string | null {
+  const cleaned = Array.from(
+    new Set(
+      types.map((t) => t.trim().toUpperCase()).filter((t) => t.length > 0)
+    )
+  );
+  return cleaned.length === 0 ? null : cleaned.join(",");
+}
+
+export function activityTypesLabel(csv: string | null): string {
+  const types = parseActivityTypes(csv);
+  if (types.length === 0) return "Alle Sportarten";
+  return types.map(activityTypeLabel).join(" + ");
 }
 
 export interface GoalProgress {
@@ -97,7 +125,7 @@ export function defaultTitle(goal: {
   timeframe: GoalTimeframe;
   targetValue: number;
 }): string {
-  const type = goal.activityType ?? "Alle Sportarten";
+  const label = activityTypesLabel(goal.activityType);
   const formatted = formatGoalValue(goal.metric, goal.targetValue);
-  return `${type} · ${formatted} ${timeframeLabel(goal.timeframe)}`;
+  return `${label} · ${formatted} ${timeframeLabel(goal.timeframe)}`;
 }

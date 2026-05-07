@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, TrendingDown, TrendingUp, CheckCircle2 } from "lucide-react";
 import {
+  activityTypesLabel,
   defaultTitle,
   formatGoalValue,
   metricLabel,
@@ -12,7 +13,6 @@ import {
   type GoalTimeframe,
   type GoalProgress,
 } from "@/lib/goals";
-import { activityTypeLabel } from "@/lib/activity-types";
 import { EditGoalButton } from "./goal-form";
 import { spaceMono } from "./bento/bento-fonts";
 
@@ -41,9 +41,7 @@ export function GoalCard({ goal, progress, compact, index = 0 }: GoalCardProps) 
   const [deleting, setDeleting] = useState(false);
 
   const title = goal.title ?? defaultTitle(goal);
-  const typeLabel = goal.activityType
-    ? activityTypeLabel(goal.activityType)
-    : "Alle Sportarten";
+  const typeLabel = activityTypesLabel(goal.activityType);
 
   const achieved = progress.progressPct >= 100;
   const delta = progress.deltaPct;

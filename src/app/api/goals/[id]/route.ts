@@ -5,6 +5,7 @@ import { goals } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 import { homeCacheTag } from "@/lib/cache/home-stats";
+import { joinActivityTypes } from "@/lib/goals";
 
 export async function PATCH(
   req: NextRequest,
@@ -27,10 +28,16 @@ export async function PATCH(
   if (typeof body.active === "boolean") {
     updates.active = body.active;
   }
-  if (body.activityType === null || typeof body.activityType === "string") {
-    updates.activityType = body.activityType
-      ? String(body.activityType).trim().toUpperCase() || null
-      : null;
+  if (Array.isArray(body.activityTypes)) {
+    const arr = (body.activityTypes as unknown[]).filter(
+      (t): t is string => typeof t === "string"
+    );
+    updates.activityType = joinActivityTypes(arr);
+  } else if (body.activityType === null || typeof body.activityType === "string") {
+    updates.activityType =
+      typeof body.activityType === "string" && body.activityType.trim()
+        ? joinActivityTypes([body.activityType])
+        : null;
   }
   updates.updatedAt = new Date();
 

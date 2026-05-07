@@ -3,9 +3,13 @@ import { Target, TrendingDown, TrendingUp, CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { defaultTitle, formatGoalValue, type Goal } from "@/lib/goals";
+import {
+  activityTypesLabel,
+  defaultTitle,
+  formatGoalValue,
+  type Goal,
+} from "@/lib/goals";
 import { computeGoalProgress } from "@/lib/goals-server";
-import { activityTypeLabel } from "@/lib/activity-types";
 
 const MAX_GOALS = 3;
 
@@ -51,9 +55,7 @@ export async function GoalsSummary({ userId }: { userId: string }) {
       <div className="flex flex-col gap-2">
         {visible.map(({ goal, progress }) => {
           const title = goal.title ?? defaultTitle(goal);
-          const typeLabel = goal.activityType
-            ? activityTypeLabel(goal.activityType)
-            : "Alle";
+          const typeLabel = activityTypesLabel(goal.activityType);
           const achieved = progress.progressPct >= 100;
           const delta = progress.deltaPct;
           const pct = Math.min(100, Math.round(progress.progressPct));
