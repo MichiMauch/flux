@@ -31,13 +31,14 @@ import {
 
 interface Props {
   tourId: string;
-  sortMode: "date" | "manual";
   members: TourActivity[];
 }
 
-export function TourMembersOrderEditor({ tourId, sortMode, members }: Props) {
+export function TourMembersOrderEditor({ tourId, members }: Props) {
   const router = useRouter();
   const [items, setItems] = useState(members);
+  const [savedOrder, setSavedOrder] = useState(() => members.map((m) => m.id));
+  const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
   const sensors = useSensors(
@@ -53,67 +54,90 @@ export function TourMembersOrderEditor({ tourId, sortMode, members }: Props) {
     );
   }
 
-  if (sortMode === "date") {
-    return (
-      <ul className="divide-y divide-[#1a1a1a] rounded-md border border-[#1a1a1a]">
-        {items.map((m) => (
-          <li key={m.id} className="flex items-center gap-3 p-3">
-            <MemberMeta member={m} />
-            <TourMemberRemoveButton
-              tourId={tourId}
-              activityId={m.id}
-              activityName={m.name}
-            />
-          </li>
-        ))}
-      </ul>
-    );
-  }
+  const dirty =
+    items.length !== savedOrder.length ||
+    items.some((m, i) => m.id !== savedOrder[i]);
 
-  async function handleDragEnd(e: DragEndEvent) {
+  function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const oldIndex = items.findIndex((m) => m.id === active.id);
     const newIndex = items.findIndex((m) => m.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
-    const next = arrayMove(items, oldIndex, newIndex);
-    setItems(next);
+    setItems((prev) => arrayMove(prev, oldIndex, newIndex));
+  }
+
+  async function handleSave() {
+    if (!dirty || busy) return;
+    setBusy(true);
+    const ids = items.map((m) => m.id);
     try {
-      await setTourMemberOrder(
-        tourId,
-        next.map((m) => m.id)
-      );
+      await setTourMemberOrder(tourId, ids);
+      setSavedOrder(ids);
+      toast.success("Reihenfolge gespeichert");
       startTransition(() => router.refresh());
     } catch (err) {
-      setItems(items);
       toast.error(
         err instanceof Error ? err.message : "Speichern fehlgeschlagen"
       );
+    } finally {
+      setBusy(false);
     }
   }
 
+  function handleReset() {
+    setItems(
+      savedOrder
+        .map((id) => members.find((m) => m.id === id))
+        .filter((m): m is TourActivity => m != null)
+    );
+  }
+
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext
-        items={items.map((m) => m.id)}
-        strategy={verticalListSortingStrategy}
+    <div className="space-y-3">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
       >
-        <ul className="divide-y divide-[#1a1a1a] rounded-md border border-[#1a1a1a]">
-          {items.map((m, idx) => (
-            <SortableRow
-              key={m.id}
-              tourId={tourId}
-              member={m}
-              position={idx + 1}
-            />
-          ))}
-        </ul>
-      </SortableContext>
-    </DndContext>
+        <SortableContext
+          items={items.map((m) => m.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ul className="divide-y divide-[#1a1a1a] rounded-md border border-[#1a1a1a]">
+            {items.map((m, idx) => (
+              <SortableRow
+                key={m.id}
+                tourId={tourId}
+                member={m}
+                position={idx + 1}
+              />
+            ))}
+          </ul>
+        </SortableContext>
+      </DndContext>
+
+      {dirty ? (
+        <div className="flex items-center justify-end gap-3 pt-1">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={busy}
+            className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#2a2a2a] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a] disabled:opacity-60`}
+          >
+            Zurücksetzen
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={busy}
+            className={`${spaceMono.className} inline-flex items-center rounded-md border border-[#ff6a00] bg-[#ff6a00] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-black hover:bg-[#ff8030] disabled:opacity-60`}
+          >
+            {busy ? "Speichern …" : "Reihenfolge speichern"}
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -162,29 +186,23 @@ function SortableRow({
       >
         #{position}
       </span>
-      <MemberMeta member={member} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm text-white">{member.name}</div>
+        <div
+          className={`${spaceMono.className} flex flex-wrap items-center gap-x-3 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
+        >
+          <span>{member.type}</span>
+          <span>{formatDateLabel(member.startTime)}</span>
+          {member.distance ? (
+            <span>{formatDistanceAuto(member.distance, 1)}</span>
+          ) : null}
+        </div>
+      </div>
       <TourMemberRemoveButton
         tourId={tourId}
         activityId={member.id}
         activityName={member.name}
       />
     </li>
-  );
-}
-
-function MemberMeta({ member }: { member: TourActivity }) {
-  return (
-    <div className="min-w-0 flex-1">
-      <div className="truncate text-sm text-white">{member.name}</div>
-      <div
-        className={`${spaceMono.className} flex flex-wrap items-center gap-x-3 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
-      >
-        <span>{member.type}</span>
-        <span>{formatDateLabel(member.startTime)}</span>
-        {member.distance ? (
-          <span>{formatDistanceAuto(member.distance, 1)}</span>
-        ) : null}
-      </div>
-    </div>
   );
 }

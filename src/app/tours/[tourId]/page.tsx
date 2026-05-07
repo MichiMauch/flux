@@ -19,7 +19,9 @@ import {
   getTourTotals,
   getTourActivities,
   getTourPhotos,
+  tourHasManualOrder,
 } from "../data";
+import { TourSortToggle } from "../tour-sort-toggle";
 
 function formatDateRangeLabel(
   start: Date | null,
@@ -41,18 +43,28 @@ function formatDateRangeLabel(
 
 export default async function TourDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tourId: string }>;
+  searchParams: Promise<{ sort?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
   const { tourId } = await params;
+  const sp = await searchParams;
+  const hasManualOrder = await tourHasManualOrder(userId, tourId);
+  // If a manual order exists, default to it (it represents the owner's intent).
+  // The viewer can override via ?sort=date.
+  const requestedMode = sp.sort === "date" ? "date" : sp.sort === "manual" ? "manual" : null;
+  const sortMode: "date" | "manual" =
+    requestedMode ?? (hasManualOrder ? "manual" : "date");
+
   const [tour, totals, members, photos] = await Promise.all([
     getTour(userId, tourId),
     getTourTotals(userId, tourId),
-    getTourActivities(userId, tourId),
+    getTourActivities(userId, tourId, sortMode),
     getTourPhotos(userId, tourId),
   ]);
 
@@ -151,6 +163,9 @@ export default async function TourDetailPage({
       <div className="grid grid-cols-1 gap-4">
         <BentoTourStats totals={totals} dateRangeLabel={dateRangeLabel} />
         <BentoTourMap routes={routes} />
+        {hasManualOrder ? (
+          <TourSortToggle tourId={tour.id} current={sortMode} />
+        ) : null}
         <BentoTourActivities members={members} tourId={tour.id} />
         <BentoTourPhotos photos={photos} />
       </div>

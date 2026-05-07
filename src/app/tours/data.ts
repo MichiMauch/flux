@@ -135,17 +135,11 @@ export async function getTourTotals(
 
 export async function getTourActivities(
   userId: string,
-  tourId: string
+  tourId: string,
+  mode: "date" | "manual" = "date"
 ): Promise<TourActivity[]> {
   const ownerId = await getReadableOwnerId(userId, tourId);
   if (!ownerId) return [];
-
-  const tourRows = await db
-    .select({ sortMode: activityTours.sortMode })
-    .from(activityTours)
-    .where(eq(activityTours.id, tourId))
-    .limit(1);
-  const sortMode = tourRows[0]?.sortMode ?? "date";
 
   const baseQuery = db
     .select({
@@ -176,9 +170,9 @@ export async function getTourActivities(
     );
 
   const rows =
-    sortMode === "manual"
+    mode === "manual"
       ? await baseQuery.orderBy(
-          // NULLS LAST so newly added (un-ordered) members go to the end.
+          // NULLS LAST so members without an explicit position go to the end.
           sql`${activityTourMembers.sortOrder} ASC NULLS LAST`,
           asc(activities.startTime)
         )
@@ -188,6 +182,29 @@ export async function getTourActivities(
     ...r,
     routeData: r.routeData as TourActivity["routeData"],
   }));
+}
+
+/**
+ * True iff the tour has at least one member with a non-null sortOrder —
+ * i.e. the owner has explicitly arranged the tour at some point.
+ */
+export async function tourHasManualOrder(
+  userId: string,
+  tourId: string
+): Promise<boolean> {
+  const ownerId = await getReadableOwnerId(userId, tourId);
+  if (!ownerId) return false;
+  const rows = await db
+    .select({ id: activityTourMembers.activityId })
+    .from(activityTourMembers)
+    .where(
+      and(
+        eq(activityTourMembers.tourId, tourId),
+        sql`${activityTourMembers.sortOrder} IS NOT NULL`
+      )
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 export async function getTourSportBreakdown(

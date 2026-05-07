@@ -59,7 +59,10 @@ export default async function EditTourPage({
       )[0] ?? null
     : null;
 
-  const members = await getTourActivities(userId, tourId);
+  // Edit page always shows members in date order so DnD has a stable starting
+  // baseline. The viewer-side toggle on /tours/[id] decides whether to honour
+  // the saved manual order.
+  const members = await getTourActivities(userId, tourId, "date");
 
   const memberIds = members.map((m) => m.id);
   const candidateWhere =
@@ -117,7 +120,6 @@ export default async function EditTourPage({
             startDate: toDateInput(tour.startDate),
             endDate: toDateInput(tour.endDate),
             sharedWithPartner: tour.sharedWithPartner,
-            sortMode: tour.sortMode === "manual" ? "manual" : "date",
           }}
           partnerName={partner?.name ?? null}
         />
@@ -143,12 +145,13 @@ export default async function EditTourPage({
         >
           Aktivitäten in dieser Tour ({members.length})
         </h2>
+        <p className="text-[11px] text-[#7a7a7a]">
+          Standardmässig nach Datum sortiert. Per Drag &amp; Drop in eine
+          eigene Reihenfolge bringen und unten speichern — die Tour-Detailseite
+          bekommt dann einen Umschalter „Datum / Manuell".
+        </p>
 
-        <TourMembersOrderEditor
-          tourId={tour.id}
-          sortMode={tour.sortMode === "manual" ? "manual" : "date"}
-          members={members}
-        />
+        <TourMembersOrderEditor tourId={tour.id} members={members} />
 
         <TourActivityPicker
           tourId={tour.id}

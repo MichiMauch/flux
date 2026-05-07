@@ -510,8 +510,9 @@ export const activityTours = pgTable("activity_groups", {
   sharedWithPartner: boolean("shared_with_partner").default(false).notNull(),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
-  // 'date' = sort members by activity start_time (default, legacy behaviour)
-  // 'manual' = sort by activityTourMembers.sortOrder (user-curated via DnD)
+  // Legacy: war als 'date' | 'manual'-Schalter geplant. Inzwischen leitet sich
+  // die Verfügbarkeit der manuellen Reihenfolge aus activityTourMembers.sortOrder
+  // ab — Spalte bleibt aus Migrationsgründen, wird aber nicht mehr gelesen.
   sortMode: text("sort_mode").default("date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

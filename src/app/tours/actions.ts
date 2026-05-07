@@ -7,7 +7,7 @@ import {
   activityTours,
   activityTourMembers,
 } from "@/lib/db/schema";
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { unlink } from "fs/promises";
 import { getTourCoverPath } from "@/lib/tour-covers";
@@ -55,11 +55,6 @@ function parseDescription(v: FormDataEntryValue | null): string | null {
   return trimmed;
 }
 
-function parseSortMode(v: FormDataEntryValue | null): "date" | "manual" {
-  if (v === "manual") return "manual";
-  return "date";
-}
-
 export async function createTour(formData: FormData): Promise<string> {
   const userId = await requireUserId();
 
@@ -89,13 +84,6 @@ export async function updateTour(
   const startDate = parseDate(formData.get("startDate"));
   const endDate = parseDate(formData.get("endDate"));
   const sharedWithPartner = formData.get("sharedWithPartner") === "on";
-  const sortMode = parseSortMode(formData.get("sortMode"));
-
-  const [prev] = await db
-    .select({ sortMode: activityTours.sortMode })
-    .from(activityTours)
-    .where(eq(activityTours.id, tourId))
-    .limit(1);
 
   await db
     .update(activityTours)
@@ -105,52 +93,9 @@ export async function updateTour(
       startDate,
       endDate,
       sharedWithPartner,
-      sortMode,
       updatedAt: new Date(),
     })
     .where(eq(activityTours.id, tourId));
-
-  // First switch to manual: seed sort_order chronologically for any members
-  // that don't have one yet, so the DnD list starts in a sensible order.
-  if (sortMode === "manual" && prev?.sortMode !== "manual") {
-    const unordered = await db
-      .select({ activityId: activityTourMembers.activityId })
-      .from(activityTourMembers)
-      .innerJoin(
-        activities,
-        eq(activityTourMembers.activityId, activities.id)
-      )
-      .where(
-        and(
-          eq(activityTourMembers.tourId, tourId),
-          isNull(activityTourMembers.sortOrder)
-        )
-      )
-      .orderBy(asc(activities.startTime));
-
-    if (unordered.length > 0) {
-      const [{ baseOrder }] = await db
-        .select({
-          baseOrder: sql<number>`coalesce(max(${activityTourMembers.sortOrder}), -1)`,
-        })
-        .from(activityTourMembers)
-        .where(eq(activityTourMembers.tourId, tourId));
-
-      await db.transaction(async (tx) => {
-        for (let i = 0; i < unordered.length; i++) {
-          await tx
-            .update(activityTourMembers)
-            .set({ sortOrder: baseOrder + 1 + i })
-            .where(
-              and(
-                eq(activityTourMembers.tourId, tourId),
-                eq(activityTourMembers.activityId, unordered[i].activityId)
-              )
-            );
-        }
-      });
-    }
-  }
 
   revalidatePath("/tours");
   revalidatePath(`/tours/${tourId}`);
@@ -185,22 +130,16 @@ export async function addActivitiesToTour(
 
   if (owned.length === 0) return;
 
-  const [tour] = await db
-    .select({ sortMode: activityTours.sortMode })
-    .from(activityTours)
-    .where(eq(activityTours.id, tourId))
-    .limit(1);
+  // If a manual order already exists, append new members at the end so they
+  // don't pop up in the middle of the curated list.
+  const [{ maxOrder }] = await db
+    .select({
+      maxOrder: sql<number | null>`max(${activityTourMembers.sortOrder})`,
+    })
+    .from(activityTourMembers)
+    .where(eq(activityTourMembers.tourId, tourId));
 
-  let nextOrder: number | null = null;
-  if (tour?.sortMode === "manual") {
-    const [{ maxOrder }] = await db
-      .select({
-        maxOrder: sql<number>`coalesce(max(${activityTourMembers.sortOrder}), -1)`,
-      })
-      .from(activityTourMembers)
-      .where(eq(activityTourMembers.tourId, tourId));
-    nextOrder = maxOrder + 1;
-  }
+  const nextOrder = maxOrder == null ? null : maxOrder + 1;
 
   const rows = owned.map((a, i) => ({
     tourId,
