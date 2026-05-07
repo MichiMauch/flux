@@ -100,6 +100,10 @@ async function selectActivityRows(
   }
   const where = conds.length === 1 ? conds[0] : and(...conds);
 
+  // List previews only need the simplified ~120-pt polyline, NOT the full
+  // GPS track with timestamps. Selecting routeData here makes the rows
+  // ~10 MB total which (a) blows past the 2 MB unstable_cache limit and
+  // (b) bloats the RSC payload. routeGeometry is the compact preview.
   const rows = await db
     .select({
       id: activities.id,
@@ -111,7 +115,7 @@ async function selectActivityRows(
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: activities.routeData,
+      routeData: activities.routeGeometry,
       photoCount: sql<number>`COALESCE((SELECT COUNT(*)::int FROM ${activityPhotos} WHERE ${activityPhotos.activityId} = ${activities.id}), 0)`,
     })
     .from(activities)
