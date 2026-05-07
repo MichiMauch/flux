@@ -236,7 +236,7 @@ export default function MultiRouteMapClient({
     : null;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full isolate">
       <div ref={containerRef} className="h-full w-full" />
 
       <div className="absolute top-2 right-2 z-[1000] flex rounded-md border bg-background shadow-sm overflow-hidden">

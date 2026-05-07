@@ -226,7 +226,7 @@ export default function BentoMapClient({
   }, [hoverIdx, routeData]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full isolate">
       <div ref={containerRef} className="h-full w-full" />
       <div className="absolute top-2 right-2 z-[1000] flex items-center gap-2">
         {photos.length > 0 && (

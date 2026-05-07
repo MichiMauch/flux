@@ -200,7 +200,7 @@ export default function MapClient({
   }, [layer]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full isolate">
       <div ref={containerRef} className="h-full w-full" />
 
       {/* Photo toggle */}
