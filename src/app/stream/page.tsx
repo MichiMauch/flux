@@ -59,7 +59,7 @@ export default async function StreamPage() {
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: sql<unknown>`COALESCE(${activities.routeGeometry}, ${activities.routeData})`,
+      routeData: activities.routeData,
     })
     .from(activities)
     .where(

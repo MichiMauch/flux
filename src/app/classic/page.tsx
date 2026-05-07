@@ -8,7 +8,7 @@ import { EarnedTrophies } from "@/app/components/earned-trophies";
 import { ActivityFeedCard } from "@/app/components/activity-feed-card";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
-import { desc, eq, and, sql } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
 import { Activity } from "lucide-react";
 import Link from "next/link";
@@ -42,7 +42,7 @@ export default async function ClassicHomePage({
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: sql<unknown>`COALESCE(${activities.routeGeometry}, ${activities.routeData})`,
+      routeData: activities.routeData,
     })
     .from(activities)
     .where(and(...conditions))
