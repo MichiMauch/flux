@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activities, goals, userTrophies } from "@/lib/db/schema";
 import { currentStreak, dayKey, longestStreak } from "@/lib/streak";
@@ -49,8 +49,10 @@ export function getYtdDistance(userId: string): Promise<YtdDistanceData> {
       const lastYear = lastYearSameRange(now);
 
       const sumIn = async (from: Date, to: Date) => {
-        const rows = await db
-          .select({ distance: activities.distance })
+        const [row] = await db
+          .select({
+            total: sql<number>`COALESCE(SUM(${activities.distance}), 0)::float8`,
+          })
           .from(activities)
           .where(
             and(
@@ -59,7 +61,7 @@ export function getYtdDistance(userId: string): Promise<YtdDistanceData> {
               lt(activities.startTime, to),
             ),
           );
-        return rows.reduce((s, r) => s + (r.distance ?? 0), 0);
+        return Number(row?.total ?? 0);
       };
 
       const [metersYtd, metersLastYear, latest] = await Promise.all([
@@ -104,9 +106,11 @@ export function getYtdAscent(userId: string): Promise<YtdAscentData> {
       const now = new Date();
       const { from, to } = ytdRange(now);
 
-      const [rows, latest] = await Promise.all([
+      const [totalRow, latest] = await Promise.all([
         db
-          .select({ ascent: activities.ascent })
+          .select({
+            total: sql<number>`COALESCE(SUM(${activities.ascent}), 0)::float8`,
+          })
           .from(activities)
           .where(
             and(
@@ -129,9 +133,7 @@ export function getYtdAscent(userId: string): Promise<YtdAscentData> {
       ]);
 
       return {
-        totalMeters: Math.round(
-          rows.reduce((s, r) => s + (r.ascent ?? 0), 0),
-        ),
+        totalMeters: Math.round(Number(totalRow[0]?.total ?? 0)),
         latestAscent:
           latest[0]?.ascent != null ? Math.round(latest[0].ascent) : null,
         year: now.getFullYear(),
@@ -159,10 +161,9 @@ export function getYtdTime(userId: string): Promise<YtdTimeData> {
       const lastYear = lastYearSameRange(now);
 
       const sumIn = async (from: Date, to: Date) => {
-        const rows = await db
+        const [row] = await db
           .select({
-            duration: activities.duration,
-            movingTime: activities.movingTime,
+            total: sql<number>`COALESCE(SUM(COALESCE(${activities.movingTime}, ${activities.duration}, 0)), 0)::float8`,
           })
           .from(activities)
           .where(
@@ -172,10 +173,7 @@ export function getYtdTime(userId: string): Promise<YtdTimeData> {
               lt(activities.startTime, to),
             ),
           );
-        return rows.reduce(
-          (s, r) => s + (r.movingTime ?? r.duration ?? 0),
-          0,
-        );
+        return Math.round(Number(row?.total ?? 0));
       };
 
       const [secYtd, secLastYear, latest] = await Promise.all([
@@ -251,14 +249,17 @@ export interface StreakData {
 export function getStreak(userId: string): Promise<StreakData> {
   return unstable_cache(
     async () => {
-      const acts = await db
-        .select({ startTime: activities.startTime })
+      // SELECT DISTINCT day_key directly — one row per active day instead
+      // of one per activity. For users with multiple activities on the
+      // same day, this collapses ~Nx down to # active days.
+      const rows = await db
+        .selectDistinct({
+          day: sql<string>`to_char(${activities.startTime}, 'YYYY-MM-DD')`,
+        })
         .from(activities)
-        .where(eq(activities.userId, userId))
-        .orderBy(desc(activities.startTime));
+        .where(eq(activities.userId, userId));
 
-      const activeDays = new Set<string>();
-      for (const a of acts) activeDays.add(dayKey(a.startTime));
+      const activeDays = new Set<string>(rows.map((r) => r.day));
 
       return {
         current: currentStreak(activeDays),
@@ -374,61 +375,80 @@ export interface RecordsYtdData {
   year: number;
 }
 
-function pickMax(
-  rows: RecordRow[],
-  key: "distance" | "ascent" | "avgSpeed" | "trimp",
-): RecordRow | null {
-  let best: RecordRow | null = null;
-  let bestVal = -Infinity;
-  for (const r of rows) {
-    const v = r[key];
-    if (v == null) continue;
-    if (v > bestVal) {
-      bestVal = v;
-      best = r;
-    }
-  }
-  return best;
-}
-
 export function getRecordsYtd(userId: string): Promise<RecordsYtdData> {
   return unstable_cache(
     async () => {
       const now = new Date();
       const jan1 = new Date(now.getFullYear(), 0, 1);
 
-      const raw = await db
-        .select({
-          id: activities.id,
-          name: activities.name,
-          type: activities.type,
-          startTime: activities.startTime,
-          distance: activities.distance,
-          ascent: activities.ascent,
-          avgSpeed: activities.avgSpeed,
-          trimp: activities.trimp,
-        })
-        .from(activities)
-        .where(
-          and(eq(activities.userId, userId), gte(activities.startTime, jan1)),
-        );
+      // 4 small parallel queries with ORDER BY metric DESC LIMIT 1 — uses
+      // the (user_id, start_time) index for filtering and Postgres picks
+      // the single max row per metric. Replaces a full-YTD scan + JS reduce.
+      const baseSelect = {
+        id: activities.id,
+        name: activities.name,
+        type: activities.type,
+        startTime: activities.startTime,
+        distance: activities.distance,
+        ascent: activities.ascent,
+        avgSpeed: activities.avgSpeed,
+        trimp: activities.trimp,
+      } as const;
+      const where = and(
+        eq(activities.userId, userId),
+        gte(activities.startTime, jan1),
+      );
+      // ORDER BY col DESC NULLS LAST — Postgres default for DESC is NULLS
+      // FIRST, which would surface a NULL-metric row over a real maximum.
+      const topBy = (orderBy: ReturnType<typeof sql>) =>
+        db
+          .select(baseSelect)
+          .from(activities)
+          .where(where)
+          .orderBy(orderBy)
+          .limit(1);
 
-      const rows: RecordRow[] = raw.map((r) => ({
-        id: r.id,
-        name: r.name,
-        type: r.type,
-        startTimeIso: r.startTime.toISOString(),
-        distance: r.distance,
-        ascent: r.ascent,
-        avgSpeed: r.avgSpeed,
-        trimp: r.trimp,
-      }));
+      const [longestRows, highestRows, fastestRows, hardestRows] =
+        await Promise.all([
+          topBy(sql`${activities.distance} DESC NULLS LAST`),
+          topBy(sql`${activities.ascent} DESC NULLS LAST`),
+          topBy(sql`${activities.avgSpeed} DESC NULLS LAST`),
+          topBy(sql`${activities.trimp} DESC NULLS LAST`),
+        ]);
+
+      const toRow = (raw: typeof longestRows): RecordRow | null => {
+        const r = raw[0];
+        if (!r) return null;
+        return {
+          id: r.id,
+          name: r.name,
+          type: r.type,
+          startTimeIso: r.startTime.toISOString(),
+          distance: r.distance,
+          ascent: r.ascent,
+          avgSpeed: r.avgSpeed,
+          trimp: r.trimp,
+        };
+      };
+
+      const longest = toRow(longestRows);
+      const highest = toRow(highestRows);
+      const fastest = toRow(fastestRows);
+      const hardest = toRow(hardestRows);
+
+      // ORDER BY DESC puts NULLs last on Postgres by default — but a row
+      // with metric=null could still surface if NO row in YTD has the
+      // metric. Guard against that by zeroing out null-metric rows.
+      const guard = (
+        r: RecordRow | null,
+        key: "distance" | "ascent" | "avgSpeed" | "trimp",
+      ): RecordRow | null => (r && r[key] != null ? r : null);
 
       return {
-        longest: pickMax(rows, "distance"),
-        highest: pickMax(rows, "ascent"),
-        fastest: pickMax(rows, "avgSpeed"),
-        hardest: pickMax(rows, "trimp"),
+        longest: guard(longest, "distance"),
+        highest: guard(highest, "ascent"),
+        fastest: guard(fastest, "avgSpeed"),
+        hardest: guard(hardest, "trimp"),
         year: now.getFullYear(),
       };
     },
@@ -455,8 +475,8 @@ export function getMonthlyKm(userId: string): Promise<MonthlyKmData> {
 
       const rows = await db
         .select({
-          startTime: activities.startTime,
-          distance: activities.distance,
+          month: sql<number>`(EXTRACT(MONTH FROM ${activities.startTime})::int - 1)`,
+          meters: sql<number>`COALESCE(SUM(${activities.distance}), 0)::float8`,
         })
         .from(activities)
         .where(
@@ -465,11 +485,11 @@ export function getMonthlyKm(userId: string): Promise<MonthlyKmData> {
             gte(activities.startTime, from),
             lt(activities.startTime, to),
           ),
-        );
+        )
+        .groupBy(sql`EXTRACT(MONTH FROM ${activities.startTime})`);
 
       const km: number[] = Array.from({ length: 12 }, () => 0);
-      for (const a of rows)
-        km[a.startTime.getMonth()] += (a.distance ?? 0) / 1000;
+      for (const r of rows) km[Number(r.month)] = Number(r.meters) / 1000;
       const totalKm = km.reduce((s, v) => s + v, 0);
 
       return { km, totalKm, currentMonth: now.getMonth() };
@@ -498,7 +518,10 @@ export function getMonthlyActivities(
       const to = new Date(year + 1, 0, 1);
 
       const rows = await db
-        .select({ startTime: activities.startTime })
+        .select({
+          month: sql<number>`(EXTRACT(MONTH FROM ${activities.startTime})::int - 1)`,
+          count: sql<number>`COUNT(*)::int`,
+        })
         .from(activities)
         .where(
           and(
@@ -506,10 +529,11 @@ export function getMonthlyActivities(
             gte(activities.startTime, from),
             lt(activities.startTime, to),
           ),
-        );
+        )
+        .groupBy(sql`EXTRACT(MONTH FROM ${activities.startTime})`);
 
       const counts: number[] = Array.from({ length: 12 }, () => 0);
-      for (const a of rows) counts[a.startTime.getMonth()] += 1;
+      for (const r of rows) counts[Number(r.month)] = Number(r.count);
       const total = counts.reduce((s, v) => s + v, 0);
 
       return { counts, total, currentMonth: now.getMonth() };
@@ -578,13 +602,13 @@ export function getWeeklyStats(userId: string): Promise<WeeklyStatsData> {
       prevFrom.setDate(prevFrom.getDate() - 7);
       const prevTo = from;
 
-      const sel = (rangeFrom: Date, rangeTo: Date) =>
-        db
+      const aggIn = async (rangeFrom: Date, rangeTo: Date) => {
+        const [row] = await db
           .select({
-            distance: activities.distance,
-            duration: activities.duration,
-            movingTime: activities.movingTime,
-            ascent: activities.ascent,
+            count: sql<number>`COUNT(*)::int`,
+            distance: sql<number>`COALESCE(SUM(${activities.distance}), 0)::float8`,
+            duration: sql<number>`COALESCE(SUM(COALESCE(${activities.movingTime}, ${activities.duration}, 0)), 0)::float8`,
+            ascent: sql<number>`COALESCE(SUM(${activities.ascent}), 0)::float8`,
           })
           .from(activities)
           .where(
@@ -594,23 +618,28 @@ export function getWeeklyStats(userId: string): Promise<WeeklyStatsData> {
               lt(activities.startTime, rangeTo),
             ),
           );
+        return {
+          count: Number(row?.count ?? 0),
+          distance: Number(row?.distance ?? 0),
+          duration: Number(row?.duration ?? 0),
+          ascent: Number(row?.ascent ?? 0),
+        };
+      };
 
-      const [rows, prevRows] = await Promise.all([sel(from, to), sel(prevFrom, prevTo)]);
-
-      const sum = (rs: typeof rows, key: "distance" | "ascent") =>
-        rs.reduce((s, r) => s + (r[key] ?? 0), 0);
-      const sumDur = (rs: typeof rows) =>
-        rs.reduce((s, r) => s + (r.movingTime ?? r.duration ?? 0), 0);
+      const [cur, prev] = await Promise.all([
+        aggIn(from, to),
+        aggIn(prevFrom, prevTo),
+      ]);
 
       return {
-        count: rows.length,
-        distance: sum(rows, "distance"),
-        duration: sumDur(rows),
-        ascent: Math.round(sum(rows, "ascent")),
-        prevCount: prevRows.length,
-        prevDistance: sum(prevRows, "distance"),
-        prevDuration: sumDur(prevRows),
-        prevAscent: Math.round(sum(prevRows, "ascent")),
+        count: cur.count,
+        distance: cur.distance,
+        duration: cur.duration,
+        ascent: Math.round(cur.ascent),
+        prevCount: prev.count,
+        prevDistance: prev.distance,
+        prevDuration: prev.duration,
+        prevAscent: Math.round(prev.ascent),
         weekNo: isoWeek(from),
       };
     },
@@ -642,13 +671,13 @@ export function getMonthlyStats(userId: string): Promise<MonthlyStatsData> {
       const pFrom = new Date(now.getFullYear() - 1, now.getMonth(), 1);
       const pTo = new Date(now.getFullYear() - 1, now.getMonth() + 1, 1);
 
-      const sel = (rangeFrom: Date, rangeTo: Date) =>
-        db
+      const aggIn = async (rangeFrom: Date, rangeTo: Date) => {
+        const [row] = await db
           .select({
-            distance: activities.distance,
-            duration: activities.duration,
-            movingTime: activities.movingTime,
-            ascent: activities.ascent,
+            count: sql<number>`COUNT(*)::int`,
+            distance: sql<number>`COALESCE(SUM(${activities.distance}), 0)::float8`,
+            duration: sql<number>`COALESCE(SUM(COALESCE(${activities.movingTime}, ${activities.duration}, 0)), 0)::float8`,
+            ascent: sql<number>`COALESCE(SUM(${activities.ascent}), 0)::float8`,
           })
           .from(activities)
           .where(
@@ -658,23 +687,28 @@ export function getMonthlyStats(userId: string): Promise<MonthlyStatsData> {
               lt(activities.startTime, rangeTo),
             ),
           );
+        return {
+          count: Number(row?.count ?? 0),
+          distance: Number(row?.distance ?? 0),
+          duration: Number(row?.duration ?? 0),
+          ascent: Number(row?.ascent ?? 0),
+        };
+      };
 
-      const [rows, prevRows] = await Promise.all([sel(cFrom, cTo), sel(pFrom, pTo)]);
-
-      const sum = (rs: typeof rows, key: "distance" | "ascent") =>
-        rs.reduce((s, r) => s + (r[key] ?? 0), 0);
-      const sumDur = (rs: typeof rows) =>
-        rs.reduce((s, r) => s + (r.movingTime ?? r.duration ?? 0), 0);
+      const [cur, prev] = await Promise.all([
+        aggIn(cFrom, cTo),
+        aggIn(pFrom, pTo),
+      ]);
 
       return {
-        count: rows.length,
-        distance: sum(rows, "distance"),
-        duration: sumDur(rows),
-        ascent: Math.round(sum(rows, "ascent")),
-        prevCount: prevRows.length,
-        prevDistance: sum(prevRows, "distance"),
-        prevDuration: sumDur(prevRows),
-        prevAscent: Math.round(sum(prevRows, "ascent")),
+        count: cur.count,
+        distance: cur.distance,
+        duration: cur.duration,
+        ascent: Math.round(cur.ascent),
+        prevCount: prev.count,
+        prevDistance: prev.distance,
+        prevDuration: prev.duration,
+        prevAscent: Math.round(prev.ascent),
         currentMonth: now.getMonth(),
       };
     },

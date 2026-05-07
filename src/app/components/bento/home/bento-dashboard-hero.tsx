@@ -33,7 +33,9 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: activities.routeData,
+      // Compact ~120-pt polyline preview — RouteMapStatic only needs
+      // [{lat, lng}], so the full GPS track is wasted bandwidth here.
+      routeData: activities.routeGeometry,
       photoCount: photoCountSql,
     })
     .from(activities)
