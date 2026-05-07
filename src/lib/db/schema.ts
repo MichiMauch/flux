@@ -28,6 +28,11 @@ export const users = pgTable("user", {
   withingsRefreshToken: text("withings_refresh_token"),
   withingsTokenExpiry: timestamp("withings_token_expiry"),
   withingsUserId: text("withings_user_id"),
+  // Per-user random secret for the Withings webhook URL. Withings can't send
+  // custom auth headers, so the secret has to be in the URL — but a per-user
+  // token bounds the blast radius if the URL leaks (only that user's data is
+  // re-syncable, not all users).
+  withingsWebhookToken: text("withings_webhook_token").unique(),
   image: text("image"),
   birthday: timestamp("birthday", { mode: "date" }),
   sex: text("sex"), // 'male' | 'female'

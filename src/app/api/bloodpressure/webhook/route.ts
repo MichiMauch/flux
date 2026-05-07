@@ -23,7 +23,10 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  console.log("BP webhook received:", body);
+  // Don't log the raw body — systolic/diastolic/pulse values are health PII
+  // and would land in stdout/Coolify log aggregation. Log only the source id
+  // for traceability.
+  console.log(`BP webhook received: id=${body?.id ?? "[missing]"}`);
 
   // Hardcode to Michi (BP is only for him)
   const user = await db.query.users.findFirst({

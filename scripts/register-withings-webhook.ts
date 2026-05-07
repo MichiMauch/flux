@@ -6,13 +6,16 @@
  *   tsx --env-file=.env.local scripts/register-withings-webhook.ts subscribe --all
  *   tsx --env-file=.env.local scripts/register-withings-webhook.ts revoke --user=<id>
  *
- * Uses NEXT_PUBLIC_BASE_URL + WITHINGS_WEBHOOK_SECRET from env (or --url to
- * override — useful to subscribe against prod from a dev shell).
+ * Uses NEXT_PUBLIC_BASE_URL from env (or --url to override — useful to
+ * subscribe against prod from a dev shell). The webhook URL is per-user
+ * and contains a random token stored on the user row; if the row has no
+ * token yet, one is generated on subscribe.
  *
  *   --url=https://flux.mauch.rocks
  */
 
 import "dotenv/config";
+import { randomUUID } from "crypto";
 import { parseArgs } from "node:util";
 import { db } from "../src/lib/db";
 import { users } from "../src/lib/db/schema";
@@ -24,8 +27,8 @@ import {
   subscribeNotification,
 } from "../src/lib/withings-client";
 
-function callbackUrl(baseUrl: string, secret: string): string {
-  return `${baseUrl}/api/withings/webhook?secret=${encodeURIComponent(secret)}`;
+function webhookUrl(baseUrl: string, token: string): string {
+  return `${baseUrl}/api/withings/webhook/${token}`;
 }
 
 async function getAccessToken(
@@ -86,9 +89,7 @@ async function main(): Promise<void> {
   });
 
   const baseUrl = (values.url as string | undefined) ?? process.env.NEXT_PUBLIC_BASE_URL;
-  const secret = process.env.WITHINGS_WEBHOOK_SECRET;
   if (!baseUrl) throw new Error("Set NEXT_PUBLIC_BASE_URL or pass --url=");
-  if (!secret) throw new Error("WITHINGS_WEBHOOK_SECRET not set in env");
   if (!baseUrl.startsWith("https://")) {
     throw new Error(`Withings requires HTTPS callbacks; got ${baseUrl}`);
   }
@@ -97,22 +98,37 @@ async function main(): Promise<void> {
     values.user as string | undefined,
     Boolean(values.all)
   );
-  const cb = callbackUrl(baseUrl, secret);
 
   for (const u of targets) {
     const label = `${u.name ?? u.id} (${u.id})`;
     try {
-      const token = await getAccessToken(u);
+      const accessToken = await getAccessToken(u);
+
+      // Per-user webhook token. Generate one if missing (only when actually
+      // subscribing — list/revoke operate on the existing token).
+      let webhookToken = u.withingsWebhookToken;
+      if (!webhookToken && subcommand === "subscribe") {
+        webhookToken = randomUUID();
+        await db
+          .update(users)
+          .set({ withingsWebhookToken: webhookToken })
+          .where(eq(users.id, u.id));
+      }
+      if (!webhookToken && subcommand !== "list") {
+        console.error(`${label}: no withings_webhook_token on user — skip`);
+        continue;
+      }
+      const cb = webhookToken ? webhookUrl(baseUrl, webhookToken) : null;
 
       if (subcommand === "list") {
-        const subs = await listNotifications(token, 1);
+        const subs = await listNotifications(accessToken, 1);
         console.log(`${label}:`, JSON.stringify(subs, null, 2));
-      } else if (subcommand === "subscribe") {
-        await subscribeNotification(token, cb, 1, "flux-weight");
-        console.log(`${label}: subscribed → ${cb}`);
-      } else if (subcommand === "revoke") {
-        await revokeNotification(token, cb, 1);
-        console.log(`${label}: revoked ← ${cb}`);
+      } else if (subcommand === "subscribe" && cb) {
+        await subscribeNotification(accessToken, cb, 1, "flux-weight");
+        console.log(`${label}: subscribed`);
+      } else if (subcommand === "revoke" && cb) {
+        await revokeNotification(accessToken, cb, 1);
+        console.log(`${label}: revoked`);
       } else {
         usage();
       }

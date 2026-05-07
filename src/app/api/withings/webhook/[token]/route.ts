@@ -1,70 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 import { users, weightMeasurements } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getWeightMeasurements, refreshToken } from "@/lib/withings-client";
 
-function checkWebhookSecret(request: NextRequest): boolean {
-  const expected = process.env.WITHINGS_WEBHOOK_SECRET;
-  if (!expected) return false;
-  const provided =
-    request.nextUrl.searchParams.get("secret") ??
-    request.headers.get("x-webhook-secret") ??
-    "";
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
+// Per-user webhook URL. Withings doesn't support auth headers, so the auth
+// token has to live in the URL. We use a per-user random UUID stored in
+// users.withingsWebhookToken instead of a single shared global secret — this
+// way, if the URL leaks via 3rd-party logs, only that one user's data can be
+// re-synced (the worst case is still bounded since syncs are idempotent).
 
 // Withings sends GET to verify webhook URL
-export async function GET(request: NextRequest) {
-  if (!process.env.WITHINGS_WEBHOOK_SECRET) {
-    console.error("WITHINGS_WEBHOOK_SECRET not configured — rejecting webhook");
-    return NextResponse.json(
-      { error: "Webhook not configured" },
-      { status: 500 }
-    );
-  }
-  if (!checkWebhookSecret(request)) {
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  const { token } = await params;
+  const user = await findUserByToken(token);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return NextResponse.json({ status: "ok" });
 }
 
 // Withings sends POST with notification data
-export async function POST(request: NextRequest) {
-  if (!process.env.WITHINGS_WEBHOOK_SECRET) {
-    console.error("WITHINGS_WEBHOOK_SECRET not configured — rejecting webhook");
-    return NextResponse.json(
-      { error: "Webhook not configured" },
-      { status: 500 }
-    );
-  }
-  if (!checkWebhookSecret(request)) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  const { token } = await params;
+  const user = await findUserByToken(token);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.text();
-  console.log("Withings webhook received:", body);
 
   // Parse form-encoded body: userid=xxx&startdate=xxx&enddate=xxx&appli=1
-  const params = new URLSearchParams(body);
-  const withingsUserId = params.get("userid");
-  const appli = params.get("appli");
+  const params2 = new URLSearchParams(body);
+  const withingsUserId = params2.get("userid");
+  const appli = params2.get("appli");
+
+  console.log(
+    `Withings webhook received: appli=${appli} userid=${withingsUserId ? "[set]" : "[missing]"}`
+  );
 
   // appli=1 = weight, appli=4 = activity
-  if (appli !== "1" || !withingsUserId) {
+  if (appli !== "1") {
     return NextResponse.json({ received: true });
   }
 
-  // Find user by Withings user ID
-  const user = await db.query.users.findFirst({
-    where: eq(users.withingsUserId, withingsUserId),
-  });
+  // Defence-in-depth: ensure the body's withings user id matches the URL token
+  // owner — otherwise an attacker who knows one user's token couldn't trick us
+  // into syncing a different user's data, but we'd still spend an outbound
+  // call. Skip if mismatch.
+  if (
+    withingsUserId &&
+    user.withingsUserId &&
+    withingsUserId !== user.withingsUserId
+  ) {
+    console.warn("Withings webhook: userid in body does not match token owner");
+    return NextResponse.json({ received: true });
+  }
 
-  if (!user?.withingsAccessToken || !user?.withingsRefreshToken) {
-    console.warn("No user found for Withings user ID:", withingsUserId);
+  if (!user.withingsAccessToken || !user.withingsRefreshToken) {
     return NextResponse.json({ received: true });
   }
 
@@ -114,10 +113,19 @@ export async function POST(request: NextRequest) {
       });
       synced++;
     }
-    console.log(`Withings webhook sync: ${synced} new measurements for ${user.name}`);
+    console.log(`Withings webhook sync: ${synced} new measurements for user ${user.id}`);
   } catch (e) {
     console.error("Withings webhook sync error:", e);
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function findUserByToken(token: string) {
+  // UUIDs are unguessable, so a simple equality lookup is fine. We require a
+  // non-empty token to avoid accidental matches against legacy NULL values.
+  if (!token || token.length < 16) return null;
+  return db.query.users.findFirst({
+    where: eq(users.withingsWebhookToken, token),
+  });
 }

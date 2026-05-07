@@ -9,7 +9,17 @@ import { clearStateCookie, verifyOAuthState } from "@/lib/oauth-state";
 const COOKIE = "oauth_state_polar";
 
 export async function GET(request: NextRequest) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.url;
+  // Always use the configured base URL — never fall back to request.url, which
+  // would let an attacker-controlled Host header redirect callers (incl. the
+  // OAuth code exchange below) to an arbitrary host.
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  if (!baseUrl) {
+    console.error("NEXT_PUBLIC_BASE_URL not configured — refusing OAuth callback");
+    return NextResponse.json(
+      { error: "Server misconfigured" },
+      { status: 500 }
+    );
+  }
 
   const session = await auth();
   if (!session?.user?.id) {
