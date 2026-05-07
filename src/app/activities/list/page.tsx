@@ -1,8 +1,8 @@
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
-  getActivityListPage,
   getActivityMonthCounts,
   getAvailableSports,
 } from "@/lib/cache/activity-filters";
@@ -12,7 +12,8 @@ import { BentoSyncButton } from "../../components/bento/home/bento-sync-button";
 import { spaceMono } from "../../components/bento/bento-fonts";
 import { ActivitiesSportFilter } from "../activities-sport-filter";
 import { ActivitiesDateFilter } from "../activities-date-filter";
-import { ActivitiesFeed } from "../activities-feed";
+import { ActivitiesFeedSection } from "../activities-feed-section";
+import { FeedSkeleton } from "../feed-skeleton";
 import { parseMonthKey, parseSport } from "../filters";
 
 const INITIAL_PAGE_SIZE = 15;
@@ -30,14 +31,10 @@ export default async function ActivitiesListPage({
   const sport = parseSport(params.sport);
   const monthKey = parseMonthKey(params.month);
 
-  const [listRows, availableSports, monthRows] = await Promise.all([
-    getActivityListPage(userId, sport, monthKey, INITIAL_PAGE_SIZE),
+  const [availableSports, monthRows] = await Promise.all([
     getAvailableSports(userId),
     getActivityMonthCounts(userId, sport),
   ]);
-
-  const hasMore = listRows.length > INITIAL_PAGE_SIZE;
-  const initial = hasMore ? listRows.slice(0, INITIAL_PAGE_SIZE) : listRows;
 
   return (
     <BentoPageShell>
@@ -81,12 +78,17 @@ export default async function ActivitiesListPage({
         </div>
       </div>
 
-      <ActivitiesFeed
-        initial={initial}
-        initialHasMore={hasMore}
-        sport={sport}
-        monthKey={monthKey}
-      />
+      <Suspense
+        key={`${sport ?? "all"}:${monthKey ?? "all"}`}
+        fallback={<FeedSkeleton variant="list" />}
+      >
+        <ActivitiesFeedSection
+          userId={userId}
+          sport={sport}
+          monthKey={monthKey}
+          pageSize={INITIAL_PAGE_SIZE}
+        />
+      </Suspense>
     </BentoPageShell>
   );
 }
