@@ -14,6 +14,7 @@ import {
   getThumbnailFilename,
 } from "@/lib/photos";
 import { reverseGeocode } from "@/lib/geocode";
+import { assertValidImageBuffer, InvalidImageError } from "@/lib/image-validation";
 
 const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
 const MAX_PHOTOS_PER_REQUEST = 20;
@@ -70,12 +71,6 @@ export async function POST(
     );
   }
   for (const f of files) {
-    if (!f.type.startsWith("image/")) {
-      return NextResponse.json(
-        { error: "Nur Bilddateien erlaubt" },
-        { status: 400 }
-      );
-    }
     if (f.size > MAX_PHOTO_SIZE) {
       return NextResponse.json(
         { error: "Datei zu gross (max 20 MB)" },
@@ -92,6 +87,20 @@ export async function POST(
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Validate by content (magic bytes via sharp), not by client MIME.
+    try {
+      await assertValidImageBuffer(buffer);
+    } catch (e) {
+      if (e instanceof InvalidImageError) {
+        return NextResponse.json(
+          { error: "Nur Bilddateien erlaubt" },
+          { status: 400 }
+        );
+      }
+      throw e;
+    }
+
     const photoId = crypto.randomUUID();
 
     // Extract EXIF GPS + timestamp. Three strategies layered, take the

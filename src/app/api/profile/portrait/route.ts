@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { PORTRAITS_PATH, getPortraitPath } from "@/lib/portraits";
+import { assertValidImageBuffer, InvalidImageError } from "@/lib/image-validation";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -20,14 +21,21 @@ export async function POST(request: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file" }, { status: 400 });
   }
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "Nur Bilddateien erlaubt" }, { status: 400 });
-  }
   if (file.size > MAX_SIZE) {
     return NextResponse.json({ error: "Datei zu gross (max 10 MB)" }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  // Validate by content (magic bytes via sharp), not by client-supplied MIME.
+  try {
+    await assertValidImageBuffer(buffer);
+  } catch (e) {
+    if (e instanceof InvalidImageError) {
+      return NextResponse.json({ error: "Nur Bilddateien erlaubt" }, { status: 400 });
+    }
+    throw e;
+  }
+
   const optimized = await sharp(buffer)
     .rotate()
     .resize(400, 400, { fit: "cover", position: "attention" })
