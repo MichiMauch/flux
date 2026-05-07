@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
 
 export interface ActivityFeedItem {
@@ -57,7 +57,7 @@ export async function loadMoreActivities(
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: activities.routeData,
+      routeData: sql<unknown>`COALESCE(${activities.routeGeometry}, ${activities.routeData})`,
     })
     .from(activities)
     .where(where)

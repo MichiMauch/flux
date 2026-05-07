@@ -26,6 +26,7 @@ import { users, activities, deletedPolarActivities, dailyActivity } from "../src
 import { parseTrainingSession, parseDailyActivity } from "../src/lib/polar-export-parser";
 import { computeTrimp, type Sex } from "../src/lib/trimp";
 import { generateActivityTitle } from "../src/lib/ai-title";
+import { buildRouteGeometry } from "../src/lib/activities/route-geometry";
 
 interface Args {
   dir: string;
@@ -332,6 +333,7 @@ async function main() {
         ascent: parsed.ascent,
         descent: parsed.descent,
         routeData: parsed.routeData,
+        routeGeometry: buildRouteGeometry(parsed.routeData),
         heartRateData: parsed.heartRateData,
         speedData: parsed.speedData,
         fatPercentage: parsed.fatPercentage,

@@ -3,6 +3,7 @@ import { validateWebhookSignature, listExercises, downloadFit, parsePolarStartTi
 import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
+import { buildRouteGeometry } from "@/lib/activities/route-geometry";
 import { reverseGeocodeStructured } from "@/lib/geocode";
 import { db } from "@/lib/db";
 import { users, activities, deletedPolarActivities } from "@/lib/db/schema";
@@ -184,6 +185,7 @@ async function handleExerciseEvent(user: typeof users.$inferSelect): Promise<voi
         ascent: fitSession?.totalAscent ?? null,
         descent: fitSession?.totalDescent ?? null,
         routeData,
+        routeGeometry: buildRouteGeometry(routeData),
         heartRateData,
         speedData,
         minAltitude: fitSession?.minAltitude ?? null,

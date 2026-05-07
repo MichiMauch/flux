@@ -44,7 +44,7 @@ export default async function ActivitiesListPage({
         movingTime: activities.movingTime,
         avgHeartRate: activities.avgHeartRate,
         ascent: activities.ascent,
-        routeData: activities.routeData,
+        routeData: sql<unknown>`COALESCE(${activities.routeGeometry}, ${activities.routeData})`,
       })
       .from(activities)
       .where(whereUserAndSport)

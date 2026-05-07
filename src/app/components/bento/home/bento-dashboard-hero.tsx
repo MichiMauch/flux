@@ -33,7 +33,7 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: activities.routeData,
+      routeData: sql<unknown>`COALESCE(${activities.routeGeometry}, ${activities.routeData})`,
       photoCount: photoCountSql,
     })
     .from(activities)

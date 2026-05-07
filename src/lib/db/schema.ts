@@ -112,7 +112,8 @@ export const activities = pgTable(
     maxHeartRate: integer("max_heart_rate"),
     ascent: real("ascent"),
     descent: real("descent"),
-    routeData: json("route_data"), // [{lat, lng, time}]
+    routeData: json("route_data"), // [{lat, lng, time}] — full track for detail view
+    routeGeometry: json("route_geometry"), // [{lat, lng}] — simplified ~120-pt polyline for list previews
     heartRateData: json("heart_rate_data"), // [{time, bpm}]
     speedData: json("speed_data"), // [{time, speed}]
     fatPercentage: integer("fat_percentage"),

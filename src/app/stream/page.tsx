@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { activities, activityBoosts, users } from "@/lib/db/schema";
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { getPhotoCountsByActivity } from "@/lib/activities/photo-counts";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
@@ -59,7 +59,7 @@ export default async function StreamPage() {
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: activities.routeData,
+      routeData: sql<unknown>`COALESCE(${activities.routeGeometry}, ${activities.routeData})`,
     })
     .from(activities)
     .where(

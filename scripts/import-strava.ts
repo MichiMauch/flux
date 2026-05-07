@@ -24,6 +24,7 @@ import { fetchActivitiesInRange, fetchStreams, type StravaActivity } from "../sr
 import { parseStravaActivity, type ParsedStravaActivity } from "../src/lib/strava-import-parser";
 import { computeTrimp, type Sex } from "../src/lib/trimp";
 import { generateActivityTitle } from "../src/lib/ai-title";
+import { buildRouteGeometry } from "../src/lib/activities/route-geometry";
 
 interface Args {
   month: string;
@@ -232,6 +233,7 @@ async function main() {
       ascent: parsed.ascent,
       descent: parsed.descent,
       routeData: parsed.routeData,
+      routeGeometry: buildRouteGeometry(parsed.routeData),
       heartRateData: parsed.heartRateData,
       speedData: parsed.speedData,
       minAltitude: parsed.minAltitude,

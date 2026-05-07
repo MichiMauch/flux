@@ -7,6 +7,7 @@ import { listExercises, downloadFit, parsePolarStartTime } from "@/lib/polar-cli
 import { parseFitFile } from "@/lib/fit-parser";
 import { computeTrimp, type Sex } from "@/lib/trimp";
 import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
+import { buildRouteGeometry } from "@/lib/activities/route-geometry";
 import { reverseGeocodeStructured } from "@/lib/geocode";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
@@ -138,6 +139,7 @@ export async function POST() {
         avgHeartRate: exercise.heart_rate?.average,
         maxHeartRate: exercise.heart_rate?.maximum,
         routeData,
+        routeGeometry: buildRouteGeometry(routeData),
         heartRateData,
         speedData,
         fatPercentage: exercise.fat_percentage ?? null,
