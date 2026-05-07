@@ -3,6 +3,40 @@
 Alle nennenswerten Änderungen an Flux werden hier dokumentiert.
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionierung: [SemVer](https://semver.org).
 
+## [1.1.0] - 2026-05-07
+
+### Added
+
+- **home:** Trophäen kompakt mit Akkordeon [522d2c5]
+- **goals:** Mehrere Sportarten pro Ziel kombinieren [16dde59]
+- **activities:** replace timeline ribbon with collapsible date filter (mobile year+month, desktop heatmap) [f019c8b]
+- **import-polar:** Bulk-Import-Flags (--from/--until/--types/--collapse-cycling/--no-daily/--analyze) [3a80796]
+- **activity:** Personal-Best-Erwähnung auf Detail-Seite [280a0ac]
+
+### Changed
+
+- **home:** SQL aggregates + Hero routeGeometry [f06975a]
+- **stream:** routeGeometry + single-roundtrip + Suspense streaming [e07ae35]
+- **activities:** stream feed via Suspense — filter UI renders instantly [754b25f]
+- **activities:** list query uses routeGeometry (compact preview), not full routeData [475366f]
+- **home:** cache aggregate bento queries with unstable_cache (Phase 4) [71fc3e7]
+- **routes:** add route_geometry column for compact list previews (Phase 3) [d49f286]
+- **feed:** replace N+1 photo-count subquery with grouped helper (Phase 2) [bffebf7]
+- **db:** add critical indexes after bulk-import (Phase 1) [8b05071]
+- **tours:** Aktivitäts-Gruppen → Touren umbenennen [da59744]
+
+### Fixed
+
+- **map:** Karte verdeckt Mobile-Bottom-Nav [af8f562]
+- **calendar:** icon ignoriert Aktivitätsnamen [f9f25fe]
+- **activities:** replace skeleton with small walk-icon spinner [9fca488]
+- **activities:** real skeleton structure inside cards (image + text bars) [f130595]
+- **activities:** make loading state unmistakable — neon spinner + caption + bordered placeholders [1d61bf1]
+- **activities:** force feed skeleton via navigation context (Suspense alone is suppressed by Next.js' implicit transition) [3a65dcf]
+- **activities:** make feed skeleton visible on black page bg [68af05d]
+- **activities:** remove useTransition from date filter so Suspense fallback shows [038a138]
+- **routes:** revert COALESCE in list queries — restore route previews [43377b7]
+
 ## [1.0.0] - 2026-05-04
 
 Erste stabile Public-Version.
