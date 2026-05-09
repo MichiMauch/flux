@@ -8,7 +8,18 @@ import { spaceMono } from "../components/bento/bento-fonts";
 import { listToursForUser } from "./data";
 import { formatDistanceAuto } from "@/lib/activity-format";
 
-function formatDateRange(start: Date | null, end: Date | null): string {
+function toDate(v: Date | string | null | undefined): Date | null {
+  if (!v) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateRange(
+  startIn: Date | string | null,
+  endIn: Date | string | null
+): string {
+  const start = toDate(startIn);
+  const end = toDate(endIn);
   if (!start && !end) return "—";
   const fmt = (d: Date) =>
     d.toLocaleDateString("de-CH", {

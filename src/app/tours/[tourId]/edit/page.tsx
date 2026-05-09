@@ -22,9 +22,10 @@ import { TourMembersOrderEditor } from "../../tour-members-order-editor";
 
 const PICKER_LIMIT = 1000;
 
-function toDateInput(d: Date | null): string {
-  if (!d) return "";
-  return d.toISOString().slice(0, 10);
+function toDateInput(v: Date | string | null): string {
+  if (!v) return "";
+  const d = v instanceof Date ? v : new Date(v);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
 
 export default async function EditTourPage({
@@ -157,7 +158,7 @@ export default async function EditTourPage({
         <p className="text-[11px] text-[#7a7a7a]">
           Standardmässig nach Datum sortiert. Per Drag &amp; Drop in eine
           eigene Reihenfolge bringen und unten speichern — die Tour-Detailseite
-          bekommt dann einen Umschalter „Datum / Manuell".
+          bekommt dann einen Umschalter „Datum / Manuell&ldquo;.
         </p>
 
         <TourMembersOrderEditor tourId={tour.id} members={members} />

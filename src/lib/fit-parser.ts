@@ -1,4 +1,11 @@
 import FitParser from "fit-file-parser";
+import {
+  computeElevationStats,
+  computeMovingTimeSec,
+  computeSpeedStats,
+  type RoutePoint,
+  type SpeedSample,
+} from "./activity-stats";
 
 interface ParsedFitData {
   routeData: { lat: number; lng: number; time?: string; elevation?: number }[];
@@ -72,54 +79,40 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
         }
       }
 
-      // Extract session-level data
-      const s = data.sessions?.[0];
-      // Calculate altitude stats from records (FIT uses km for altitude with lengthUnit: km)
-      const alts = (data.records ?? [])
-        .map((r: any) => r.altitude)
-        .filter((a: any) => a != null) as number[];
-      const minAlt = alts.length > 0 ? Math.round(Math.min(...alts)) : undefined;
-      const maxAlt = alts.length > 0 ? Math.round(Math.max(...alts)) : undefined;
+      // Records-Fallbacks: Polar liefert manchmal keine sessions[0] oder
+      // einzelne Aggregate (total_ascent, avg_speed, …) sind nicht gesetzt.
+      // Wir berechnen sie aus den Records, damit ascent/movingTime/etc. nicht
+      // fehlen, wenn Tracking-Daten vorhanden sind.
+      const elev = computeElevationStats(routeData as RoutePoint[]);
+      const sp = computeSpeedStats(speedData as SpeedSample[]);
+      const movingTimeFromRecords = computeMovingTimeSec(
+        speedData as SpeedSample[]
+      );
 
-      const session = s
-        ? {
-            minAltitude: minAlt,
-            maxAltitude: maxAlt,
-            avgCadence: s.avg_cadence ?? undefined,
-            maxCadence: s.max_cadence ?? undefined,
-            totalSteps: s.total_cycles ?? undefined,
-            avgSpeed: s.avg_speed ?? undefined,
-            maxSpeed: s.max_speed ?? undefined,
-            avgHeartRate: s.avg_heart_rate ?? undefined,
-            maxHeartRate: s.max_heart_rate ?? undefined,
-            totalCalories: s.total_calories ?? undefined,
-            totalAscent: s.total_ascent ?? undefined,
-            totalDescent: s.total_descent ?? undefined,
-            totalDistance: s.total_distance ?? undefined,
-            totalElapsedTime: s.total_elapsed_time ?? undefined,
-            totalTimerTime: s.total_timer_time ?? undefined,
-            movingTime: calcMovingTime(data.records ?? []),
-            sport: s.sport ?? undefined,
-            subSport: s.sub_sport ?? undefined,
-          }
-        : null;
+      const s = data.sessions?.[0];
+
+      const session = {
+        minAltitude: elev.minAlt ?? undefined,
+        maxAltitude: elev.maxAlt ?? undefined,
+        avgCadence: s?.avg_cadence ?? undefined,
+        maxCadence: s?.max_cadence ?? undefined,
+        totalSteps: s?.total_cycles ?? undefined,
+        avgSpeed: s?.avg_speed ?? sp.avg ?? undefined,
+        maxSpeed: s?.max_speed ?? sp.max ?? undefined,
+        avgHeartRate: s?.avg_heart_rate ?? undefined,
+        maxHeartRate: s?.max_heart_rate ?? undefined,
+        totalCalories: s?.total_calories ?? undefined,
+        totalAscent: s?.total_ascent ?? elev.ascent ?? undefined,
+        totalDescent: s?.total_descent ?? elev.descent ?? undefined,
+        totalDistance: s?.total_distance ?? undefined,
+        totalElapsedTime: s?.total_elapsed_time ?? undefined,
+        totalTimerTime: s?.total_timer_time ?? undefined,
+        movingTime: movingTimeFromRecords ?? undefined,
+        sport: s?.sport ?? undefined,
+        subSport: s?.sub_sport ?? undefined,
+      };
 
       resolve({ routeData, heartRateData, speedData, session });
     });
   });
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function calcMovingTime(records: any[]): number | undefined {
-  const SPEED_THRESHOLD = 0.5; // km/h
-  let movingSeconds = 0;
-  for (let i = 1; i < records.length; i++) {
-    const r = records[i];
-    const prev = records[i - 1];
-    if (r.speed != null && r.speed > SPEED_THRESHOLD && r.timestamp && prev.timestamp) {
-      const dt = (new Date(r.timestamp).getTime() - new Date(prev.timestamp).getTime()) / 1000;
-      if (dt > 0 && dt < 10) movingSeconds += dt;
-    }
-  }
-  return movingSeconds > 0 ? Math.round(movingSeconds) : undefined;
 }
