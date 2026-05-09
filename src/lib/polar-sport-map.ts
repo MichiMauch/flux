@@ -13,6 +13,14 @@
 // Observed across user exports (Polar Vantage V3 + Grit X Pro):
 // sport.id "2"  → ROAD_BIKING  (Michi + Sibylle, speeds 16–20 km/h)
 // sport.id "3"  → WALKING      (Michi + Sibylle, speeds 4–6 km/h, NOT MTB)
+// sport.id "5"  → CYCLING      (Michi: 228 trainings — 142 of them on Polar
+//                               V650, a road-bike-only computer with no run
+//                               mode. Speeds 12–25 km/h with 100–600 m ascent.
+//                               Polar's official sport table also lists 5 =
+//                               "Cycling". Mapped to generic CYCLING so
+//                               --collapse-cycling treats it like the other
+//                               bike subtypes; user can refine to
+//                               ROAD_BIKING / MOUNTAIN_BIKING per activity.)
 // sport.id "11" → HIKING       (Michi + Sibylle, Polar Flow label)
 // sport.id "38" → ROAD_BIKING  (Michi, speeds 17–21 km/h)
 // sport.id "83" → YOGA (Sibylle, indoor 60 min)
@@ -24,7 +32,7 @@ const SPORT_ID_TO_TYPE: Record<string, string> = {
   "2": "ROAD_BIKING",
   "3": "WALKING",
   "4": "OTHER_OUTDOOR",
-  "5": "ROAD_RUNNING",
+  "5": "CYCLING",
   "6": "OTHER_INDOOR",
   "11": "HIKING",
   "12": "ROAD_BIKING",
