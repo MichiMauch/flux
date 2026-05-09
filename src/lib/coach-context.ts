@@ -1,9 +1,10 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activities,
+  dailyActivity,
   goals,
   sleepSessions,
   users,
@@ -22,6 +23,7 @@ import {
   type FormZone,
 } from "@/lib/training-load";
 import {
+  STEPS_STREAK_THRESHOLD,
   currentStreak,
   dayKey,
   daysSinceLastActive,
@@ -239,8 +241,38 @@ export async function buildCoachContext(
     totalZoneSec > 0 ? Math.round((zoneSeconds[i] / totalZoneSec) * 1000) / 10 : 0;
 
   // --- Consistency ---
+  // Tage mit ≥10k Schritten zählen ebenfalls — siehe STEPS_STREAK_THRESHOLD.
+  // Volle Historie laden, damit currentStreak/daysSinceLastActive auch ältere
+  // Streaks korrekt sehen (recent28 ist nur das 28-Tage-Fenster).
+  const [stepDayRows, activityDayRows] = await Promise.all([
+    db
+      .select({ date: dailyActivity.date })
+      .from(dailyActivity)
+      .where(
+        and(
+          eq(dailyActivity.userId, userId),
+          or(
+            gte(dailyActivity.steps, STEPS_STREAK_THRESHOLD),
+            gte(dailyActivity.activeSteps, STEPS_STREAK_THRESHOLD),
+          ),
+        ),
+      ),
+    db
+      .selectDistinct({
+        day: sql<string>`to_char(${activities.startTime}, 'YYYY-MM-DD')`,
+      })
+      .from(activities)
+      .where(eq(activities.userId, userId)),
+  ]);
   const activeDays = new Set<string>();
-  for (const a of recent28) activeDays.add(dayKey(a.startTime));
+  for (const r of activityDayRows) activeDays.add(r.day);
+  for (const r of stepDayRows) activeDays.add(r.date);
+
+  const ctxStartKey = dayKey(ctxStart);
+  const activeDaysLast28 = new Set<string>();
+  for (const k of activeDays) {
+    if (k >= ctxStartKey) activeDaysLast28.add(k);
+  }
 
   // --- Active goals ---
   const goalRows = await db
@@ -439,7 +471,7 @@ export async function buildCoachContext(
     consistency: {
       currentStreakDays: currentStreak(activeDays),
       daysSinceLastActivity: daysSinceLastActive(activeDays),
-      activeDaysLast28: activeDays.size,
+      activeDaysLast28: activeDaysLast28.size,
     },
     goals: goalSnapshots,
     sleep: {

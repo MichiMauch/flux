@@ -3,6 +3,12 @@
  * (YYYY-MM-DD). Shared by Bento streak card and coach context builder.
  */
 
+/**
+ * Tage mit ≥ STEPS_STREAK_THRESHOLD Schritten zählen als aktiv, auch ohne
+ * Trainings-Aktivität — der Streak bricht dann nicht ab.
+ */
+export const STEPS_STREAK_THRESHOLD = 10_000;
+
 export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${(d.getMonth() + 1)
     .toString()

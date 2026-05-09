@@ -1,8 +1,13 @@
 import { unstable_cache } from "next/cache";
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { activities, goals, userTrophies } from "@/lib/db/schema";
-import { currentStreak, dayKey, longestStreak } from "@/lib/streak";
+import { activities, dailyActivity, goals, userTrophies } from "@/lib/db/schema";
+import {
+  STEPS_STREAK_THRESHOLD,
+  currentStreak,
+  dayKey,
+  longestStreak,
+} from "@/lib/streak";
 import { isoWeek, startOfWeek, currentWeekRange } from "@/lib/activity-week";
 import { getDailyTrimp } from "@/lib/training-load-query";
 import { computeTrainingLoadSeries } from "@/lib/training-load";
@@ -252,14 +257,29 @@ export function getStreak(userId: string): Promise<StreakData> {
       // SELECT DISTINCT day_key directly — one row per active day instead
       // of one per activity. For users with multiple activities on the
       // same day, this collapses ~Nx down to # active days.
-      const rows = await db
-        .selectDistinct({
-          day: sql<string>`to_char(${activities.startTime}, 'YYYY-MM-DD')`,
-        })
-        .from(activities)
-        .where(eq(activities.userId, userId));
+      const [activityRows, stepRows] = await Promise.all([
+        db
+          .selectDistinct({
+            day: sql<string>`to_char(${activities.startTime}, 'YYYY-MM-DD')`,
+          })
+          .from(activities)
+          .where(eq(activities.userId, userId)),
+        db
+          .select({ date: dailyActivity.date })
+          .from(dailyActivity)
+          .where(
+            and(
+              eq(dailyActivity.userId, userId),
+              or(
+                gte(dailyActivity.steps, STEPS_STREAK_THRESHOLD),
+                gte(dailyActivity.activeSteps, STEPS_STREAK_THRESHOLD),
+              ),
+            ),
+          ),
+      ]);
 
-      const activeDays = new Set<string>(rows.map((r) => r.day));
+      const activeDays = new Set<string>(activityRows.map((r) => r.day));
+      for (const r of stepRows) activeDays.add(r.date);
 
       return {
         current: currentStreak(activeDays),
