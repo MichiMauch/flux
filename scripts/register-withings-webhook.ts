@@ -5,6 +5,7 @@
  *   tsx --env-file=.env.local scripts/register-withings-webhook.ts subscribe --user=<id>
  *   tsx --env-file=.env.local scripts/register-withings-webhook.ts subscribe --all
  *   tsx --env-file=.env.local scripts/register-withings-webhook.ts revoke --user=<id>
+ *   tsx --env-file=.env.local scripts/register-withings-webhook.ts revoke --user=<id> --callback-url=https://...
  *
  * Uses NEXT_PUBLIC_BASE_URL from env (or --url to override — useful to
  * subscribe against prod from a dev shell). The webhook URL is per-user
@@ -12,6 +13,10 @@
  * token yet, one is generated on subscribe.
  *
  *   --url=https://flux.mauch.rocks
+ *
+ * Pass --callback-url to revoke an arbitrary subscription (useful to clean
+ * up stale entries from before the URL scheme was migrated, since those
+ * URLs aren't reconstructible from the user row).
  */
 
 import "dotenv/config";
@@ -84,9 +89,12 @@ async function main(): Promise<void> {
       user: { type: "string" },
       url: { type: "string" },
       all: { type: "boolean" },
+      "callback-url": { type: "string" },
     },
     strict: false,
   });
+
+  const callbackUrlOverride = values["callback-url"] as string | undefined;
 
   const baseUrl = (values.url as string | undefined) ?? process.env.NEXT_PUBLIC_BASE_URL;
   if (!baseUrl) throw new Error("Set NEXT_PUBLIC_BASE_URL or pass --url=");
@@ -114,7 +122,14 @@ async function main(): Promise<void> {
           .set({ withingsWebhookToken: webhookToken })
           .where(eq(users.id, u.id));
       }
-      if (!webhookToken && subcommand !== "list") {
+      // For revoke we may target an arbitrary URL via --callback-url (e.g. a
+      // stale subscription from before the URL scheme migration). For
+      // subscribe we always derive from the user's webhook_token.
+      if (
+        !webhookToken &&
+        subcommand !== "list" &&
+        !(subcommand === "revoke" && callbackUrlOverride)
+      ) {
         console.error(`${label}: no withings_webhook_token on user — skip`);
         continue;
       }
@@ -126,9 +141,14 @@ async function main(): Promise<void> {
       } else if (subcommand === "subscribe" && cb) {
         await subscribeNotification(accessToken, cb, 1, "flux-weight");
         console.log(`${label}: subscribed`);
-      } else if (subcommand === "revoke" && cb) {
-        await revokeNotification(accessToken, cb, 1);
-        console.log(`${label}: revoked`);
+      } else if (subcommand === "revoke") {
+        const target = callbackUrlOverride ?? cb;
+        if (!target) {
+          console.error(`${label}: no callback URL to revoke`);
+          continue;
+        }
+        await revokeNotification(accessToken, target, 1);
+        console.log(`${label}: revoked ${target}`);
       } else {
         usage();
       }
