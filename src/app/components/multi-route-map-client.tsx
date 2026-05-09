@@ -25,7 +25,6 @@ export interface MultiRouteEntry {
 
 interface MultiRouteMapClientProps {
   routes: MultiRouteEntry[];
-  showLegend?: boolean;
 }
 
 type LayerType = "outdoors" | "cycle" | "satellite";
@@ -80,7 +79,6 @@ function formatStartLabel(start: MultiRouteEntry["startTime"]): string | null {
 
 export default function MultiRouteMapClient({
   routes,
-  showLegend = true,
 }: MultiRouteMapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
@@ -346,62 +344,6 @@ export default function MultiRouteMapClient({
         </div>
       )}
 
-      {showLegend && routes.length > 0 && (
-        <div className="absolute bottom-2 left-2 z-[1000] max-h-64 max-w-[60%] overflow-auto rounded-md border bg-background/95 backdrop-blur shadow-sm">
-          {effectiveSelectedId != null && (
-            <div className="sticky top-0 z-[1] border-b bg-background/95 backdrop-blur">
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                className="flex w-full items-center justify-center gap-1 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                Alle einblenden
-              </button>
-            </div>
-          )}
-          <ul className="divide-y">
-            {routes.map((route, idx) => {
-              const color = colorFor(route, idx);
-              const isSelected = route.activityId === effectiveSelectedId;
-              return (
-                <li key={route.activityId}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedId((prev) =>
-                        prev === route.activityId ? null : route.activityId
-                      )
-                    }
-                    onMouseEnter={() => setHoveredId(route.activityId)}
-                    onMouseLeave={() =>
-                      setHoveredId((prev) =>
-                        prev === route.activityId ? null : prev
-                      )
-                    }
-                    onFocus={() => setHoveredId(route.activityId)}
-                    onBlur={() =>
-                      setHoveredId((prev) =>
-                        prev === route.activityId ? null : prev
-                      )
-                    }
-                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
-                      isSelected
-                        ? "bg-foreground text-background"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <span
-                      className="h-2.5 w-4 rounded-sm shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="truncate">{route.name}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

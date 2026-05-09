@@ -9,12 +9,8 @@ const MultiRouteMapClient = dynamic(() => import("./multi-route-map-client"), {
 
 interface MultiRouteMapSectionProps {
   routes: MultiRouteEntry[];
-  showLegend?: boolean;
 }
 
-export function MultiRouteMapSection({
-  routes,
-  showLegend,
-}: MultiRouteMapSectionProps) {
-  return <MultiRouteMapClient routes={routes} showLegend={showLegend} />;
+export function MultiRouteMapSection({ routes }: MultiRouteMapSectionProps) {
+  return <MultiRouteMapClient routes={routes} />;
 }
