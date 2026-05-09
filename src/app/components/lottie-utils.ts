@@ -14,12 +14,12 @@ function nearlyEqual(a: number, b: number, tol = 0.02): boolean {
   return Math.abs(a - b) < tol;
 }
 
-function isOriginalOrange(arr: number[]): boolean {
+function isColor(arr: number[], color: [number, number, number]): boolean {
   return (
     arr.length >= 3 &&
-    nearlyEqual(arr[0], ORIGINAL_ORANGE[0]) &&
-    nearlyEqual(arr[1], ORIGINAL_ORANGE[1]) &&
-    nearlyEqual(arr[2], ORIGINAL_ORANGE[2])
+    nearlyEqual(arr[0], color[0]) &&
+    nearlyEqual(arr[1], color[1]) &&
+    nearlyEqual(arr[2], color[2])
   );
 }
 
@@ -33,13 +33,16 @@ function isBlack(arr: number[]): boolean {
 }
 
 /**
- * Walk Lottie JSON, replacing baked original-orange with `tint`, and
- * pure black strokes/fills with `blackReplace`. Other colors stay intact.
+ * Walk Lottie JSON, replacing the baked source color (default: brand orange)
+ * with `tint`, and pure black strokes/fills with `blackReplace`. Other colors
+ * stay intact. Pass `sourceColor` for Lotties that aren't keyed on orange
+ * (e.g. footprint.json baked in cyan).
  */
 export function tintLottie<T>(
   data: T,
   tint: [number, number, number],
-  blackReplace: [number, number, number] = [1, 1, 1]
+  blackReplace: [number, number, number] = [1, 1, 1],
+  sourceColor: [number, number, number] = ORIGINAL_ORANGE
 ): T {
   if (data == null) return data;
   if (Array.isArray(data)) {
@@ -48,7 +51,7 @@ export function tintLottie<T>(
       data.every((v) => typeof v === "number" && v >= 0 && v <= 1)
     ) {
       const arr = data as number[];
-      if (isOriginalOrange(arr)) {
+      if (isColor(arr, sourceColor)) {
         return [tint[0], tint[1], tint[2], arr[3]] as unknown as T;
       }
       if (isBlack(arr)) {
@@ -60,7 +63,9 @@ export function tintLottie<T>(
         ] as unknown as T;
       }
     }
-    return data.map((item) => tintLottie(item, tint, blackReplace)) as unknown as T;
+    return data.map((item) =>
+      tintLottie(item, tint, blackReplace, sourceColor),
+    ) as unknown as T;
   }
   if (typeof data === "object") {
     const out: Record<string, unknown> = {};
@@ -68,7 +73,8 @@ export function tintLottie<T>(
       out[k] = tintLottie(
         (data as Record<string, unknown>)[k],
         tint,
-        blackReplace
+        blackReplace,
+        sourceColor,
       );
     }
     return out as T;

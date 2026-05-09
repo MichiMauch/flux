@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { ActivityLottie } from "./activity-lottie";
+import { FootprintLottie } from "./footprint-lottie";
 import { activityTypeColor } from "@/lib/activity-types";
 import { dayKey } from "@/lib/activity-week";
 import { formatDurationHmSplit } from "@/lib/activity-format";
 import { SevenSegDisplay } from "./bento/seven-seg";
 import { spaceMono } from "./bento/bento-fonts";
+
+const STEPS_NEON = "#FF10F0";
 
 interface CalendarEntry {
   id: string;
@@ -20,12 +23,18 @@ interface ActivityCalendarProps {
   year: number;
   month: number; // 0-based
   byDay: Record<string, CalendarEntry[]>;
+  stepsByDay?: Record<string, number>;
 }
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const WEEKS = 6;
 
-export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) {
+export function ActivityCalendar({
+  year,
+  month,
+  byDay,
+  stepsByDay = {},
+}: ActivityCalendarProps) {
   // Build 6-week grid starting from Monday before/at day 1
   const first = new Date(year, month, 1);
   const firstDayOfWeek = (first.getDay() + 6) % 7; // Mon=0
@@ -93,22 +102,34 @@ export function ActivityCalendar({ year, month, byDay }: ActivityCalendarProps) 
                   isLastRow ? "" : "border-b"
                 } ${inMonth ? "bg-[#0f0f0f]" : "bg-black/80"}`;
 
+                const stepCount = stepsByDay[key] ?? 0;
+                const showFootprint = inMonth && stepCount > 0;
+
                 const dayNumber = (
-                  <div
-                    className={`text-[11px] font-semibold tabular-nums leading-none ${
-                      !inMonth
-                        ? "text-[#5a5149]"
-                        : isToday
-                          ? "text-[#FF6A00]"
-                          : "text-white"
-                    }`}
-                  >
-                    {isToday ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#FF6A00] text-black font-bold">
-                        {d.getDate()}
-                      </span>
-                    ) : (
-                      d.getDate()
+                  <div className="flex items-center justify-between gap-1">
+                    <div
+                      className={`text-[11px] font-semibold tabular-nums leading-none ${
+                        !inMonth
+                          ? "text-[#5a5149]"
+                          : isToday
+                            ? "text-[#FF6A00]"
+                            : "text-white"
+                      }`}
+                    >
+                      {isToday ? (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#FF6A00] text-black font-bold">
+                          {d.getDate()}
+                        </span>
+                      ) : (
+                        d.getDate()
+                      )}
+                    </div>
+                    {showFootprint && (
+                      <FootprintLottie
+                        size={18}
+                        tint={STEPS_NEON}
+                        title={`${stepCount.toLocaleString("de-CH")} Schritte`}
+                      />
                     )}
                   </div>
                 );

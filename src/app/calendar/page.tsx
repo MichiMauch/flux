@@ -2,8 +2,9 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { ActivityCalendar } from "@/app/components/activity-calendar";
 import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { activities, dailyActivity } from "@/lib/db/schema";
+import { and, eq, gte, lt, lte, or } from "drizzle-orm";
+import { STEPS_STREAK_THRESHOLD } from "@/lib/streak";
 import {
   monthRange,
   parseMonthParam,
@@ -50,24 +51,47 @@ export default async function CalendarPage({
   const gridTo = new Date(to);
   gridTo.setDate(gridTo.getDate() + 7);
 
-  const rows = await db
-    .select({
-      id: activities.id,
-      type: activities.type,
-      name: activities.name,
-      startTime: activities.startTime,
-      distance: activities.distance,
-      duration: activities.duration,
-      movingTime: activities.movingTime,
-    })
-    .from(activities)
-    .where(
-      and(
-        eq(activities.userId, session.user.id),
-        gte(activities.startTime, gridFrom),
-        lt(activities.startTime, gridTo)
-      )
-    );
+  const gridFromKey = dayKey(gridFrom);
+  const gridToKey = dayKey(gridTo);
+
+  const [rows, stepRows] = await Promise.all([
+    db
+      .select({
+        id: activities.id,
+        type: activities.type,
+        name: activities.name,
+        startTime: activities.startTime,
+        distance: activities.distance,
+        duration: activities.duration,
+        movingTime: activities.movingTime,
+      })
+      .from(activities)
+      .where(
+        and(
+          eq(activities.userId, session.user.id),
+          gte(activities.startTime, gridFrom),
+          lt(activities.startTime, gridTo),
+        ),
+      ),
+    db
+      .select({
+        date: dailyActivity.date,
+        steps: dailyActivity.steps,
+        activeSteps: dailyActivity.activeSteps,
+      })
+      .from(dailyActivity)
+      .where(
+        and(
+          eq(dailyActivity.userId, session.user.id),
+          gte(dailyActivity.date, gridFromKey),
+          lte(dailyActivity.date, gridToKey),
+          or(
+            gte(dailyActivity.steps, STEPS_STREAK_THRESHOLD),
+            gte(dailyActivity.activeSteps, STEPS_STREAK_THRESHOLD),
+          ),
+        ),
+      ),
+  ]);
 
   const byDay: Record<
     string,
@@ -89,6 +113,11 @@ export default async function CalendarPage({
       distanceKm: r.distance != null ? r.distance / 1000 : null,
       durationSec: r.movingTime ?? r.duration ?? null,
     });
+  }
+
+  const stepsByDay: Record<string, number> = {};
+  for (const r of stepRows) {
+    stepsByDay[r.date] = Math.max(r.steps ?? 0, r.activeSteps ?? 0);
   }
 
   const prev = shiftMonth(year, month, -1);
@@ -158,7 +187,12 @@ export default async function CalendarPage({
             }
           >
             <div className={rajdhani.className}>
-              <ActivityCalendar year={year} month={month} byDay={byDay} />
+              <ActivityCalendar
+                year={year}
+                month={month}
+                byDay={byDay}
+                stepsByDay={stepsByDay}
+              />
             </div>
           </BentoTile>
         </div>
