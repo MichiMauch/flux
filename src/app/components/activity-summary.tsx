@@ -39,6 +39,8 @@ interface ActivitySummaryProps {
     totalSteps: number | null;
     avgSpeed: number | null;
     cardioLoad: number | null;
+    muscleLoad: number | null;
+    runningIndex: number | null;
     trimp: number | null;
     fatPercentage: number | null;
     carbPercentage: number | null;

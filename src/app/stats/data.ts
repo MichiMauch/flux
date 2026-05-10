@@ -277,7 +277,9 @@ export async function getDailyActivityData(userId: string, range: TimeRange) {
   return db
     .select({
       date: dailyActivity.date,
-      steps: dailyActivity.steps,
+      // Polar liefert via API nur active-steps; ältere Tage aus dem Export-ZIP
+      // haben dafür steps. Beide sind semantisch ≈ Tagesschritte — Fallback:
+      steps: sql<number | null>`COALESCE(${dailyActivity.steps}, ${dailyActivity.activeSteps})`,
       durationSec: dailyActivity.durationSec,
       calories: dailyActivity.calories,
     })

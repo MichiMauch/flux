@@ -37,7 +37,11 @@ interface PolarExercise {
     "cardio-load-interpretation"?: string;
     "muscle-load"?: number;
     "muscle-load-interpretation"?: string;
+    "perceived-load"?: number;
+    "perceived-load-interpretation"?: string;
+    "user-rpe"?: string;
   };
+  "running-index"?: number;
 }
 
 interface PolarGpxPoint {
@@ -218,122 +222,98 @@ export async function downloadGpx(
   return res.text();
 }
 
-// ── Daily Activity (Transaction Flow) ──────────────────────────────────────
+// ── Daily Activity (non-transactional, /v3/users/activities*) ──────────────
+// Polar's recommended replacement for the deprecated activity-transactions
+// flow. We discover days via the list endpoint with a date range and pull
+// the full samples in a single call.
 
-export interface PolarDailyActivity {
-  id: string;
-  polar_user: string;
-  transaction_id?: number;
-  date: string; // YYYY-MM-DD
-  created: string; // ISO
+export interface PolarActivityV3 {
+  start_time?: string;
+  end_time?: string;
+  active_duration?: string; // ISO duration
+  inactive_duration?: string; // ISO duration
+  daily_activity?: number; // 0-100, goal completion %
   calories?: number;
-  "active-calories"?: number;
-  duration?: string; // ISO duration PT…
-  "active-steps"?: number;
-  distance?: number;
-  "active-time-goal"?: string; // ISO duration
-  "active-time-zones"?: Array<{
-    index: number;
-    "inzone-duration"?: string;
-  }>;
-  "active-goal-completion"?: number; // 0-1 or 0-100 depending on API
-  "inactivity-stamps"?: string[];
-  // Catch-all for any extra fields Polar adds
-  [key: string]: unknown;
+  active_calories?: number;
+  steps?: number;
+  inactivity_alert_count?: number;
+  distance_from_steps?: number;
+  samples?: {
+    date?: string;
+    steps?: { interval_ms?: number; total_steps?: number; samples?: unknown[] };
+    activity_zones?: { samples?: unknown[] };
+    // Polar dokumentiert dies als Array, liefert aber tatsächlich
+    // {samples: [...]}. Beide Shapes hier zulassen.
+    inactivity_stamps?:
+      | Array<{ stamp: string }>
+      | { samples?: Array<{ stamp: string }> };
+  };
+  [k: string]: unknown;
 }
 
-interface ActivityTransactionStart {
-  "transaction-id": number;
-  "resource-uri": string;
-}
-
-interface ActivityListResponse {
-  "activity-log"?: string[];
-}
-
-export async function createActivityTransaction(
+/**
+ * List daily activities (non-transactional). Polar's recommended replacement
+ * for the deprecated activity-transactions flow. Returns last 28 days when
+ * no range given. Maximum range is 28 days; max age is 365 days.
+ */
+export async function listActivitiesV3(
   token: string,
-  polarUserId: string
-): Promise<ActivityTransactionStart | null> {
-  const res = await fetch(
-    `${POLAR_API_BASE}/v3/users/${polarUserId}/activity-transactions`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-  if (res.status === 204) return null; // no new data
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to create activity transaction: ${res.status} ${text}`);
-  }
-  return res.json();
-}
-
-export async function listDailyActivities(
-  token: string,
-  polarUserId: string,
-  transactionId: number
-): Promise<string[]> {
-  const res = await fetch(
-    `${POLAR_API_BASE}/v3/users/${polarUserId}/activity-transactions/${transactionId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-  if (res.status === 204) return [];
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to list daily activities: ${res.status} ${text}`);
-  }
-  const data = (await res.json()) as ActivityListResponse;
-  return data["activity-log"] ?? [];
-}
-
-export async function getDailyActivity(
-  token: string,
-  url: string
-): Promise<PolarDailyActivity> {
-  // Polar returns absolute URLs in the activity-log; use them directly.
-  const full = url.startsWith("http") ? url : `${POLAR_API_BASE}${url}`;
-  const res = await fetch(full, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+  opts: {
+    from?: string; // YYYY-MM-DD
+    to?: string;
+    inactivityStamps?: boolean;
+    activityZones?: boolean;
+    steps?: boolean;
+  } = {},
+): Promise<PolarActivityV3[]> {
+  const params = new URLSearchParams();
+  if (opts.from) params.set("from", opts.from);
+  if (opts.to) params.set("to", opts.to);
+  if (opts.inactivityStamps) params.set("inactivity_stamps", "true");
+  if (opts.activityZones) params.set("activity_zones", "true");
+  if (opts.steps) params.set("steps", "true");
+  const qs = params.toString();
+  const url = `${POLAR_API_BASE}/v3/users/activities${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
+  if (res.status === 204 || res.status === 404 || res.status === 400) return [];
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Failed to get daily activity: ${res.status} ${text}`);
+    throw new Error(`Failed to list v3 activities: ${res.status} ${text}`);
   }
   return res.json();
 }
 
-export async function commitActivityTransaction(
+/**
+ * Fetch daily activity for a date via the new v3 endpoint. Returns null on
+ * 204/404 (no data). Date must be within the last 365 days per Polar.
+ */
+export async function getDailyActivityV3(
   token: string,
-  polarUserId: string,
-  transactionId: number
-): Promise<void> {
-  const res = await fetch(
-    `${POLAR_API_BASE}/v3/users/${polarUserId}/activity-transactions/${transactionId}`,
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-  if (!res.ok && res.status !== 200 && res.status !== 204) {
+  date: string,
+  opts: {
+    inactivityStamps?: boolean;
+    activityZones?: boolean;
+    steps?: boolean;
+  } = {}
+): Promise<PolarActivityV3 | null> {
+  const params = new URLSearchParams();
+  if (opts.inactivityStamps) params.set("inactivity_stamps", "true");
+  if (opts.activityZones) params.set("activity_zones", "true");
+  if (opts.steps) params.set("steps", "true");
+  const qs = params.toString();
+  const url = `${POLAR_API_BASE}/v3/users/activities/${date}${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  if (res.status === 204 || res.status === 404) return null;
+  if (res.status === 400) return null; // outdated date (>365d)
+  if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Failed to commit activity transaction: ${res.status} ${text}`);
+    throw new Error(`Failed to get v3 daily activity ${date}: ${res.status} ${text}`);
   }
+  return res.json();
 }
 
 // ── Sleep (AccessLink /v3/users/sleep) ─────────────────────────────────────
@@ -512,4 +492,275 @@ export async function validateWebhookSignature(
   }
   if (computed.length !== received.length) return false;
   return timingSafeEqual(computed, received);
+}
+
+// ── Generic helper for the simpler v3 GET endpoints ────────────────────────
+
+async function polarGet<T>(token: string, path: string): Promise<T | null> {
+  const url = path.startsWith("http") ? path : `${POLAR_API_BASE}${path}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  if (res.status === 204 || res.status === 404 || res.status === 400) return null;
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GET ${path} failed: ${res.status} ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ── Physical Information (/v3/users/physical-info) ─────────────────────────
+
+export interface PolarPhysicalInfo {
+  weight?: number;
+  height?: number;
+  birthday?: string; // YYYY-MM-DD
+  gender?: "MALE" | "FEMALE" | string;
+  maximum_heart_rate?: number;
+  resting_heart_rate?: number;
+  aerobic_threshold?: number;
+  anaerobic_threshold?: number;
+  vo2_max?: number;
+  weight_source?: string;
+  training_background?: string;
+  typical_day?: string;
+  sleep_goal?: string; // ISO duration PT8H
+  created?: string;
+  modified?: string;
+  [k: string]: unknown;
+}
+
+export async function getPhysicalInfo(
+  token: string,
+): Promise<PolarPhysicalInfo | null> {
+  return polarGet<PolarPhysicalInfo>(token, "/v3/users/physical-info");
+}
+
+// ── Cardio Load (/v3/users/cardio-load) ────────────────────────────────────
+
+export interface PolarCardioLoad {
+  date: string;
+  cardio_load_status?: string;
+  cardio_load?: number;
+  strain?: number;
+  tolerance?: number;
+  cardio_load_ratio?: number;
+  cardio_load_level?: {
+    very_low?: number;
+    low?: number;
+    medium?: number;
+    high?: number;
+    very_high?: number;
+  };
+  [k: string]: unknown;
+}
+
+export async function listCardioLoad(token: string): Promise<PolarCardioLoad[]> {
+  const data = await polarGet<PolarCardioLoad[] | { items?: PolarCardioLoad[] }>(
+    token,
+    "/v3/users/cardio-load",
+  );
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  return data.items ?? [];
+}
+
+// ── Continuous Heart Rate (/v3/users/continuous-heart-rate/{date}) ─────────
+
+export interface PolarContinuousHr {
+  polar_user?: string;
+  date: string;
+  heart_rate_samples?: Array<{ heart_rate: number; sample_time: string }>;
+  [k: string]: unknown;
+}
+
+export async function getContinuousHeartRate(
+  token: string,
+  date: string,
+): Promise<PolarContinuousHr | null> {
+  return polarGet<PolarContinuousHr>(
+    token,
+    `/v3/users/continuous-heart-rate/${date}`,
+  );
+}
+
+// ── SleepWise (/v3/users/sleepwise/*) ──────────────────────────────────────
+// Polar's docs write the path as "sleep-wise" (hyphen), but the LIVE endpoint
+// is "sleepwise" (no hyphen). Verified against the API for both users.
+
+export interface PolarSleepWiseAlertness {
+  grade?: number;
+  grade_validity_seconds?: number;
+  grade_type?: string;
+  grade_classification?: string;
+  validity?: string;
+  sleep_inertia?: string;
+  sleep_type?: string;
+  [k: string]: unknown;
+}
+
+export interface PolarCircadianBedtime {
+  validity?: string;
+  quality?: string;
+  result_type?: string;
+  period_start_time?: string;
+  period_end_time?: string;
+  [k: string]: unknown;
+}
+
+export async function getSleepWiseAlertness(
+  token: string,
+): Promise<PolarSleepWiseAlertness[] | null> {
+  const data = await polarGet<
+    PolarSleepWiseAlertness[] | { items?: PolarSleepWiseAlertness[] }
+  >(token, "/v3/users/sleepwise/alertness");
+  if (!data) return null;
+  if (Array.isArray(data)) return data;
+  return data.items ?? null;
+}
+
+export async function getSleepWiseCircadianBedtime(
+  token: string,
+): Promise<PolarCircadianBedtime[] | null> {
+  const data = await polarGet<
+    PolarCircadianBedtime[] | { items?: PolarCircadianBedtime[] }
+  >(token, "/v3/users/sleepwise/circadian-bedtime");
+  if (!data) return null;
+  if (Array.isArray(data)) return data;
+  return data.items ?? null;
+}
+
+// ── Elixir Biosensing (/v3/users/biosensing/*) ─────────────────────────────
+// These were impossible to find from the docs page — discovered via the live
+// swagger.yaml at https://www.polar.com/accesslink-api/swagger.yaml. All five
+// endpoints accept optional `from` and `to` query params (ISO dates, max 28
+// days range). Returns 200 with array, 204 if no data.
+
+export interface PolarBodyTemperaturePeriod {
+  source_device_id?: string;
+  measurement_type?: "TM_UNKNOWN" | "TM_SKIN_TEMPERATURE" | "TM_CORE_TEMPERATURE" | string;
+  sensor_location?: "SL_UNKNOWN" | "SL_DISTAL" | "SL_PROXIMAL" | string;
+  start_time?: string;
+  end_time?: string;
+  modified_time?: string;
+  samples?: Array<{
+    temperature_celsius: number;
+    recording_time_delta_milliseconds: number;
+  }>;
+  [k: string]: unknown;
+}
+
+export interface PolarSkinTemperatureNight {
+  sleep_time_skin_temperature_celsius?: number;
+  deviation_from_baseline_celsius?: number;
+  sleep_date?: string;
+  [k: string]: unknown;
+}
+
+export interface PolarSkinContactPeriod {
+  source_device_id?: string;
+  start_time?: string;
+  end_time?: string;
+  modified_time?: string;
+  skin_contact_changes?: Array<{
+    skin_contact?: boolean;
+    recording_time_delta_milliseconds?: number;
+  }>;
+  [k: string]: unknown;
+}
+
+export interface PolarEcgTestResult {
+  source_device_id?: string;
+  test_time?: number; // unix epoch
+  time_zone_offset?: number;
+  average_heart_rate_bpm?: number;
+  heart_rate_variability_ms?: number;
+  heart_rate_variability_level?: string;
+  [k: string]: unknown;
+}
+
+export interface PolarSpo2TestResult {
+  source_device_id?: string;
+  test_time?: number; // unix epoch
+  time_zone_offset?: number;
+  test_status?: string;
+  blood_oxygen_percent?: number;
+  [k: string]: unknown;
+}
+
+function biosensingPath(
+  resource: string,
+  from?: string,
+  to?: string,
+): string {
+  const qs = new URLSearchParams();
+  if (from) qs.set("from", from);
+  if (to) qs.set("to", to);
+  const q = qs.toString();
+  return `/v3/users/biosensing/${resource}${q ? `?${q}` : ""}`;
+}
+
+export async function getBodyTemperature(
+  token: string,
+  from?: string,
+  to?: string,
+): Promise<PolarBodyTemperaturePeriod[] | null> {
+  const data = await polarGet<PolarBodyTemperaturePeriod[]>(
+    token,
+    biosensingPath("bodytemperature", from, to),
+  );
+  return Array.isArray(data) ? data : null;
+}
+
+export async function getSkinTemperature(
+  token: string,
+  from?: string,
+  to?: string,
+): Promise<PolarSkinTemperatureNight[] | null> {
+  const data = await polarGet<PolarSkinTemperatureNight[]>(
+    token,
+    biosensingPath("skintemperature", from, to),
+  );
+  return Array.isArray(data) ? data : null;
+}
+
+export async function getSkinContacts(
+  token: string,
+  from?: string,
+  to?: string,
+): Promise<PolarSkinContactPeriod[] | null> {
+  const data = await polarGet<PolarSkinContactPeriod[]>(
+    token,
+    biosensingPath("skincontacts", from, to),
+  );
+  return Array.isArray(data) ? data : null;
+}
+
+export async function getWristEcg(
+  token: string,
+  from?: string,
+  to?: string,
+): Promise<PolarEcgTestResult[] | null> {
+  const data = await polarGet<PolarEcgTestResult[]>(
+    token,
+    biosensingPath("ecg", from, to),
+  );
+  return Array.isArray(data) ? data : null;
+}
+
+export async function getSpo2(
+  token: string,
+  from?: string,
+  to?: string,
+): Promise<PolarSpo2TestResult[] | null> {
+  const data = await polarGet<PolarSpo2TestResult[]>(
+    token,
+    biosensingPath("spo2", from, to),
+  );
+  return Array.isArray(data) ? data : null;
+}
+
+/** ISO duration → seconds, or null on bad input. */
+export function parseIsoDurationStrict(s: string | undefined | null): number | null {
+  return parseIsoDuration(s);
 }

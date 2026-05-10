@@ -1,0 +1,1 @@
+ALTER TABLE "daily_polar_extras" ADD COLUMN "skin_contacts_raw" json;

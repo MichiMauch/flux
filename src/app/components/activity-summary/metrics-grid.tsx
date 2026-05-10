@@ -23,6 +23,8 @@ interface Props {
     totalSteps: number | null;
     calories: number | null;
     cardioLoad: number | null;
+    muscleLoad: number | null;
+    runningIndex: number | null;
     fatPercentage: number | null;
     carbPercentage: number | null;
     proteinPercentage: number | null;
@@ -122,6 +124,22 @@ export function SummaryMetricsGrid({ activity, formatDuration }: Props) {
           icon={<Activity />}
           label="Cardio Load"
           value={activity.cardioLoad.toFixed(0)}
+          unit=""
+        />
+      )}
+      {activity.muscleLoad != null && activity.muscleLoad > 0 && (
+        <Mini
+          icon={<Activity />}
+          label="Muscle Load"
+          value={activity.muscleLoad.toFixed(0)}
+          unit=""
+        />
+      )}
+      {activity.runningIndex != null && activity.runningIndex > 0 && (
+        <Mini
+          icon={<Activity />}
+          label="Running Index"
+          value={`${activity.runningIndex}`}
           unit=""
         />
       )}

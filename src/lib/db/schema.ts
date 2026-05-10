@@ -37,10 +37,16 @@ export const users = pgTable("user", {
   birthday: timestamp("birthday", { mode: "date" }),
   sex: text("sex"), // 'male' | 'female'
   heightCm: integer("height_cm"),
+  weightKg: real("weight_kg"),
   maxHeartRate: integer("max_heart_rate"),
   restHeartRate: integer("rest_heart_rate"),
   aerobicThreshold: integer("aerobic_threshold"),
   anaerobicThreshold: integer("anaerobic_threshold"),
+  vo2Max: integer("vo2_max"),
+  trainingBackground: text("training_background"), // e.g. OCCASIONAL/REGULAR/FREQUENT/HEAVY/SEMI_PRO/PRO
+  typicalDay: text("typical_day"), // MOSTLY_SITTING/MOSTLY_STANDING/MOSTLY_MOVING
+  sleepGoalSec: integer("sleep_goal_sec"),
+  physicalInfoSyncedAt: timestamp("physical_info_synced_at"),
   partnerId: text("partner_id"),
   partnerPushEnabled: boolean("partner_push_enabled").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -133,6 +139,9 @@ export const activities = pgTable(
     maxSpeed: real("max_speed"),
     cardioLoad: real("cardio_load"),
     cardioLoadInterpretation: text("cardio_load_interpretation"),
+    muscleLoad: real("muscle_load"),
+    muscleLoadInterpretation: text("muscle_load_interpretation"),
+    runningIndex: integer("running_index"),
     trimp: real("trimp"),
     notes: text("notes"),
     device: text("device"),
@@ -283,12 +292,58 @@ export const dailyActivity = pgTable(
     activeTimeGoalSec: integer("active_time_goal_sec"),
     activeGoalCompletion: real("active_goal_completion"), // 0-1
     activeTimeZones: json("active_time_zones"), // raw array from Polar
-    inactivityStamps: json("inactivity_stamps"), // array of ISO strings
+    inactivityStamps: json("inactivity_stamps"), // legacy: string[] · v3: {stamp: string}[]
+    inactivityAlertCount: integer("inactivity_alert_count"),
+    inactiveDurationSec: integer("inactive_duration_sec"),
     raw: json("raw"), // full Polar response for debug
+    rawV3: json("raw_v3"), // v3 endpoint response (richer)
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (t) => [index("daily_activity_user_date_idx").on(t.userId, t.date)],
+);
+
+// ── Daily Polar Extras (cardio-load, continuous-HR, sleep-wise, etc.) ──────
+// Polar liefert eine Reihe weiterer Tagesdaten über separate Endpoints. Die
+// Top-Level-Felder mit bekannter Shape sind eigene Spalten; alles andere
+// landet als raw JSON, damit es ohne Schema-Migration darstellbar bleibt.
+
+export const dailyPolarExtras = pgTable(
+  "daily_polar_extras",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD
+    // ── Cardio Load (/v3/users/cardio-load) ──
+    cardioLoad: real("cardio_load"),
+    cardioLoadStatus: text("cardio_load_status"),
+    cardioLoadStrain: real("cardio_load_strain"),
+    cardioLoadTolerance: real("cardio_load_tolerance"),
+    cardioLoadRatio: real("cardio_load_ratio"),
+    cardioLoadLevel: json("cardio_load_level"), // {very_low, low, medium, high, very_high}
+    cardioLoadRaw: json("cardio_load_raw"),
+    // ── Continuous Heart Rate (/v3/users/continuous-heart-rate/{date}) ──
+    continuousHrSamples: json("continuous_hr_samples"), // [{heart_rate, sample_time}]
+    continuousHrRaw: json("continuous_hr_raw"),
+    // ── Sleep-wise (/v3/users/sleep-wise/*) ──
+    alertnessRaw: json("alertness_raw"),
+    circadianBedtimeRaw: json("circadian_bedtime_raw"),
+    // ── Elixir Biosensing (/v3/users/biosensing/*) ──
+    bodyTemperatureRaw: json("body_temperature_raw"),
+    skinTemperatureRaw: json("skin_temperature_raw"),
+    skinContactsRaw: json("skin_contacts_raw"),
+    spo2Raw: json("spo2_raw"),
+    wristEcgRaw: json("wrist_ecg_raw"), // /v3/users/biosensing/ecg
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("daily_polar_extras_user_date_idx").on(t.userId, t.date),
+  ],
 );
 
 // ── Weight (Withings) ──────────────────────────────────────────────────────

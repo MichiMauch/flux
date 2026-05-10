@@ -1,9 +1,10 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { dailyActivity } from "@/lib/db/schema";
+import { dailyActivity, dailyPolarExtras } from "@/lib/db/schema";
 import { and, eq, desc } from "drizzle-orm";
 import { DailyActivityView } from "@/app/components/daily-activity-view";
+import { DailyPolarExtrasView } from "@/app/components/daily-polar-extras-view";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
@@ -56,12 +57,20 @@ export default async function DailyPage({
     date = latest[0]?.date ?? new Date().toISOString().slice(0, 10);
   }
 
-  const row = await db.query.dailyActivity.findFirst({
-    where: and(
-      eq(dailyActivity.userId, session.user.id),
-      eq(dailyActivity.date, date)
-    ),
-  });
+  const [row, extras] = await Promise.all([
+    db.query.dailyActivity.findFirst({
+      where: and(
+        eq(dailyActivity.userId, session.user.id),
+        eq(dailyActivity.date, date),
+      ),
+    }),
+    db.query.dailyPolarExtras.findFirst({
+      where: and(
+        eq(dailyPolarExtras.userId, session.user.id),
+        eq(dailyPolarExtras.date, date),
+      ),
+    }),
+  ]);
 
   const today = new Date().toISOString().slice(0, 10);
   const prevDate = shiftDate(date, -1);
@@ -105,7 +114,10 @@ export default async function DailyPage({
             }
           >
             {row ? (
-              <DailyActivityView data={row} />
+              <div className="space-y-4">
+                <DailyActivityView data={row} />
+                {extras && <DailyPolarExtrasView data={extras} />}
+              </div>
             ) : (
               <div className="rounded-lg border border-dashed border-[#2a2a2a] bg-black/40 p-10 text-center">
                 <p className="font-semibold text-white">Keine Daten für diesen Tag.</p>

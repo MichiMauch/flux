@@ -59,12 +59,8 @@ export async function POST(request: NextRequest) {
     if (event === "EXERCISE") {
       await handleExerciseEvent(user);
     } else if (event === "ACTIVITY_SUMMARY") {
-      if (!user.polarUserId) {
-        console.warn("[webhook] ACTIVITY_SUMMARY: user has no polarUserId, skipping");
-      } else {
-        const synced = await syncDailyActivity(user.id, user.polarToken, user.polarUserId);
-        console.log(`[webhook] ACTIVITY_SUMMARY: ${synced} days synced for ${user.name}`);
-      }
+      const synced = await syncDailyActivity(user.id, user.polarToken);
+      console.log(`[webhook] ACTIVITY_SUMMARY: ${synced} days synced for ${user.name}`);
     } else if (event === "SLEEP") {
       const result = await syncSleep(user.id, user.polarToken);
       console.log(

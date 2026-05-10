@@ -12,6 +12,7 @@ import { revalidateTag } from "next/cache";
 import { homeCacheTag } from "@/lib/cache/home-stats";
 import { reverseGeocodeStructured } from "@/lib/geocode";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
+import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
 import { evaluateTrophies } from "@/lib/trophies-server";
 import { writeFile, mkdir } from "fs/promises";
@@ -149,6 +150,12 @@ export async function POST() {
         proteinPercentage: exercise.protein_percentage ?? null,
         cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
         cardioLoadInterpretation: exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
+        muscleLoad: exercise.training_load_pro?.["muscle-load"] ?? null,
+        muscleLoadInterpretation: exercise.training_load_pro?.["muscle-load-interpretation"] ?? null,
+        runningIndex:
+          typeof exercise["running-index"] === "number"
+            ? exercise["running-index"]
+            : null,
         trimp,
         device: exercise.device ?? null,
         fitFilePath,
@@ -171,14 +178,10 @@ export async function POST() {
 
     // Daily activity (best effort)
     let dailySynced = 0;
-    if (user.polarUserId) {
-      try {
-        dailySynced = await syncDailyActivity(user.id, user.polarToken, user.polarUserId);
-      } catch (e) {
-        console.error("Daily activity sync failed:", e);
-      }
-    } else {
-      console.warn("[sync] skipping daily: user has no polarUserId");
+    try {
+      dailySynced = await syncDailyActivity(user.id, user.polarToken);
+    } catch (e) {
+      console.error("Daily activity sync failed:", e);
     }
 
     // Sleep + Nightly Recharge (best effort)
@@ -190,6 +193,14 @@ export async function POST() {
       nightsSynced = r.nightsSynced;
     } catch (e) {
       console.error("Sleep sync failed:", e);
+    }
+
+    // Physical info — overwrite user fields with Polar's authoritative values
+    // (best effort).
+    try {
+      await syncPhysicalInfo(user.id, user.polarToken);
+    } catch (e) {
+      console.error("Physical-info sync failed:", e);
     }
 
     if (synced > 0 || dailySynced > 0 || sleepSynced > 0 || nightsSynced > 0) {
