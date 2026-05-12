@@ -251,44 +251,41 @@ export interface StreakData {
   longest: number;
 }
 
-export function getStreak(userId: string): Promise<StreakData> {
-  return unstable_cache(
-    async () => {
-      // SELECT DISTINCT day_key directly — one row per active day instead
-      // of one per activity. For users with multiple activities on the
-      // same day, this collapses ~Nx down to # active days.
-      const [activityRows, stepRows] = await Promise.all([
-        db
-          .selectDistinct({
-            day: sql<string>`to_char(${activities.startTime}, 'YYYY-MM-DD')`,
-          })
-          .from(activities)
-          .where(eq(activities.userId, userId)),
-        db
-          .select({ date: dailyActivity.date })
-          .from(dailyActivity)
-          .where(
-            and(
-              eq(dailyActivity.userId, userId),
-              or(
-                gte(dailyActivity.steps, STEPS_STREAK_THRESHOLD),
-                gte(dailyActivity.activeSteps, STEPS_STREAK_THRESHOLD),
-              ),
-            ),
+export async function getStreak(userId: string): Promise<StreakData> {
+  // Bewusst NICHT gecached: Sobald eine neue Aktivität (oder ein 10k-Tag) in
+  // der DB landet, soll der Streak sofort sichtbar werden. Bei einem
+  // gemeinsamen `unstable_cache` über die ganze Home-Seite hat ein verspätet
+  // eintreffender Polar-Webhook (oder ein Dev-Server, der nicht mitkriegt,
+  // dass die Prod den Tag invalidiert hat) den Streak ≥30min auf 0 gehalten.
+  // Beide Queries laufen über den `(user_id, …)`-Index und sind günstig.
+  const [activityRows, stepRows] = await Promise.all([
+    db
+      .selectDistinct({
+        day: sql<string>`to_char(${activities.startTime}, 'YYYY-MM-DD')`,
+      })
+      .from(activities)
+      .where(eq(activities.userId, userId)),
+    db
+      .select({ date: dailyActivity.date })
+      .from(dailyActivity)
+      .where(
+        and(
+          eq(dailyActivity.userId, userId),
+          or(
+            gte(dailyActivity.steps, STEPS_STREAK_THRESHOLD),
+            gte(dailyActivity.activeSteps, STEPS_STREAK_THRESHOLD),
           ),
-      ]);
+        ),
+      ),
+  ]);
 
-      const activeDays = new Set<string>(activityRows.map((r) => r.day));
-      for (const r of stepRows) activeDays.add(r.date);
+  const activeDays = new Set<string>(activityRows.map((r) => r.day));
+  for (const r of stepRows) activeDays.add(r.date);
 
-      return {
-        current: currentStreak(activeDays),
-        longest: longestStreak(activeDays),
-      };
-    },
-    ["home:streak", userId],
-    { revalidate: TTL_SECONDS, tags: tagsFor(userId) },
-  )();
+  return {
+    current: currentStreak(activeDays),
+    longest: longestStreak(activeDays),
+  };
 }
 
 // ── Consistency 12w ────────────────────────────────────────────────────────

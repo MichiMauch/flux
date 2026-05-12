@@ -65,14 +65,18 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
   const hasRoute =
     Array.isArray(latest.routeData) && (latest.routeData as unknown[]).length >= 2;
   const activeDuration = latest.movingTime ?? latest.duration;
+  // Server kann je nach Umgebung in UTC laufen (Docker default) — ohne
+  // explizite timeZone würde die Startzeit dann falsch angezeigt.
   const dateLabel = latest.startTime.toLocaleDateString("de-CH", {
     weekday: "long",
     day: "2-digit",
     month: "long",
+    timeZone: "Europe/Zurich",
   });
   const timeLabel = latest.startTime.toLocaleTimeString("de-CH", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Zurich",
   });
 
   return (
