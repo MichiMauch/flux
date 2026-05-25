@@ -218,6 +218,20 @@
       "when": 1778409452083,
       "tag": "0030_add_skin_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1778479491501,
+      "tag": "0031_add_share_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1779706870387,
+      "tag": "0032_add_tour_completed",
+      "breakpoints": true
     }
   ]
 }

@@ -130,6 +130,7 @@ export default async function EditTourPage({
             startDate: toDateInput(tour.startDate),
             endDate: toDateInput(tour.endDate),
             sharedWithPartner: tour.sharedWithPartner,
+            completed: tour.completed,
           }}
           partnerName={partner?.name ?? null}
         />

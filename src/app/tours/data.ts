@@ -35,6 +35,7 @@ export interface TourSummary {
   coverOffsetX: number;
   coverOffsetY: number;
   sharedWithPartner: boolean;
+  completed: boolean;
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;
@@ -266,6 +267,7 @@ export async function listToursForUser(
       coverOffsetX: activityTours.coverOffsetX,
       coverOffsetY: activityTours.coverOffsetY,
       sharedWithPartner: activityTours.sharedWithPartner,
+      completed: activityTours.completed,
       startDate: activityTours.startDate,
       endDate: activityTours.endDate,
       createdAt: activityTours.createdAt,
@@ -302,6 +304,7 @@ export async function listToursForUser(
     coverOffsetX: r.coverOffsetX,
     coverOffsetY: r.coverOffsetY,
     sharedWithPartner: r.sharedWithPartner,
+    completed: r.completed,
     startDate: r.startDate,
     endDate: r.endDate,
     createdAt: r.createdAt,

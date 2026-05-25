@@ -5,6 +5,7 @@ import Image from "next/image";
 import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { spaceMono } from "../components/bento/bento-fonts";
+import { DoneRibbon } from "../components/done-ribbon";
 import { listToursForUser } from "./data";
 import { formatDistanceAuto } from "@/lib/activity-format";
 
@@ -116,6 +117,7 @@ export default async function ToursPage() {
                     Von {g.ownerName}
                   </span>
                 ) : null}
+                {g.completed ? <DoneRibbon /> : null}
               </div>
               <div className="p-4">
                 <h2 className="line-clamp-1 text-lg font-semibold text-white">

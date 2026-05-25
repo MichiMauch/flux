@@ -151,6 +151,7 @@ export const activities = pgTable(
     locality: text("locality"), // Stadt/Stadtteil aus routeData[0] via Mapbox
     country: text("country"), // ISO-2 Country-Code (z.B. "CH", "FR")
     geocodedAt: timestamp("geocoded_at"),
+    shareToken: text("share_token").unique(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => [
@@ -568,6 +569,8 @@ export const activityTours = pgTable("activity_groups", {
   coverOffsetX: real("cover_offset_x").default(50).notNull(), // 0..100 percent
   coverOffsetY: real("cover_offset_y").default(50).notNull(), // 0..100 percent
   sharedWithPartner: boolean("shared_with_partner").default(false).notNull(),
+  shareToken: text("share_token").unique(),
+  completed: boolean("completed").default(false).notNull(),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   // Legacy: war als 'date' | 'manual'-Schalter geplant. Inzwischen leitet sich

@@ -84,6 +84,7 @@ export async function updateTour(
   const startDate = parseDate(formData.get("startDate"));
   const endDate = parseDate(formData.get("endDate"));
   const sharedWithPartner = formData.get("sharedWithPartner") === "on";
+  const completed = formData.get("completed") === "on";
 
   await db
     .update(activityTours)
@@ -93,6 +94,7 @@ export async function updateTour(
       startDate,
       endDate,
       sharedWithPartner,
+      completed,
       updatedAt: new Date(),
     })
     .where(eq(activityTours.id, tourId));

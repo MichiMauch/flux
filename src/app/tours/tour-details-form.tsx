@@ -14,6 +14,7 @@ interface Props {
     startDate: string;
     endDate: string;
     sharedWithPartner: boolean;
+    completed: boolean;
   };
   partnerName: string | null;
 }
@@ -118,6 +119,25 @@ export function TourDetailsForm({ tourId, initial, partnerName }: Props) {
             className="w-full rounded-md border border-[#2a2a2a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#ff6a00]"
           />
         </div>
+      </div>
+
+      <div className="space-y-1 border-t border-[#1a1a1a] pt-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            name="completed"
+            defaultChecked={initial.completed}
+            className="mt-0.5 h-4 w-4 accent-[#ff6a00]"
+          />
+          <span className="flex-1">
+            <span className="block text-sm text-white">Tour abgeschlossen</span>
+            <span
+              className={`${spaceMono.className} mt-0.5 block text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
+            >
+              Markiert die Tour als fertig — zeigt ein DONE-Band in der Übersicht
+            </span>
+          </span>
+        </label>
       </div>
 
       {partnerName ? (
