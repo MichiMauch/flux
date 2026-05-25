@@ -12,6 +12,7 @@ import {
 import { useHover } from "./hover-context";
 import { KilometerList } from "./kilometer-list";
 import { ActivityMapFullscreen } from "./activity-map-fullscreen";
+import { ActivityFlightFullscreen } from "./activity-flight-fullscreen";
 
 const BentoMapClient = dynamic(() => import("./bento-map-client"), {
   ssr: false,
@@ -51,6 +52,7 @@ export function BentoRouteInteractive({
 }: Props) {
   const [selectedKm, setSelectedKm] = useState<number | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [flight, setFlight] = useState(false);
   const [kmOpen, setKmOpen] = useState(false);
   const { hoverIdx } = useHover();
 
@@ -130,6 +132,7 @@ export function BentoRouteInteractive({
               hoverIdx={hoverIdx}
               color={color}
               onRequestFullscreen={() => setFullscreen(true)}
+              onRequestFlight={() => setFlight(true)}
             />
           </div>
         </div>
@@ -144,6 +147,12 @@ export function BentoRouteInteractive({
         totalDescent={totalDescent}
         isRunning={isRunning}
         photos={photos}
+        color={color}
+      />
+      <ActivityFlightFullscreen
+        open={flight}
+        onClose={() => setFlight(false)}
+        routeData={routeData}
         color={color}
       />
     </>

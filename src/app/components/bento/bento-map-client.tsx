@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Camera, CameraOff, Maximize2, Minimize2 } from "lucide-react";
+import { Camera, CameraOff, Maximize2, Minimize2, Navigation } from "lucide-react";
+import { appendShareToken, useShareToken } from "@/lib/share-context";
 
 const DEFAULT_NEON = "#FF6A00";
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -24,6 +25,8 @@ interface Props {
   onRequestFullscreen?: () => void;
   /** When set, render a minimize button that calls this on click. */
   onRequestExitFullscreen?: () => void;
+  /** When set, render a 3D-flight button that calls this on click. */
+  onRequestFlight?: () => void;
 }
 
 export default function BentoMapClient({
@@ -34,6 +37,7 @@ export default function BentoMapClient({
   color = DEFAULT_NEON,
   onRequestFullscreen,
   onRequestExitFullscreen,
+  onRequestFlight,
 }: Props) {
   const NEON = color;
   const mapRef = useRef<L.Map | null>(null);
@@ -42,6 +46,7 @@ export default function BentoMapClient({
   const photoMarkersRef = useRef<L.Marker[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showPhotos, setShowPhotos] = useState(true);
+  const shareToken = useShareToken();
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -158,8 +163,9 @@ export default function BentoMapClient({
     photoMarkersRef.current = [];
     if (!showPhotos) return;
     for (const photo of photos) {
+      const photoSrc = appendShareToken(`/api/photos/${photo.id}?thumb=1`, shareToken);
       const icon = L.divIcon({
-        html: `<img src="/api/photos/${photo.id}?thumb=1" alt="" class="photo-marker-img" style="border-color:${NEON}" />`,
+        html: `<img src="${photoSrc}" alt="" class="photo-marker-img" style="border-color:${NEON}" />`,
         className: "photo-marker-wrapper",
         iconSize: [50, 50],
         iconAnchor: [25, 25],
@@ -171,7 +177,7 @@ export default function BentoMapClient({
         });
       photoMarkersRef.current.push(m);
     }
-  }, [photos, showPhotos]);
+  }, [photos, showPhotos, shareToken]);
 
   // Highlight range polyline
   useEffect(() => {
@@ -248,11 +254,24 @@ export default function BentoMapClient({
             Fotos
           </button>
         )}
+        {onRequestFlight && (
+          <button
+            type="button"
+            onClick={onRequestFlight}
+            className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[#2a2a2a] bg-[#0f0f0f] text-[#a3a3a3] hover:text-white transition-colors [font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em]"
+            title="3D-Flug starten"
+            aria-label="3D-Flug entlang der Route starten"
+            style={{ color: NEON }}
+          >
+            <Navigation className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">3D-Flug</span>
+          </button>
+        )}
         {onRequestFullscreen && (
           <button
             type="button"
             onClick={onRequestFullscreen}
-            className="hidden md:inline-flex items-center justify-center h-8 w-8 rounded-md border border-[#2a2a2a] bg-[#0f0f0f] text-[#a3a3a3] hover:text-white transition-colors"
+            className="cursor-pointer hidden md:inline-flex items-center justify-center h-8 w-8 rounded-md border border-[#2a2a2a] bg-[#0f0f0f] text-[#a3a3a3] hover:text-white transition-colors"
             title="Vollbild"
             aria-label="Karte im Vollbild öffnen"
           >
