@@ -294,7 +294,10 @@ export async function listToursForUser(
     )
     .where(visibilityWhere)
     .groupBy(activityTours.id, users.name)
-    .orderBy(desc(activityTours.createdAt));
+    .orderBy(
+      sql`COALESCE(${activityTours.startDate}, MIN(${activities.startTime})) DESC NULLS LAST`,
+      desc(activityTours.createdAt)
+    );
 
   return rows.map((r) => ({
     id: r.id,
