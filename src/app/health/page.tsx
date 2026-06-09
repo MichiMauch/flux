@@ -123,13 +123,12 @@ export default async function HealthPage() {
                 )}
                 <div style={{ height: 300 }}>
                   <WeightChart
-                    data={weightData
-                      .reverse()
-                      .map((d) => ({
-                        date: d.date.toLocaleDateString("de-CH"),
-                        weight: d.weight,
-                        fatMass: d.fatMass,
-                      }))}
+                    data={weightData.map((d) => ({
+                      t: d.date.getTime(),
+                      weight: d.weight,
+                      fatMass: d.fatMass,
+                    }))}
+                    initialTargetWeight={user?.targetWeightKg ?? null}
                   />
                 </div>
               </div>

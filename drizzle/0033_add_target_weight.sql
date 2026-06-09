@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "target_weight_kg" real;

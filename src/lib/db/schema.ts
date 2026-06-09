@@ -38,6 +38,7 @@ export const users = pgTable("user", {
   sex: text("sex"), // 'male' | 'female'
   heightCm: integer("height_cm"),
   weightKg: real("weight_kg"),
+  targetWeightKg: real("target_weight_kg"),
   maxHeartRate: integer("max_heart_rate"),
   restHeartRate: integer("rest_heart_rate"),
   aerobicThreshold: integer("aerobic_threshold"),
