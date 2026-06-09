@@ -29,6 +29,15 @@ const PROJECTION_DAYS = 42; // 6 Wochen
 /** Obergrenze für den Prognosehorizont (verhindert absurde Achsen bei flachem Trend) */
 const MAX_PROJECTION_DAYS = 730;
 
+/** Auswählbare Zeiträume; `days: null` = gesamter Verlauf */
+const RANGES: { key: string; label: string; days: number | null }[] = [
+  { key: "7", label: "7T", days: 7 },
+  { key: "30", label: "30T", days: 30 },
+  { key: "90", label: "90T", days: 90 },
+  { key: "365", label: "1J", days: 365 },
+  { key: "all", label: "Alles", days: null },
+];
+
 function linearRegression(points: { x: number; y: number }[]) {
   const n = points.length;
   if (n < 2) return null;
@@ -60,11 +69,19 @@ export function WeightChart({ data, initialTargetWeight }: WeightChartProps) {
     initialTargetWeight != null ? String(initialTargetWeight) : ""
   );
   const [, startTransition] = useTransition();
+  const [rangeKey, setRangeKey] = useState("all");
 
-  const hasFatMass = data.some((d) => d.fatMass != null);
+  // Alle Punkte chronologisch sortieren (Regression + Projektion brauchen echte Zeit)
+  const allPoints = [...data].sort((a, b) => a.t - b.t);
+  const lastAll =
+    allPoints.length > 0 ? allPoints[allPoints.length - 1].t : 0;
 
-  // Punkte chronologisch sortieren (Regression + Projektion brauchen echte Zeit)
-  const points = [...data].sort((a, b) => a.t - b.t);
+  // Auf den gewählten Zeitraum filtern (Anker = jüngste Messung, nicht "jetzt")
+  const range = RANGES.find((r) => r.key === rangeKey) ?? RANGES[RANGES.length - 1];
+  const cutoff = range.days != null ? lastAll - range.days * DAY_MS : -Infinity;
+  const points = allPoints.filter((d) => d.t >= cutoff);
+
+  const hasFatMass = points.some((d) => d.fatMass != null);
 
   // Regression auf Basis von Tagen seit erstem Messpunkt
   const t0 = points.length > 0 ? points[0].t : 0;
@@ -168,6 +185,24 @@ export function WeightChart({ data, initialTargetWeight }: WeightChartProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="inline-flex overflow-hidden rounded-md border border-[#2a2a2a]">
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => setRangeKey(r.key)}
+              aria-pressed={rangeKey === r.key}
+              className={`cursor-pointer px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                rangeKey === r.key
+                  ? "bg-[#f59e0b]/15 text-[#f59e0b]"
+                  : "bg-black/40 text-[#9ca3af] hover:text-white"
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+
         <button
           type="button"
           onClick={() => setShowTrend((v) => !v)}

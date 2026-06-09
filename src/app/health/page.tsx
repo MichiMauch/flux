@@ -27,7 +27,7 @@ export default async function HealthPage() {
     .from(weightMeasurements)
     .where(eq(weightMeasurements.userId, session.user.id))
     .orderBy(desc(weightMeasurements.date))
-    .limit(100);
+    .limit(365);
 
   const latestWeight = weightData[0];
 
