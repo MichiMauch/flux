@@ -7,6 +7,7 @@ import {
   Zap,
 } from "lucide-react";
 import { BentoElevationChart } from "@/app/components/bento/bento-elevation-chart";
+import { BentoElevationRangeTile } from "@/app/components/bento/bento-elevation-range-tile";
 import { BentoGpxTile } from "@/app/components/bento/bento-gpx-tile";
 import { BentoNotesTile } from "@/app/components/bento/bento-notes-tile";
 import { BentoPhotosTile } from "@/app/components/bento/bento-photos-tile";
@@ -132,6 +133,8 @@ export function ActivityDetailBody({
               </div>
             )}
           </div>
+
+          <BentoElevationRangeTile route={route} />
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <StatTile
