@@ -51,7 +51,7 @@ export function getSearchTools(userId: string): ToolSet {
   return {
     list_activities: {
       description:
-        "Liefere eine kompakte Übersicht (bis zu 200 Einträge) aller Aktivitäten des Users, absteigend sortiert nach Startzeit. Nutze dies für einen ersten Überblick, bevor du gezielt filterst.",
+        "Liefert NUR die 200 NEUESTEN Aktivitäten (absteigend nach Startzeit) — also NICHT alle. Nutze dies ausschliesslich für 'was habe ich zuletzt / diesen Monat gemacht'. Verwende es NIE, um zu prüfen, ob eine bestimmte oder ältere Aktivität existiert, und ziehe daraus NIE den Schluss 'nicht gefunden' — ältere Aktivitäten (z.B. von 2018) fehlen hier. Für jede gezielte Suche nutze search_activities.",
       inputSchema: z.object({}),
       execute: async (): Promise<{ activities: CompactActivity[]; total: number }> => {
         const rows = await db
@@ -78,7 +78,7 @@ export function getSearchTools(userId: string): ToolSet {
 
     search_activities: {
       description:
-        "Filtere und sortiere Aktivitäten des Users. Alle Parameter sind optional. nameContains prüft Teilstring (case-insensitive) im Titel. dateFrom/dateTo sind ISO-Datumsstrings. orderBy akzeptiert: distance, duration, ascent, startTime, trimp. Maximales Limit: 100.",
+        "Durchsucht ALLE Aktivitäten des Users — auch sehr alte (Jahre zurück, z.B. 2018). Das ist das richtige Tool, um bestimmte Aktivitäten zu finden: nach Typ (z.B. Wanderungen → HIKING), Name, Zeitraum (dateFrom/dateTo) oder Distanz. Alle Parameter sind optional. nameContains prüft Teilstring (case-insensitive) im Titel. dateFrom/dateTo sind ISO-Datumsstrings. orderBy akzeptiert: distance, duration, ascent, startTime, trimp. Maximales Limit: 100. Bei einer Typ-/Zeitraum-Suche ohne ausdrücklichen Limit-Wunsch limit=100 setzen, damit auch ältere Treffer erscheinen.",
       inputSchema: z.object({
         type: z
           .string()
