@@ -46,7 +46,9 @@ export function RouteMapStatic({
     `pin-s+ffffff(${first.lng.toFixed(5)},${first.lat.toFixed(5)})`,
     `pin-s+${hex}(${end.lng.toFixed(5)},${end.lat.toFixed(5)})`,
   ].join(",");
-  const path = `path-4+${hex}-1(${encoded})`;
+  // White casing under the accent line for contrast on any map background
+  // (same halo as the share-card and the interactive map).
+  const path = `path-7+ffffff-0.95(${encoded}),path-4+${hex}-1(${encoded})`;
 
   const url =
     `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/` +

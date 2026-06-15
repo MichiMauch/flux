@@ -100,17 +100,18 @@ export default function BentoMapClient({
 
     const positions: L.LatLngExpression[] = routeData.map((p) => [p.lat, p.lng]);
 
-    // Outer glow polyline
+    // White casing under the line for contrast on any map background
+    // (matches the share-card halo: white under, accent on top).
     L.polyline(positions, {
-      color: NEON,
-      weight: 10,
-      opacity: 0.25,
+      color: "#ffffff",
+      weight: 8,
+      opacity: 0.95,
     }).addTo(map);
     // Main polyline
     const polyline = L.polyline(positions, {
       color: NEON,
       weight: 4,
-      opacity: 0.95,
+      opacity: 1,
     }).addTo(map);
 
     L.circleMarker(positions[0] as L.LatLngExpression, {
