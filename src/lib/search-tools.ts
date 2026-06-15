@@ -171,17 +171,20 @@ export function getSearchTools(userId: string): ToolSet {
           const d = new Date(args.dateTo);
           if (!isNaN(d.getTime())) conditions.push(lte(activities.startTime, d));
         }
-        if (args.minDistanceKm != null) {
+        // WICHTIG: nur > 0 prüfen, nicht != null. Das LLM füllt optionale
+        // Zahlen-Parameter gerne mit 0 statt sie wegzulassen — ein "max=0"
+        // würde sonst zu "<= 0" und schliesst ALLE Aktivitäten aus.
+        if (args.minDistanceKm != null && args.minDistanceKm > 0) {
           conditions.push(gte(activities.distance, args.minDistanceKm * 1000));
         }
-        if (args.maxDistanceKm != null) {
+        if (args.maxDistanceKm != null && args.maxDistanceKm > 0) {
           conditions.push(lte(activities.distance, args.maxDistanceKm * 1000));
         }
         // Gesamtdauer (elapsed) — das meinen User mit "X Stunden lang".
-        if (args.minDurationMin != null) {
+        if (args.minDurationMin != null && args.minDurationMin > 0) {
           conditions.push(gte(activities.duration, args.minDurationMin * 60));
         }
-        if (args.maxDurationMin != null) {
+        if (args.maxDurationMin != null && args.maxDurationMin > 0) {
           conditions.push(lte(activities.duration, args.maxDurationMin * 60));
         }
 
