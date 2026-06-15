@@ -117,6 +117,32 @@ function routeToPath(
     .join(" ");
 }
 
+// Google "encoded polyline" (precision 5) — far more compact than GeoJSON,
+// so two stacked overlays (casing + line) stay well under Mapbox's URL cap.
+function encodePolyline(coords: number[][]): string {
+  let lastLat = 0;
+  let lastLng = 0;
+  let result = "";
+  const enc = (value: number) => {
+    let v = value < 0 ? ~(value << 1) : value << 1;
+    let out = "";
+    while (v >= 0x20) {
+      out += String.fromCharCode((0x20 | (v & 0x1f)) + 63);
+      v >>= 5;
+    }
+    out += String.fromCharCode(v + 63);
+    return out;
+  };
+  for (const [lng, lat] of coords) {
+    const la = Math.round(lat * 1e5);
+    const lo = Math.round(lng * 1e5);
+    result += enc(la - lastLat) + enc(lo - lastLng);
+    lastLat = la;
+    lastLng = lo;
+  }
+  return result;
+}
+
 // Full-bleed Mapbox static map with the route baked in as a line overlay.
 // Requested at the card's own size/aspect so it fills the canvas exactly
 // (no objectFit guesswork in Satori).
@@ -140,16 +166,12 @@ async function buildMapboxStaticDataUrl(
     .map((p) => [Number(p.lng.toFixed(5)), Number(p.lat.toFixed(5))]);
   if (coords.length < 2) return null;
 
-  const geojson = {
-    type: "Feature",
-    properties: {
-      stroke: strokeColor,
-      "stroke-width": 6,
-      "stroke-opacity": 1,
-    },
-    geometry: { type: "LineString", coordinates: coords },
-  };
-  const overlay = `geojson(${encodeURIComponent(JSON.stringify(geojson))})`;
+  // White casing under the accent line for contrast on any map background
+  // (same halo technique as the interactive Wanderkarte: white under, accent
+  // on top). Two stacked path overlays, drawn bottom-to-top in URL order.
+  const poly = encodeURIComponent(encodePolyline(coords));
+  const hex = strokeColor.replace("#", "");
+  const overlay = `path-13+ffffff-1(${poly}),path-6+${hex}-1(${poly})`;
   // Mapbox caps static images at 1280px per side (no @2x here — 1080 would
   // exceed the cap when doubled). padding keeps the route inset from edges.
   const reqW = Math.min(Math.round(width), 1280);
@@ -422,11 +444,20 @@ export async function GET(
             <path
               d={routePath}
               fill="none"
-              stroke={accent}
-              strokeWidth="12"
+              stroke="#ffffff"
+              strokeWidth="20"
               strokeLinecap="round"
               strokeLinejoin="round"
               opacity="0.95"
+            />
+            <path
+              d={routePath}
+              fill="none"
+              stroke={accent}
+              strokeWidth="11"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="1"
             />
           </svg>
         ) : null}
