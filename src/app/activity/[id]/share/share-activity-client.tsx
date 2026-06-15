@@ -6,6 +6,7 @@ import {
   Check,
   Download,
   Camera,
+  Image as ImageIcon,
   Link2,
   Mail,
   MessageCircle,
@@ -163,6 +164,29 @@ export function ShareActivityClient({
     });
   }
 
+  function handleWhatsappStatus() {
+    run("Status", async () => {
+      const blob = await fetchCard();
+      const date = new Date().toISOString().slice(0, 10);
+      const suffix = mode === "flight" ? "flug" : "karte";
+      const file = new File([blob], `flux-${date}-${suffix}.png`, {
+        type: "image/png",
+      });
+      // The card image goes into the native share sheet; the user then picks
+      // WhatsApp → Status. There is no web API to post to Status directly.
+      if (
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({ files: [file], title: "Flux", text: activityName });
+        return;
+      }
+      // Desktop fallback: save the PNG and tell the user what to do with it.
+      downloadBlob(blob);
+      setInfo("Bild gespeichert — in WhatsApp → Status hochladen.");
+    });
+  }
+
   function handleNativeShare() {
     run("Teilen", async () => {
       const blob = await fetchCard();
@@ -281,6 +305,13 @@ export function ShareActivityClient({
               tint="#25D366"
             />
             <ActionButton
+              label="Status"
+              icon={<ImageIcon className="h-5 w-5" />}
+              onClick={handleWhatsappStatus}
+              disabled={pending}
+              tint="linear-gradient(135deg,#25D366,#128C7E)"
+            />
+            <ActionButton
               label="E-Mail"
               icon={<Mail className="h-5 w-5" />}
               onClick={handleMail}
@@ -340,7 +371,8 @@ export function ShareActivityClient({
 
         <p className="text-center text-[10px] text-[#666] [font-family:var(--bento-mono)] uppercase tracking-[0.14em]">
           Auswahl bestimmt, was geteilt wird · WhatsApp/E-Mail/Link senden den
-          öffentlichen Link · Stories & Speichern laden das PNG
+          öffentlichen Link · Status öffnet die Teilen-Auswahl mit dem Bild
+          (WhatsApp → Status) · Stories & Speichern laden das PNG
         </p>
       </main>
     </div>
