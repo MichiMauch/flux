@@ -9,6 +9,7 @@ import {
   Link2,
   Mail,
   MessageCircle,
+  Orbit,
   Share2,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export function ShareActivityClient({
   const router = useRouter();
   const [token, setToken] = useState<string | null>(initialToken);
   const [copied, setCopied] = useState(false);
+  const [flightCopied, setFlightCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -88,6 +90,16 @@ export function ShareActivityClient({
       await navigator.clipboard.writeText(publicUrl(t));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function handleCopyFlightLink() {
+    run("Flug-Link", async () => {
+      const t = await ensureToken();
+      // ?view=flight makes the public page open the 3D flythrough directly.
+      await navigator.clipboard.writeText(`${publicUrl(t)}?view=flight`);
+      setFlightCopied(true);
+      window.setTimeout(() => setFlightCopied(false), 2000);
     });
   }
 
@@ -222,6 +234,19 @@ export function ShareActivityClient({
               disabled={pending}
             />
             <ActionButton
+              label={flightCopied ? "Kopiert" : "3D-Flug"}
+              icon={
+                flightCopied ? (
+                  <Check className="h-5 w-5 text-emerald-400" />
+                ) : (
+                  <Orbit className="h-5 w-5" />
+                )
+              }
+              onClick={handleCopyFlightLink}
+              disabled={pending}
+              tint="linear-gradient(135deg,#06b6d4,#3b82f6)"
+            />
+            <ActionButton
               label="Speichern"
               icon={<Download className="h-5 w-5" />}
               onClick={handleDownload}
@@ -262,7 +287,8 @@ export function ShareActivityClient({
         )}
 
         <p className="text-center text-[10px] text-[#666] [font-family:var(--bento-mono)] uppercase tracking-[0.14em]">
-          WhatsApp & E-Mail senden den öffentlichen Link · Stories lädt das PNG
+          WhatsApp & E-Mail senden den öffentlichen Link · Stories lädt das PNG ·
+          3D-Flug kopiert einen Link, der direkt in den Flug öffnet
         </p>
       </main>
     </div>

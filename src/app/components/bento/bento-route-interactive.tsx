@@ -52,7 +52,14 @@ export function BentoRouteInteractive({
 }: Props) {
   const [selectedKm, setSelectedKm] = useState<number | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [flight, setFlight] = useState(false);
+  // Open the 3D flight straight away when arriving via a shared flight link,
+  // e.g. /share/activity/<token>?view=flight — recipient lands in the flythrough.
+  const [flight, setFlight] = useState(
+    () =>
+      routeData.length >= 2 &&
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("view") === "flight"
+  );
   const [kmOpen, setKmOpen] = useState(false);
   const { hoverIdx } = useHover();
 
