@@ -50,7 +50,7 @@ export function ShareActivityClient({
 
   async function fetchCard(): Promise<Blob> {
     const res = await fetch(
-      `/api/activities/${activityId}/share-card?format=square`,
+      `/api/activities/${activityId}/share-card?format=story`,
       { credentials: "include" }
     );
     if (!res.ok) throw new Error("Karte konnte nicht erstellt werden");
@@ -178,7 +178,7 @@ export function ShareActivityClient({
         <div className="overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[#0a0a0a]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/activities/${activityId}/share-card?format=square`}
+            src={`/api/activities/${activityId}/share-card?format=story`}
             alt="Share-Card Vorschau"
             className="block h-auto w-full"
           />
