@@ -227,6 +227,17 @@ const getCachedActivityShareCardData = unstable_cache(
   { revalidate: CACHE_SECONDS }
 );
 
+async function activityMatchesShareToken(activityId: string, token: string) {
+  if (!token) return false;
+  const rows = await db
+    .select({ shareToken: activities.shareToken })
+    .from(activities)
+    .where(eq(activities.id, activityId))
+    .limit(1);
+  const stored = rows[0]?.shareToken;
+  return !!stored && stored === token;
+}
+
 async function canReadActivity(activityId: string, viewerId: string) {
   const rows = await db
     .select({
@@ -310,13 +321,25 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
   const { id } = await params;
-  const allowed = await canReadActivity(id, session.user.id);
+  const shareToken = new URL(request.url).searchParams.get("share");
+
+  // Two access paths:
+  //  - public link previews (WhatsApp/Telegram/etc.) fetch with ?share=<token>
+  //    and no session — validate the token against the activity.
+  //  - the owner/partner views the card while logged in (no token).
+  let allowed = false;
+  let viaShareToken = false;
+  if (shareToken) {
+    allowed = await activityMatchesShareToken(id, shareToken);
+    viaShareToken = allowed;
+  } else {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    allowed = await canReadActivity(id, session.user.id);
+  }
   if (!allowed) {
     return new Response("Forbidden", { status: 403 });
   }
@@ -730,7 +753,9 @@ export async function GET(
 
   response.headers.set(
     "Cache-Control",
-    `private, max-age=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}`
+    viaShareToken
+      ? `public, max-age=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}`
+      : `private, max-age=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}`
   );
   response.headers.set(
     "Content-Disposition",

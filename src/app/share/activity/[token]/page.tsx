@@ -22,13 +22,49 @@ import { ShareTokenProvider } from "@/lib/share-context";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export const metadata: Metadata = {
-  title: "Geteilte Aktivität",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  const rows = await db
+    .select({ id: activities.id, name: activities.name })
+    .from(activities)
+    .where(eq(activities.shareToken, token))
+    .limit(1);
+  const act = rows[0];
+
+  // noindex always — these are private share links, not for search engines.
+  const robots = { index: false, follow: false } as const;
+  if (!act) {
+    return { title: "Geteilte Aktivität", robots };
+  }
+
+  // Public link-preview image: the Bento share-card PNG, which crawlers
+  // (WhatsApp/Telegram/…) fetch via the ?share=<token> path that bypasses auth.
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "";
+  const ogImage = `${base}/api/activities/${act.id}/share-card?format=square&share=${token}`;
+  const description = "Geteilte Aktivität auf Flux";
+
+  return {
+    title: act.name,
+    description,
+    robots,
+    openGraph: {
+      type: "website",
+      title: act.name,
+      description,
+      images: [{ url: ogImage, width: 1080, height: 1080, type: "image/png" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: act.name,
+      description,
+      images: [ogImage],
+    },
+  };
+}
 
 export default async function SharedActivityPage({
   params,

@@ -26,6 +26,7 @@ export async function proxy(request: NextRequest) {
     if (
       pathname.startsWith("/api/photos/") ||
       pathname.match(/^\/api\/activities\/[^/]+\/gpx$/) ||
+      pathname.match(/^\/api\/activities\/[^/]+\/share-card$/) ||
       pathname.match(/^\/api\/tours\/[^/]+\/cover$/)
     ) {
       return NextResponse.next();
