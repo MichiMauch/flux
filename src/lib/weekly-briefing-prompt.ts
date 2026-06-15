@@ -151,7 +151,7 @@ Liefere Rückblick + Highlights + Warnungen + GENAU 7 Tagesvorschläge für die 
     schema: WeeklyBriefingSchema,
     system: SYSTEM_PROMPT,
     prompt,
-    temperature: 0.4,
+    // gpt-5-mini unterstützt nur Default-Temperature (1).
   });
 
   return result.object;

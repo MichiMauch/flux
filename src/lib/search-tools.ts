@@ -135,7 +135,26 @@ export function getSearchTools(userId: string): ToolSet {
         const conditions: SQL[] = [eq(activities.userId, userId)];
 
         if (args.type) {
-          const t = args.type.toUpperCase();
+          // Normalise common LLM/German variants to the stored enum values.
+          const raw = args.type.toUpperCase().trim();
+          const TYPE_ALIASES: Record<string, string> = {
+            HIKE: "HIKING",
+            WANDERUNG: "HIKING",
+            WANDERN: "HIKING",
+            WALK: "WALKING",
+            SPAZIERGANG: "WALKING",
+            GEHEN: "WALKING",
+            RUN: "RUNNING",
+            LAUF: "RUNNING",
+            JOGGING: "RUNNING",
+            BIKE: "CYCLING",
+            VELO: "CYCLING",
+            CYCLE: "CYCLING",
+            RAD: "CYCLING",
+            SWIM: "SWIMMING",
+            SCHWIMMEN: "SWIMMING",
+          };
+          const t = TYPE_ALIASES[raw] ?? raw;
           if (t !== "ANY" && t !== "ALL" && t !== "") {
             conditions.push(eq(activities.type, t));
           }

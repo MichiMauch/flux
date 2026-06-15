@@ -136,7 +136,7 @@ Gib 2-3 Vorschläge für die nächsten 3 Tage zurück.`;
     schema: CoachSuggestionsSchema,
     system: SYSTEM_PROMPT,
     prompt,
-    temperature: 0.4,
+    // gpt-5-mini unterstützt nur Default-Temperature (1).
   });
 
   return result.object;

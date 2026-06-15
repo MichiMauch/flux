@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     // Subsequent steps default to auto, so it can answer once it has results.
     prepareStep: ({ stepNumber }) =>
       stepNumber === 0 ? { toolChoice: "required" } : {},
-    temperature: 0.3,
+    // gpt-5-mini unterstützt nur die Default-Temperature (1) — kein custom-Wert.
     onError: (e) => {
       console.error("[/api/chat] streamText error:", e);
     },
