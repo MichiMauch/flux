@@ -5,8 +5,7 @@ import { activities, activityPhotos, users } from "@/lib/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { readFile } from "fs/promises";
-import { activityTypeColor } from "@/lib/activity-types";
-import { activityTypeIcon } from "@/lib/activity-icon";
+import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
 import { formatDurationHMS } from "@/lib/activity-format";
 
 export const runtime = "nodejs";
@@ -116,26 +115,6 @@ function routeToPath(
       return `${idx === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
     })
     .join(" ");
-}
-
-function iconForType(type: string): string {
-  const Icon = activityTypeIcon(type);
-  switch (Icon.displayName ?? Icon.name) {
-    case "Footprints":
-      return "RUN";
-    case "Bike":
-      return "RIDE";
-    case "MountainSnow":
-      return "HIKE";
-    case "Waves":
-      return "SWIM";
-    case "Dumbbell":
-      return "GYM";
-    case "Snowflake":
-      return "SKI";
-    default:
-      return "ACT";
-  }
 }
 
 // Full-bleed Mapbox static map with the route baked in as a line overlay.
@@ -393,7 +372,7 @@ export async function GET(
   const bgUrl = mapImageUrl ?? photoUrl;
 
   const duration = data.movingTime ?? data.duration ?? 0;
-  const icon = iconForType(data.type);
+  const typeLabel = activityTypeLabel(data.type).toUpperCase();
   const dateLabel = formatDate(data.startTime);
   const ownerLabel = (data.ownerName ?? "Flux").toUpperCase();
   const cardTitle = data.name.toUpperCase();
@@ -505,7 +484,7 @@ export async function GET(
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  minWidth: 104,
+                  padding: "0 22px",
                   height: 52,
                   borderRadius: 999,
                   border: `1px solid ${accent}`,
@@ -516,7 +495,7 @@ export async function GET(
                   textShadow: "0 1px 6px rgba(0,0,0,0.6)",
                 }}
               >
-                {icon}
+                {typeLabel}
               </div>
               <div
                 style={{
