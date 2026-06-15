@@ -24,10 +24,14 @@ export const revalidate = 0;
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }): Promise<Metadata> {
   const { token } = await params;
+  const sp = await searchParams;
+  const isFlight = sp.view === "flight";
   const rows = await db
     .select({ id: activities.id, name: activities.name })
     .from(activities)
@@ -43,23 +47,30 @@ export async function generateMetadata({
 
   // Public link-preview image: the Bento share-card PNG, which crawlers
   // (WhatsApp/Telegram/…) fetch via the ?share=<token> path that bypasses auth.
+  // Flight links get the distinct flight card (play button + 3D-FLUG badge),
+  // so the preview already shows it's a flythrough.
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? "";
-  const ogImage = `${base}/api/activities/${act.id}/share-card?format=square&share=${token}`;
-  const description = "Geteilte Aktivität auf Flux";
+  const ogImage =
+    `${base}/api/activities/${act.id}/share-card?format=square&share=${token}` +
+    (isFlight ? "&variant=flight" : "");
+  const title = isFlight ? `${act.name} – 3D-Flug` : act.name;
+  const description = isFlight
+    ? "3D-Flug entlang der Route auf Flux"
+    : "Geteilte Aktivität auf Flux";
 
   return {
-    title: act.name,
+    title,
     description,
     robots,
     openGraph: {
       type: "website",
-      title: act.name,
+      title,
       description,
       images: [{ url: ogImage, width: 1080, height: 1080, type: "image/png" }],
     },
     twitter: {
       card: "summary_large_image",
-      title: act.name,
+      title,
       description,
       images: [ogImage],
     },

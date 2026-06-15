@@ -393,12 +393,15 @@ export async function GET(
   // Background priority: map-with-route > photo > dark gradient.
   const bgUrl = mapImageUrl ?? photoUrl;
 
+  const isFlight =
+    new URL(request.url).searchParams.get("variant") === "flight";
   const duration = data.movingTime ?? data.duration ?? 0;
   const typeLabel = activityTypeLabel(data.type).toUpperCase();
   const dateLabel = formatDate(data.startTime);
   const ownerLabel = (data.ownerName ?? "Flux").toUpperCase();
   const cardTitle = data.name.toUpperCase();
   const pad = format === "story" ? 72 : 64;
+  const playSize = format === "story" ? 220 : 180;
 
   const response = new ImageResponse(
     (
@@ -489,6 +492,45 @@ export async function GET(
           }}
         />
 
+        {/* Flight cards get a centred play button so the recipient instantly
+            reads it as a flythrough, not a static map. */}
+        {isFlight ? (
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: playSize,
+                height: playSize,
+                borderRadius: 999,
+                background: "rgba(0,0,0,0.42)",
+                border: "4px solid rgba(255,255,255,0.92)",
+                boxShadow: "0 12px 48px rgba(0,0,0,0.5)",
+              }}
+            >
+              <svg
+                width={Math.round(playSize * 0.42)}
+                height={Math.round(playSize * 0.42)}
+                viewBox="0 0 100 100"
+              >
+                <polygon points="32,20 82,50 32,80" fill="#ffffff" />
+              </svg>
+            </div>
+          </div>
+        ) : null}
+
         {/* Content */}
         <div
           style={{
@@ -528,18 +570,39 @@ export async function GET(
               >
                 {typeLabel}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 23,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.92)",
-                  textShadow: "0 1px 6px rgba(0,0,0,0.7)",
-                }}
-              >
-                {dateLabel}
-              </div>
+              {isFlight ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "0 20px",
+                    height: 52,
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.85)",
+                    background: "rgba(6,182,212,0.32)",
+                    color: "#fff",
+                    fontSize: 22,
+                    letterSpacing: "0.18em",
+                    textShadow: "0 1px 6px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  ▶ 3D-FLUG
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    fontSize: 23,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.92)",
+                    textShadow: "0 1px 6px rgba(0,0,0,0.7)",
+                  }}
+                >
+                  {dateLabel}
+                </div>
+              )}
             </div>
 
             <div
