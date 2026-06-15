@@ -146,21 +146,13 @@ export default async function ActivityBentoPage({
       }}
     >
       <main className="mx-auto w-full max-w-7xl px-4 py-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 [font-family:var(--bento-mono)] text-xs text-[#a3a3a3] hover:text-white uppercase tracking-[0.16em] font-bold"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Zurück
-          </Link>
-          <Link
-            href={`/activity/${id}/classic`}
-            className="[font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.16em] text-[#a3a3a3] hover:text-white"
-          >
-            Klassische Ansicht
-          </Link>
-        </div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 [font-family:var(--bento-mono)] text-xs text-[#a3a3a3] hover:text-white uppercase tracking-[0.16em] font-bold"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Zurück
+        </Link>
 
         {tourMemberships.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 [font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]">
