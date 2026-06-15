@@ -3,6 +3,53 @@
 Alle nennenswerten Änderungen an Flux werden hier dokumentiert.
 Format: [Keep a Changelog](https://keepachangelog.com/de/1.1.0/) · Versionierung: [SemVer](https://semver.org).
 
+## [1.2.0] - 2026-06-15
+
+### Added
+
+- **share:** Status-Button teilt die Card als Bild (WhatsApp Status) [b523a45]
+- **share:** Swipe-Auswahl Karte/3D-Flug + eigene Flug-Vorschaukarte [762142f]
+- **share:** 3D-Flug teilen – Link oeffnet direkt den Flythrough [7f72312]
+- **map:** weisse Routen-Kontur auch in der App (Aktivitaetskarte + Thumbnails) [7c3a48b]
+- **share:** Teilen-Karte im Hochformat (Story 1080x1920) [934bea3]
+- **share:** weisse Kontur (Casing) um die Routenlinie fuer Kontrast [b65d20e]
+- **share:** Share-Card im Strava-Stil – Karte als Vollbild-Hintergrund [404259f]
+- **activity:** Höhen-Range-Kachel (min/max Altitude) im Bento-Layout [7fd91c6]
+- **share:** öffentliche Teilen-Funktion für Aktivitäten & Touren (flux-a87) [cc60e83]
+- **health:** Zeitraum-Umschalter fuer Gewichtsdiagramm [ae2b79c]
+- **health:** Gewichts-Trendlinie mit Prognose & Zielgewicht [655062a]
+- **activity:** 3D-Relive-Flug entlang der Route [be4f2c5]
+- **tours:** Tour-Uebersicht nach Startdatum absteigend sortieren [0c00555]
+- **tours:** DONE-Eckband + completed-Flag [478a3c6]
+- **polar:** drop deprecated transaction flow, pull every available v3 datapoint [3d2aefe]
+- **calendar:** Footprint-Lottie an Tagen mit ≥10k Schritten [758f613]
+- **streak:** 10k-Schritte-Tage halten den Streak am Leben [25ac506]
+- **tours:** Edit-Seite mit DnD + Save-Button, Detail-Seite mit Datum/Manuell-Toggle [a53e35f]
+- **tours:** Manuelle Reihenfolge der Tour-Mitglieder per Drag & Drop [544d882]
+
+### Changed
+
+- **activity:** klassische Detailansicht entfernen [8b62fca]
+- **tours:** parallelize awaits on detail + edit pages [423f25f]
+
+### Fixed
+
+- **flight:** bewegter Punkt im 3D-Flug kontrastreich statt Routenfarbe [bd84486]
+- **share:** Share-Card-Badge zeigt echten Aktivitaetstyp statt Icon-Ableitung [c3d148f]
+- **share:** Link-Vorschau zeigt Share-Card als og:image [3bbf8d2]
+- **polar:** zuverlaessiger Sync + klare Reauth-Fehler (flux-4ss) [de538ad]
+- **build:** fehlende share-context.tsx nachreichen [7cc6873]
+- **tours:** Tour-Uebersicht nach Enddatum statt Startdatum sortieren [1156291]
+- **deploy:** tolerant migration step in start.sh [b2966ae]
+- **tours:** WIP-ShareButton-Import aus Tour-Detailseite entfernen [e45f26b]
+- **dashboard:** Aktivitäts-Startzeit + Streak korrekt auf Dev und Prod [8ec59c1]
+- **withings:** backfill weight + repair stale webhook subscriptions [5bafa73]
+- **tour-map:** remove route legend overlay (click + tooltip already cover it) [437dc8e]
+- **polar-import:** sport-id 5 is CYCLING, not ROAD_RUNNING [079760e]
+- **activities,tours:** records fallback for missing FIT aggregates + defensive date parsing [df0e65c]
+- **deploy:** switch start.sh from drizzle-kit push --force to migrate [a5525ee]
+- **tours:** Button-Label "Manuell" → "Nach Etappen" [9d7b1da]
+
 ## [1.1.0] - 2026-05-07
 
 ### Added
