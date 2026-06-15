@@ -17,7 +17,8 @@ type CompactActivity = {
   type: string;
   startTime: string;
   distanceKm: number | null;
-  durationMin: number | null;
+  durationMin: number | null; // Gesamt-/Bruttodauer (elapsed) — "wie lang war die Aktivität"
+  movingMin: number | null; // reine Bewegungszeit (für Tempo)
   ascentM: number | null;
   trimp: number | null;
 };
@@ -33,7 +34,6 @@ function toCompact(row: {
   ascent: number | null;
   trimp: number | null;
 }): CompactActivity {
-  const seconds = row.movingTime ?? row.duration;
   return {
     id: row.id,
     name: row.name,
@@ -41,7 +41,11 @@ function toCompact(row: {
     startTime: row.startTime.toISOString(),
     distanceKm:
       row.distance != null ? Math.round((row.distance / 1000) * 100) / 100 : null,
-    durationMin: seconds != null ? Math.round(seconds / 60) : null,
+    // "Wie lang war die Aktivität" = Gesamtdauer (elapsed). movingTime nur als
+    // Zusatz — eine Wanderung mit Pausen ist brutto deutlich länger als die
+    // Bewegungszeit, und genau das meinen User mit "7h lang".
+    durationMin: row.duration != null ? Math.round(row.duration / 60) : null,
+    movingMin: row.movingTime != null ? Math.round(row.movingTime / 60) : null,
     ascentM: row.ascent != null ? Math.round(row.ascent) : null,
     trimp: row.trimp != null ? Math.round(row.trimp) : null,
   };
@@ -78,7 +82,7 @@ export function getSearchTools(userId: string): ToolSet {
 
     search_activities: {
       description:
-        "Durchsucht ALLE Aktivitäten des Users — auch sehr alte (Jahre zurück, z.B. 2018). Das ist das richtige Tool, um bestimmte Aktivitäten zu finden: nach Typ (z.B. Wanderungen → HIKING), Name, Zeitraum (dateFrom/dateTo) oder Distanz. Alle Parameter sind optional. nameContains prüft Teilstring (case-insensitive) im Titel. dateFrom/dateTo sind ISO-Datumsstrings. orderBy akzeptiert: distance, duration, ascent, startTime, trimp. Maximales Limit: 100. Bei einer Typ-/Zeitraum-Suche ohne ausdrücklichen Limit-Wunsch limit=100 setzen, damit auch ältere Treffer erscheinen.",
+        "Durchsucht ALLE Aktivitäten des Users — auch sehr alte (Jahre zurück, z.B. 2018). Das ist das richtige Tool, um bestimmte Aktivitäten zu finden: nach Typ (z.B. Wanderungen → HIKING), Name, Zeitraum (dateFrom/dateTo), Distanz oder Dauer. Alle Parameter sind optional. nameContains prüft Teilstring (case-insensitive) im Titel. dateFrom/dateTo sind ISO-Datumsstrings. minDurationMin/maxDurationMin filtern nach GESAMTDAUER in Minuten (z.B. 'über 7 Stunden' → minDurationMin=420) — das ist die Brutto-Zeit inkl. Pausen, nicht die Bewegungszeit. orderBy akzeptiert: distance, duration, ascent, startTime, trimp. Maximales Limit: 100. Bei einer Typ-/Zeitraum-/Dauer-Suche ohne ausdrücklichen Limit-Wunsch limit=100 setzen, damit auch ältere Treffer erscheinen.",
       inputSchema: z.object({
         type: z
           .string()
@@ -100,6 +104,14 @@ export function getSearchTools(userId: string): ToolSet {
           .describe("ISO-Datum, nur Aktivitäten bis zu diesem Zeitpunkt."),
         minDistanceKm: z.number().optional(),
         maxDistanceKm: z.number().optional(),
+        minDurationMin: z
+          .number()
+          .optional()
+          .describe("Mindest-Gesamtdauer in Minuten (elapsed, inkl. Pausen)."),
+        maxDurationMin: z
+          .number()
+          .optional()
+          .describe("Maximal-Gesamtdauer in Minuten (elapsed, inkl. Pausen)."),
         orderBy: z
           .enum(["distance", "duration", "ascent", "startTime", "trimp"])
           .optional()
@@ -114,6 +126,8 @@ export function getSearchTools(userId: string): ToolSet {
         dateTo?: string;
         minDistanceKm?: number;
         maxDistanceKm?: number;
+        minDurationMin?: number;
+        maxDurationMin?: number;
         orderBy?: "distance" | "duration" | "ascent" | "startTime" | "trimp";
         orderDir?: "asc" | "desc";
         limit?: number;
@@ -142,6 +156,13 @@ export function getSearchTools(userId: string): ToolSet {
         }
         if (args.maxDistanceKm != null) {
           conditions.push(lte(activities.distance, args.maxDistanceKm * 1000));
+        }
+        // Gesamtdauer (elapsed) — das meinen User mit "X Stunden lang".
+        if (args.minDurationMin != null) {
+          conditions.push(gte(activities.duration, args.minDurationMin * 60));
+        }
+        if (args.maxDurationMin != null) {
+          conditions.push(lte(activities.duration, args.maxDurationMin * 60));
         }
 
         const orderCol =
