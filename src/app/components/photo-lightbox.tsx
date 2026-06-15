@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { appendShareToken, useShareToken } from "@/lib/share-context";
 
 interface Photo {
   id: string;
@@ -15,6 +16,7 @@ interface PhotoLightboxProps {
 
 export function PhotoLightbox({ photos }: PhotoLightboxProps) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const shareToken = useShareToken();
 
   const close = useCallback(() => {
     setOpenId(null);
@@ -138,7 +140,7 @@ export function PhotoLightbox({ photos }: PhotoLightboxProps) {
       {/* Image — centered, leaves room for caption */}
       <div className="absolute inset-0 flex items-center justify-center p-4 pb-24 pt-16">
         <img
-          src={`/api/photos/${photo.id}`}
+          src={appendShareToken(`/api/photos/${photo.id}`, shareToken)}
           alt={photo.location ?? ""}
           className="max-h-full max-w-full object-contain"
           onClick={(e) => e.stopPropagation()}

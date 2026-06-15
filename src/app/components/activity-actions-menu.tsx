@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Pencil, Trash2, Loader2 } from "lucide-react";
+import { MoreVertical, Pencil, Share2, Trash2, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +75,12 @@ export function ActivityActionsMenu({
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <Pencil className="h-3.5 w-3.5" />
             Bearbeiten
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => router.push(`/activity/${activity.id}/share`)}
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Teilen
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {

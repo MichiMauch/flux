@@ -49,19 +49,41 @@ async function loadReadableTour(userId: string, tourId: string) {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ tourId: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
   const { tourId } = await params;
-  const tour = await loadReadableTour(session.user.id, tourId);
-  if (!tour) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const shareToken = request.nextUrl.searchParams.get("share");
+
+  let coverPath: string | null = null;
+  if (shareToken) {
+    const [row] = await db
+      .select({ coverPhotoPath: activityTours.coverPhotoPath })
+      .from(activityTours)
+      .where(
+        and(
+          eq(activityTours.id, tourId),
+          eq(activityTours.shareToken, shareToken)
+        )
+      )
+      .limit(1);
+    coverPath = row?.coverPhotoPath ?? null;
+    if (!row) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  } else {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const tour = await loadReadableTour(session.user.id, tourId);
+    if (!tour) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    coverPath = tour.coverPhotoPath;
   }
-  if (!tour.coverPhotoPath) {
+
+  if (!coverPath) {
     return NextResponse.json({ error: "No cover" }, { status: 404 });
   }
 

@@ -22,6 +22,7 @@ import {
   tourHasManualOrder,
 } from "../data";
 import { TourSortToggle } from "../tour-sort-toggle";
+import { ShareButton } from "@/app/components/share-button";
 
 function toDate(v: Date | string | null | undefined): Date | null {
   if (!v) return null;
@@ -119,12 +120,19 @@ export default async function TourDetailPage({
         right={
           <div className="flex items-center gap-3">
             {isOwner ? (
-              <Link
-                href={`/tours/${tour.id}/edit`}
-                className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
-              >
-                Bearbeiten
-              </Link>
+              <>
+                <ShareButton
+                  kind="tour"
+                  id={tour.id}
+                  initialToken={tour.shareToken}
+                />
+                <Link
+                  href={`/tours/${tour.id}/edit`}
+                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
+                >
+                  Bearbeiten
+                </Link>
+              </>
             ) : null}
             <Link
               href="/tours"

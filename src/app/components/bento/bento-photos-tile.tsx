@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AlertCircle, Loader2, Plus, Trash2 } from "lucide-react";
 import { Tile, TileLabel } from "@/app/activity/[id]/tiles";
 import { usePhotoUpload } from "@/lib/hooks/use-photo-upload";
+import { appendShareToken, useShareToken } from "@/lib/share-context";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,7 @@ export function BentoPhotosTile({ activityId, photos, isOwner }: Props) {
     usePhotoUpload(activityId);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const shareToken = useShareToken();
 
   const openPhoto = useCallback((id: string) => {
     if (typeof window !== "undefined") {
@@ -127,7 +129,7 @@ export function BentoPhotosTile({ activityId, photos, isOwner }: Props) {
                 aria-label="Foto öffnen"
               >
                 <Image
-                  src={`/api/photos/${p.id}?thumb=1`}
+                  src={appendShareToken(`/api/photos/${p.id}?thumb=1`, shareToken)}
                   alt=""
                   width={200}
                   height={200}

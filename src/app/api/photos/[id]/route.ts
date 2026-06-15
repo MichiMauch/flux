@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { activities, activityPhotos, users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  activities,
+  activityPhotos,
+  activityTourMembers,
+  activityTours,
+  users,
+} from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 import { readFile } from "fs/promises";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id } = await params;
   const isThumb = request.nextUrl.searchParams.get("thumb") === "1";
+  const shareToken = request.nextUrl.searchParams.get("share");
 
   const photo = await db
     .select()
@@ -28,16 +30,53 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Verify ownership — own activity OR partner's activity (read-only access)
+  const activityId = photo[0].activities.id;
   const activityOwnerId = photo[0].activities.userId;
-  if (activityOwnerId !== session.user.id) {
-    const [me] = await db
-      .select({ partnerId: users.partnerId })
-      .from(users)
-      .where(eq(users.id, session.user.id))
+
+  if (shareToken) {
+    // Activity directly shared, or activity belongs to a shared tour
+    const [direct] = await db
+      .select({ id: activities.id })
+      .from(activities)
+      .where(
+        and(eq(activities.id, activityId), eq(activities.shareToken, shareToken))
+      )
       .limit(1);
-    if (!me?.partnerId || me.partnerId !== activityOwnerId) {
+    let allowed = !!direct;
+    if (!allowed) {
+      const [viaTour] = await db
+        .select({ id: activityTours.id })
+        .from(activityTours)
+        .innerJoin(
+          activityTourMembers,
+          eq(activityTours.id, activityTourMembers.tourId)
+        )
+        .where(
+          and(
+            eq(activityTourMembers.activityId, activityId),
+            eq(activityTours.shareToken, shareToken)
+          )
+        )
+        .limit(1);
+      allowed = !!viaTour;
+    }
+    if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  } else {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (activityOwnerId !== session.user.id) {
+      const [me] = await db
+        .select({ partnerId: users.partnerId })
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1);
+      if (!me?.partnerId || me.partnerId !== activityOwnerId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
   }
 

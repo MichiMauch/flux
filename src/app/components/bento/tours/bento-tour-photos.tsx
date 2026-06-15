@@ -4,12 +4,14 @@ import { useCallback } from "react";
 import Image from "next/image";
 import { BentoTile } from "../bento-tile";
 import type { TourPhoto } from "@/app/tours/data";
+import { appendShareToken, useShareToken } from "@/lib/share-context";
 
 interface BentoTourPhotosProps {
   photos: TourPhoto[];
 }
 
 export function BentoTourPhotos({ photos }: BentoTourPhotosProps) {
+  const shareToken = useShareToken();
   const openPhoto = useCallback((id: string) => {
     if (typeof window !== "undefined") {
       window.location.hash = `photo=${id}`;
@@ -30,7 +32,7 @@ export function BentoTourPhotos({ photos }: BentoTourPhotosProps) {
             className="relative aspect-square shrink-0 basis-[42%] snap-start overflow-hidden rounded-md border border-[#2a2a2a] bg-[#0f0f0f] md:flex-initial md:basis-auto"
           >
             <Image
-              src={`/api/photos/${p.id}?thumb=1`}
+              src={appendShareToken(`/api/photos/${p.id}?thumb=1`, shareToken)}
               alt=""
               width={300}
               height={300}

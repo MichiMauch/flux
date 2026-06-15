@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Mountain, Bike, Satellite, Camera, CameraOff } from "lucide-react";
+import { appendShareToken, useShareToken } from "@/lib/share-context";
 
 interface PhotoMarker {
   id: string;
@@ -58,6 +59,7 @@ export default function MapClient({
   const containerRef = useRef<HTMLDivElement>(null);
   const [layer, setLayer] = useState<LayerType>("outdoors");
   const [showPhotos, setShowPhotos] = useState(true);
+  const shareToken = useShareToken();
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -119,8 +121,9 @@ export default function MapClient({
     photoMarkersRef.current = [];
     if (!showPhotos) return;
     for (const photo of photos) {
+      const photoSrc = appendShareToken(`/api/photos/${photo.id}?thumb=1`, shareToken);
       const icon = L.divIcon({
-        html: `<img src="/api/photos/${photo.id}?thumb=1" alt="" class="photo-marker-img" />`,
+        html: `<img src="${photoSrc}" alt="" class="photo-marker-img" />`,
         className: "photo-marker-wrapper",
         iconSize: [50, 50],
         iconAnchor: [25, 25],
@@ -132,7 +135,7 @@ export default function MapClient({
         });
       photoMarkersRef.current.push(m);
     }
-  }, [photos, showPhotos]);
+  }, [photos, showPhotos, shareToken]);
 
   // Highlight range polyline
   useEffect(() => {

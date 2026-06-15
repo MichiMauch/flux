@@ -68,21 +68,32 @@ function slugify(name: string): string {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id } = await params;
+  const shareToken = new URL(request.url).searchParams.get("share");
 
-  const [activity] = await db
-    .select()
-    .from(activities)
-    .where(and(eq(activities.id, id), eq(activities.userId, session.user.id)))
-    .limit(1);
+  let activity: typeof activities.$inferSelect | undefined;
+  if (shareToken) {
+    const [row] = await db
+      .select()
+      .from(activities)
+      .where(and(eq(activities.id, id), eq(activities.shareToken, shareToken)))
+      .limit(1);
+    activity = row;
+  } else {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const [row] = await db
+      .select()
+      .from(activities)
+      .where(and(eq(activities.id, id), eq(activities.userId, session.user.id)))
+      .limit(1);
+    activity = row;
+  }
 
   if (!activity) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

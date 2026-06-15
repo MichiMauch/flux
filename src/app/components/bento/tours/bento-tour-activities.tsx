@@ -16,11 +16,14 @@ import type { TourActivity } from "@/app/tours/data";
 interface BentoTourActivitiesProps {
   members: TourActivity[];
   tourId: string;
+  /** When false, activity entries are non-clickable (e.g. public share view). */
+  interactive?: boolean;
 }
 
 export function BentoTourActivities({
   members,
   tourId,
+  interactive = true,
 }: BentoTourActivitiesProps) {
   return (
     <BentoTile
@@ -30,29 +33,33 @@ export function BentoTourActivities({
     >
       {members.length === 0 ? (
         <div className="p-6 text-center text-sm text-[#a3a3a3]">
-          Noch keine Aktivitäten zugeordnet.{" "}
-          <Link
-            href={`/tours/${tourId}/edit`}
-            className="text-[#ff6a00] hover:underline"
-          >
-            Aktivitäten hinzufügen
-          </Link>
+          {interactive ? (
+            <>
+              Noch keine Aktivitäten zugeordnet.{" "}
+              <Link
+                href={`/tours/${tourId}/edit`}
+                className="text-[#ff6a00] hover:underline"
+              >
+                Aktivitäten hinzufügen
+              </Link>
+            </>
+          ) : (
+            "Noch keine Aktivitäten zugeordnet."
+          )}
         </div>
       ) : (
         <div className="grid gap-px border-t border-[#2a2a2a] bg-[#1a1a1a] md:grid-cols-2">
           {members.map((m, idx) => {
             const color = sportColor(m.type, idx);
-            return (
-              <Link
-                key={m.id}
-                href={`/activity/${m.id}`}
-                className="flex items-stretch gap-3 bg-[#0f0f0f] p-3 transition-colors hover:bg-[#161616] md:gap-4 md:p-5"
-              >
+            const rowClass = `flex items-stretch gap-3 bg-[#0f0f0f] p-3 md:gap-4 md:p-5${interactive ? " transition-colors hover:bg-[#161616]" : ""}`;
+            const inner = (
+              <>
                 <span
+                  key="bar"
                   className="w-1 shrink-0 self-stretch rounded-sm md:w-1.5"
                   style={{ backgroundColor: color }}
                 />
-                <div className="min-w-0 flex-1 space-y-1 md:space-y-2">
+                <div key="body" className="min-w-0 flex-1 space-y-1 md:space-y-2">
                   <div className="line-clamp-2 text-sm leading-tight text-white md:text-base md:font-medium">
                     {m.name}
                   </div>
@@ -96,7 +103,16 @@ export function BentoTourActivities({
                     ) : null}
                   </div>
                 </div>
+              </>
+            );
+            return interactive ? (
+              <Link key={m.id} href={`/activity/${m.id}`} className={rowClass}>
+                {inner}
               </Link>
+            ) : (
+              <div key={m.id} className={rowClass}>
+                {inner}
+              </div>
             );
           })}
         </div>

@@ -1,4 +1,7 @@
+"use client";
+
 import { Download } from "lucide-react";
+import { appendShareToken, useShareToken } from "@/lib/share-context";
 
 const NEON = "var(--activity-color, #FF6A00)";
 const NEON_ALPHA_1A = "color-mix(in srgb, var(--activity-color, #FF6A00) 10%, transparent)";
@@ -10,9 +13,10 @@ export function BentoGpxTile({
   activityId: string;
   className?: string;
 }) {
+  const shareToken = useShareToken();
   return (
     <a
-      href={`/api/activities/${activityId}/gpx`}
+      href={appendShareToken(`/api/activities/${activityId}/gpx`, shareToken)}
       download
       className={`rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4 flex flex-col gap-2 hover:border-[#4a4a4a] hover:bg-[#151515] transition-colors ${className}`}
     >

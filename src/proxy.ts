@@ -9,6 +9,7 @@ const publicRoutes = [
   "/api/withings/webhook",
   "/api/bloodpressure/webhook",
   "/api/cron",
+  "/share",
 ];
 
 export async function proxy(request: NextRequest) {
@@ -17,6 +18,18 @@ export async function proxy(request: NextRequest) {
   // Allow public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
+  }
+
+  // Share-token-bypass: media endpoints that accept ?share=<token>.
+  // The route handler itself validates the token against the DB.
+  if (request.nextUrl.searchParams.has("share")) {
+    if (
+      pathname.startsWith("/api/photos/") ||
+      pathname.match(/^\/api\/activities\/[^/]+\/gpx$/) ||
+      pathname.match(/^\/api\/tours\/[^/]+\/cover$/)
+    ) {
+      return NextResponse.next();
+    }
   }
 
   // Check session
