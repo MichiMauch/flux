@@ -4,6 +4,29 @@ const POLAR_API_BASE = "https://www.polaraccesslink.com";
 const POLAR_AUTH_URL = "https://flow.polar.com/oauth2/authorization";
 const POLAR_TOKEN_URL = "https://polarremote.com/v2/oauth2/token";
 
+/**
+ * Thrown when Polar rejects the user's access token (401/403). Polar
+ * AccessLink tokens are long-lived and have NO refresh_token — the only way
+ * a token dies is if the user revokes access (or, in rare cases, after a
+ * re-pair that resets the AccessLink registration). Callers should surface
+ * this as "reconnect Polar" rather than a generic failure, because no amount
+ * of retrying will fix it without a fresh OAuth flow.
+ */
+export class PolarAuthError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "PolarAuthError";
+    this.status = status;
+  }
+}
+
+function assertNotAuthError(status: number, context: string, body: string): void {
+  if (status === 401 || status === 403) {
+    throw new PolarAuthError(status, `${context}: ${status} ${body}`);
+  }
+}
+
 interface PolarTokenResponse {
   access_token: string;
   token_type: string;
@@ -153,10 +176,47 @@ export async function listExercises(
   if (!res.ok) {
     if (res.status === 204) return []; // no new data
     const text = await res.text();
+    assertNotAuthError(res.status, "Failed to list exercises", text);
     throw new Error(`Failed to list exercises: ${res.status} ${text}`);
   }
 
   return res.json();
+}
+
+// ── Notifications (webhook backup, app-level) ──────────────────────────────
+// GET /v3/notifications lists pending data across ALL of the app's users in a
+// single call — the only way to discover items a missed webhook never
+// delivered (the per-user transaction list was dropped). Authenticated with
+// the application's Basic credentials, NOT a user Bearer token.
+
+export interface PolarNotificationItem {
+  "user-id": number;
+  "data-type": "EXERCISE" | "ACTIVITY_SUMMARY" | "PHYSICAL_INFORMATION" | string;
+  url?: string;
+}
+
+export async function listNotifications(): Promise<PolarNotificationItem[]> {
+  const clientId = process.env.POLAR_CLIENT_ID;
+  const clientSecret = process.env.POLAR_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return [];
+
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const res = await fetch(`${POLAR_API_BASE}/v3/notifications`, {
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (res.status === 204) return [];
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to list notifications: ${res.status} ${text}`);
+  }
+
+  const data = (await res.json()) as { "available-user-data"?: PolarNotificationItem[] };
+  return data["available-user-data"] ?? [];
 }
 
 export async function getExercise(
@@ -194,6 +254,7 @@ export async function downloadFit(
 
   if (!res.ok) {
     const text = await res.text();
+    assertNotAuthError(res.status, "Failed to download FIT", text);
     throw new Error(`Failed to download FIT: ${res.status} ${text}`);
   }
 

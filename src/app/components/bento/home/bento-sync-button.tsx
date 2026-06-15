@@ -8,10 +8,13 @@ const NEON = "#FF6A00";
 export function BentoSyncButton() {
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [needsReauth, setNeedsReauth] = useState(false);
 
   async function handleSync() {
     setSyncing(true);
     setResult(null);
+    setNeedsReauth(false);
+    let reauth = false;
     try {
       const res = await fetch("/api/sync", { method: "POST" });
       const data = await res.json();
@@ -20,6 +23,11 @@ export function BentoSyncButton() {
           data.synced > 0 ? `${data.synced} neue Aktivität(en)` : "Alles aktuell"
         );
         if (data.synced > 0) window.location.reload();
+      } else if (data.needsReauth) {
+        // Token dead/revoked — retrying won't help, the user must reconnect.
+        reauth = true;
+        setNeedsReauth(true);
+        setResult("Polar neu verbinden");
       } else {
         setResult(data.error || "Fehler");
       }
@@ -27,21 +35,33 @@ export function BentoSyncButton() {
       setResult("Sync fehlgeschlagen");
     } finally {
       setSyncing(false);
-      setTimeout(() => setResult(null), 3000);
+      // Keep the reconnect prompt visible; only auto-clear transient messages.
+      if (!reauth) {
+        setTimeout(() => setResult(null), 3000);
+      }
     }
   }
 
   return (
     <div className="flex items-center gap-2">
-      {result && (
-        <span className="[font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em] text-[#9ca3af]">
-          {result}
-        </span>
-      )}
+      {result &&
+        (needsReauth ? (
+          <a
+            href="/api/polar/authorize"
+            className="[font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em] underline underline-offset-2 cursor-pointer"
+            style={{ color: NEON }}
+          >
+            {result}
+          </a>
+        ) : (
+          <span className="[font-family:var(--bento-mono)] text-[10px] uppercase tracking-[0.14em] text-[#9ca3af]">
+            {result}
+          </span>
+        ))}
       <button
         onClick={handleSync}
         disabled={syncing}
-        className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] transition-all disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] transition-all disabled:opacity-50 cursor-pointer"
         style={{
           borderColor: NEON,
           color: NEON,
