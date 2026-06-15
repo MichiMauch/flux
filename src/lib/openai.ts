@@ -6,7 +6,7 @@ import OpenAI from "openai";
  * Single source of truth for the OpenAI model used across the app.
  * Change this one value to switch models everywhere (chat, coach, AI-title).
  */
-export const DEFAULT_MODEL = "gpt-5.4-mini";
+export const DEFAULT_MODEL = "gpt-5-mini";
 
 let aiSdkClient: ReturnType<typeof createOpenAI> | null = null;
 let openaiClient: OpenAI | null = null;

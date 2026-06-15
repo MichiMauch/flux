@@ -66,6 +66,11 @@ export async function POST(req: NextRequest) {
     messages: modelMessages,
     tools: getSearchTools(session.user.id),
     stopWhen: stepCountIs(5),
+    // Force a tool call on the first step so the model always queries the DB
+    // instead of answering from memory ("findet nichts" obwohl es Treffer gibt).
+    // Subsequent steps default to auto, so it can answer once it has results.
+    prepareStep: ({ stepNumber }) =>
+      stepNumber === 0 ? { toolChoice: "required" } : {},
     temperature: 0.3,
     onError: (e) => {
       console.error("[/api/chat] streamText error:", e);
