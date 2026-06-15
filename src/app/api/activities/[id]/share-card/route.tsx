@@ -5,7 +5,7 @@ import { activities, activityPhotos, users } from "@/lib/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { readFile } from "fs/promises";
-import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
+import { activityTypeColor } from "@/lib/activity-types";
 import { activityTypeIcon } from "@/lib/activity-icon";
 import { formatDurationHMS } from "@/lib/activity-format";
 
@@ -76,7 +76,14 @@ function sampleRoute(points: RoutePoint[] | null, max = 120): RoutePoint[] {
   return out;
 }
 
-function routeToPath(pointsIn: RoutePoint[] | null, width: number, height: number) {
+// Project route to an SVG path that fits a width×height box while preserving
+// the geographic aspect ratio (so the route isn't stretched). Used only as a
+// fallback when the Mapbox static image is unavailable.
+function routeToPath(
+  pointsIn: RoutePoint[] | null,
+  width: number,
+  height: number
+) {
   const points = sampleRoute(pointsIn, 96);
   if (points.length < 2) return null;
 
@@ -87,15 +94,25 @@ function routeToPath(pointsIn: RoutePoint[] | null, width: number, height: numbe
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
   const latRange = maxLat - minLat || 0.001;
-  const lngRange = maxLng - minLng || 0.001;
-  const pad = 32;
-  const innerW = width - pad * 2;
-  const innerH = height - pad * 2;
+  // longitude degrees shrink with latitude — correct for it so the shape
+  // matches what a map would show.
+  const midLat = (minLat + maxLat) / 2;
+  const lngScale = Math.cos((midLat * Math.PI) / 180) || 1;
+  const lngRange = (maxLng - minLng) * lngScale || 0.001;
+
+  const pad = 120;
+  const boxW = width - pad * 2;
+  const boxH = height - pad * 2;
+  const scale = Math.min(boxW / lngRange, boxH / latRange);
+  const drawW = lngRange * scale;
+  const drawH = latRange * scale;
+  const offX = pad + (boxW - drawW) / 2;
+  const offY = pad + (boxH - drawH) / 2;
 
   return points
     .map((p, idx) => {
-      const x = pad + ((p.lng - minLng) / lngRange) * innerW;
-      const y = pad + innerH - ((p.lat - minLat) / latRange) * innerH;
+      const x = offX + ((p.lng - minLng) * lngScale) * scale;
+      const y = offY + drawH - (p.lat - minLat) * scale;
       return `${idx === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
     })
     .join(" ");
@@ -121,6 +138,9 @@ function iconForType(type: string): string {
   }
 }
 
+// Full-bleed Mapbox static map with the route baked in as a line overlay.
+// Requested at the card's own size/aspect so it fills the canvas exactly
+// (no objectFit guesswork in Satori).
 async function buildMapboxStaticDataUrl(
   routeIn: RoutePoint[] | null,
   width: number,
@@ -145,15 +165,17 @@ async function buildMapboxStaticDataUrl(
     type: "Feature",
     properties: {
       stroke: strokeColor,
-      "stroke-width": 4,
-      "stroke-opacity": 0.95,
+      "stroke-width": 6,
+      "stroke-opacity": 1,
     },
     geometry: { type: "LineString", coordinates: coords },
   };
   const overlay = `geojson(${encodeURIComponent(JSON.stringify(geojson))})`;
+  // Mapbox caps static images at 1280px per side (no @2x here — 1080 would
+  // exceed the cap when doubled). padding keeps the route inset from edges.
   const reqW = Math.min(Math.round(width), 1280);
   const reqH = Math.min(Math.round(height), 1280);
-  const url = `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${overlay}/auto/${reqW}x${reqH}@2x?access_token=${token}&padding=40`;
+  const url = `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${overlay}/auto/${reqW}x${reqH}?access_token=${token}&padding=100`;
   if (url.length > 8000) return null;
 
   try {
@@ -253,7 +275,7 @@ async function canReadActivity(activityId: string, viewerId: string) {
   return row.ownerId === viewerId || row.ownerPartnerId === viewerId;
 }
 
-function CardMetric({
+function Stat({
   label,
   value,
   unit,
@@ -261,57 +283,40 @@ function CardMetric({
 }: {
   label: string;
   value: string;
-  unit: string;
+  unit?: string;
   accent: string;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        gap: 12,
-        borderRadius: 28,
-        border: "1px solid rgba(255,255,255,0.1)",
-        background: "rgba(255,255,255,0.04)",
-        padding: "22px 24px",
-        boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.03), 0 20px 50px rgba(0,0,0,0.28), 0 0 0 1px ${accent}22`,
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div
         style={{
           display: "flex",
-          fontSize: 16,
-          letterSpacing: "0.22em",
-          color: "rgba(255,255,255,0.58)",
+          fontSize: 19,
+          letterSpacing: "0.2em",
           textTransform: "uppercase",
+          color: "rgba(255,255,255,0.62)",
         }}
       >
         {label}
       </div>
-      <div
-        style={{
-          display: "flex",
-          fontSize: 44,
-          lineHeight: 1,
-          color: "#f8f8f8",
-          letterSpacing: "0.02em",
-          textShadow: `0 0 20px ${accent}44`,
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          fontSize: 16,
-          lineHeight: 1,
-          color: accent,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-        }}
-      >
-        {unit}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+        <div style={{ display: "flex", fontSize: 62, lineHeight: 1, fontWeight: 700 }}>
+          {value}
+        </div>
+        {unit ? (
+          <div
+            style={{
+              display: "flex",
+              fontSize: 22,
+              marginBottom: 7,
+              color: accent,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            {unit}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -362,26 +367,37 @@ export async function GET(
   const height = format === "story" ? 1920 : 1080;
   const accent = activityTypeColor(data.type);
   const dimAccent = `${accent}66`;
-  const mapBoxW = format === "story" ? 920 : 500;
-  const mapBoxH = format === "story" ? 520 : 420;
+
   const routeForMap =
     data.routeGeometry && data.routeGeometry.length > 1
       ? data.routeGeometry
       : data.routeData;
-  const routePath = routeToPath(routeForMap, mapBoxW, mapBoxH);
+
+  // Request the map at the card's aspect ratio, capped to Mapbox's 1280px
+  // limit, so it fills the full canvas with no distortion.
+  const cap = 1280;
+  const mapScale = Math.min(1, cap / Math.max(width, height));
+  const mapReqW = Math.round(width * mapScale);
+  const mapReqH = Math.round(height * mapScale);
+
   const mapImageUrl = await buildMapboxStaticDataUrl(
     routeForMap,
-    mapBoxW,
-    mapBoxH,
+    mapReqW,
+    mapReqH,
     accent
   );
+  const routePath = routeToPath(routeForMap, width, height);
   const photoUrl = await fileToDataUrl(data.photoPath);
+
+  // Background priority: map-with-route > photo > dark gradient.
+  const bgUrl = mapImageUrl ?? photoUrl;
+
   const duration = data.movingTime ?? data.duration ?? 0;
   const icon = iconForType(data.type);
   const dateLabel = formatDate(data.startTime);
-  const ownerLabel = data.ownerName ?? "Flux";
-  const activityLabel = activityTypeLabel(data.type).toUpperCase();
+  const ownerLabel = (data.ownerName ?? "Flux").toUpperCase();
   const cardTitle = data.name.toUpperCase();
+  const pad = format === "story" ? 72 : 64;
 
   const response = new ImageResponse(
     (
@@ -394,355 +410,198 @@ export async function GET(
           position: "relative",
           overflow: "hidden",
           background:
-            "radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 30%), linear-gradient(160deg, #050505 0%, #0c0c0c 42%, #121212 100%)",
+            "linear-gradient(160deg, #0a0a0a 0%, #111 55%, #0a0a0a 100%)",
           color: "white",
-          padding: format === "story" ? 64 : 56,
           fontFamily: "JetBrains Mono, Menlo, monospace",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 22%, transparent 78%, rgba(255,255,255,0.03) 100%)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: -180,
-            right: -120,
-            width: 520,
-            height: 520,
-            borderRadius: 999,
-            background: `${accent}20`,
-            filter: "blur(30px)",
-          }}
-        />
+        {/* Full-bleed background: map (with route) or photo. Requested at the
+            card aspect ratio, so width/height 100% fills it exactly. */}
+        {bgUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={bgUrl}
+            alt=""
+            width={width}
+            height={height}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        ) : routePath ? (
+          <svg
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            style={{ position: "absolute", top: 0, left: 0 }}
+          >
+            <path
+              d={routePath}
+              fill="none"
+              stroke={accent}
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.95"
+            />
+          </svg>
+        ) : null}
 
+        {/* Top scrim for header legibility */}
         <div
           style={{
             display: "flex",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: Math.round(height * 0.3),
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)",
+          }}
+        />
+        {/* Bottom scrim for title + stats legibility */}
+        <div
+          style={{
+            display: "flex",
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: Math.round(height * 0.56),
+            background:
+              "linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.62) 42%, rgba(0,0,0,0) 100%)",
+          }}
+        />
+
+        {/* Content */}
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
             justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 28,
+            width: "100%",
+            height: "100%",
+            padding: pad,
           }}
         >
+          {/* Header */}
           <div
             style={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 18,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minWidth: 108,
-                height: 54,
-                borderRadius: 999,
-                border: `1px solid ${dimAccent}`,
-                background: `${accent}18`,
-                color: accent,
-                fontSize: 24,
-                letterSpacing: "0.16em",
-              }}
-            >
-              {icon}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div
                 style={{
-                  fontSize: 18,
-                  letterSpacing: "0.26em",
-                  textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.54)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: 104,
+                  height: 52,
+                  borderRadius: 999,
+                  border: `1px solid ${accent}`,
+                  background: `${accent}26`,
+                  color: "#fff",
+                  fontSize: 23,
+                  letterSpacing: "0.16em",
+                  textShadow: "0 1px 6px rgba(0,0,0,0.6)",
                 }}
               >
-                {activityLabel}
+                {icon}
               </div>
               <div
                 style={{
-                  fontSize: 24,
+                  display: "flex",
+                  fontSize: 23,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.92)",
+                  textShadow: "0 1px 6px rgba(0,0,0,0.7)",
                 }}
               >
                 {dateLabel}
               </div>
             </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                fontSize: 22,
+                letterSpacing: "0.26em",
+                textTransform: "uppercase",
+                textShadow: "0 1px 6px rgba(0,0,0,0.7)",
+              }}
+            >
+              <div style={{ display: "flex", color: accent }}>
+                {FLUX_WORDMARK}
+              </div>
+              <div style={{ display: "flex", color: "rgba(255,255,255,0.72)" }}>
+                {ownerLabel}
+              </div>
+            </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              fontSize: 18,
-              letterSpacing: "0.28em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.72)",
-            }}
-          >
-            <span style={{ color: accent }}>{FLUX_WORDMARK}</span>
-            <span style={{ color: "rgba(255,255,255,0.42)" }}>
-              {ownerLabel.toUpperCase()}
-            </span>
+          {/* Footer: title + stats over the scrim */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: format === "story" ? 78 : 72,
+                lineHeight: 0.94,
+                fontWeight: 700,
+                letterSpacing: "-0.03em",
+                textTransform: "uppercase",
+                textShadow: "0 2px 22px rgba(0,0,0,0.75)",
+              }}
+            >
+              {cardTitle}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "row", gap: 56 }}>
+              <Stat
+                label="Distanz"
+                value={formatDistance(data.distance)}
+                unit="km"
+                accent={accent}
+              />
+              <Stat
+                label="Zeit"
+                value={formatDurationHMS(duration)}
+                accent={accent}
+              />
+              <Stat
+                label="Aufstieg"
+                value={metricValue(data.ascent)}
+                unit="m"
+                accent={accent}
+              />
+            </div>
           </div>
         </div>
 
+        {/* Accent hairline frame */}
         <div
           style={{
             display: "flex",
-            flexDirection: format === "story" ? "column" : "row",
-            gap: 30,
-            flex: 1,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            border: `1px solid ${dimAccent}`,
           }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              flex: format === "story" ? "0 0 auto" : 1.12,
-              minHeight: format === "story" ? 0 : "100%",
-              gap: 22,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-                padding: "20px 24px 0 0",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: format === "story" ? 72 : 82,
-                  lineHeight: 0.92,
-                  fontWeight: 700,
-                  letterSpacing: "-0.04em",
-                  textTransform: "uppercase",
-                  textShadow: `0 0 36px ${accent}30`,
-                }}
-              >
-                {cardTitle}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: format === "story" ? "column" : "row",
-                gap: 18,
-              }}
-            >
-              <div style={{ display: "flex", flex: 1 }}>
-                <CardMetric
-                  label="Distanz"
-                  value={formatDistance(data.distance)}
-                  unit="KM"
-                  accent={accent}
-                />
-              </div>
-              <div style={{ display: "flex", flex: 1 }}>
-                <CardMetric
-                  label="Zeit"
-                  value={formatDurationHMS(duration)}
-                  unit="MOV"
-                  accent={accent}
-                />
-              </div>
-              <div style={{ display: "flex", flex: 1 }}>
-                <CardMetric
-                  label="Aufstieg"
-                  value={metricValue(data.ascent)}
-                  unit="M"
-                  accent={accent}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              flex: 0.88,
-              gap: 20,
-            }}
-          >
-            {photoUrl ? (
-              <div
-                style={{
-                  display: "flex",
-                  position: "relative",
-                  overflow: "hidden",
-                  borderRadius: 34,
-                  border: `1px solid ${dimAccent}`,
-                  background: "#0f0f0f",
-                  minHeight: format === "story" ? 620 : 320,
-                }}
-              >
-                {/* next/image is not available inside next/og ImageResponse trees. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photoUrl}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                  }}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.2) 58%, rgba(0,0,0,0.5))",
-                  }}
-                />
-              </div>
-            ) : null}
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                position: "relative",
-                overflow: "hidden",
-                borderRadius: 34,
-                border: `1px solid ${dimAccent}`,
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
-                minHeight: format === "story" ? 520 : 420,
-              }}
-            >
-              {mapImageUrl ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={mapImageUrl}
-                    alt=""
-                    width={mapBoxW}
-                    height={mapBoxH}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: "flex",
-                      position: "absolute",
-                      inset: 0,
-                      background:
-                        "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.0) 25%, rgba(0,0,0,0.0) 70%, rgba(0,0,0,0.45) 100%)",
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: "flex",
-                      position: "relative",
-                      padding: 24,
-                      fontSize: 16,
-                      letterSpacing: "0.22em",
-                      textTransform: "uppercase",
-                      color: "rgba(255,255,255,0.92)",
-                      textShadow: "0 1px 6px rgba(0,0,0,0.6)",
-                    }}
-                  >
-                    Route
-                  </div>
-                </>
-              ) : routePath ? (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    flex: 1,
-                    padding: 28,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      fontSize: 16,
-                      letterSpacing: "0.22em",
-                      textTransform: "uppercase",
-                      color: "rgba(255,255,255,0.58)",
-                      marginBottom: 16,
-                    }}
-                  >
-                    Route
-                  </div>
-                  <svg
-                    width="100%"
-                    height="100%"
-                    viewBox={`0 0 ${mapBoxW} ${mapBoxH}`}
-                    style={{ display: "flex", flex: 1 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="routeStroke"
-                        x1="0"
-                        y1="0"
-                        x2="1"
-                        y2="1"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor="#ffffff"
-                          stopOpacity="0.55"
-                        />
-                        <stop offset="100%" stopColor={accent} stopOpacity="1" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d={routePath}
-                      fill="none"
-                      stroke="url(#routeStroke)"
-                      strokeWidth="14"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity="0.96"
-                    />
-                  </svg>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 26,
-                    border: "1px dashed rgba(255,255,255,0.14)",
-                    color: "rgba(255,255,255,0.4)",
-                    fontSize: 24,
-                    letterSpacing: "0.18em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Keine Route
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        />
       </div>
     ),
     {
