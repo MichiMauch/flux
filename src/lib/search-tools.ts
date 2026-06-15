@@ -76,7 +76,6 @@ export function getSearchTools(userId: string): ToolSet {
           .limit(200);
 
         const compact = rows.map(toCompact);
-        console.log("[list_activities] -> rows=", compact.length);
         return { activities: compact, total: compact.length };
       },
     },
@@ -220,13 +219,6 @@ export function getSearchTools(userId: string): ToolSet {
           .limit(limit);
 
         const compact = rows.map(toCompact);
-        console.log(
-          "[search_activities] args=",
-          JSON.stringify(args),
-          "-> rows=",
-          compact.length,
-          compact.slice(0, 5).map((a) => `${a.name}(${a.durationMin}min)`)
-        );
         return { activities: compact, total: compact.length };
       },
     },
