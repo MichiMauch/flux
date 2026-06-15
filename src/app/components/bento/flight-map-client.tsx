@@ -193,7 +193,11 @@ export default function FlightMapClient({
         .addTo(map);
 
       const flyEl = document.createElement("div");
-      flyEl.style.cssText = `width:14px;height:14px;border-radius:9999px;background:${color};box-shadow:0 0 0 4px ${color}55,0 0 18px ${color}aa;`;
+      // Moving position puck: accent-independent white core with a dark ring
+      // so it stays clearly visible on top of the (accent-coloured) route and
+      // on any terrain — and is distinct from the green start / red end pins.
+      flyEl.style.cssText =
+        "width:16px;height:16px;border-radius:9999px;background:#ffffff;border:3px solid #0b0b0b;box-shadow:0 0 0 2px rgba(255,255,255,0.9),0 0 16px rgba(0,0,0,0.55);";
       const flySample = sampleAlongTrack(track, progress);
       flyMarkerRef.current = new mapboxgl.Marker({ element: flyEl })
         .setLngLat([flySample.lng, flySample.lat])
