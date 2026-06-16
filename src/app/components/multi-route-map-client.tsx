@@ -83,6 +83,7 @@ export default function MultiRouteMapClient({
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const polylinesRef = useRef<Map<string, L.Polyline>>(new Map());
+  const casingsRef = useRef<Map<string, L.Polyline>>(new Map());
   const baseColorsRef = useRef<Map<string, string>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
   const [layer, setLayer] = useState<LayerType>("outdoors");
@@ -129,11 +130,19 @@ export default function MultiRouteMapClient({
     if (!map) return;
 
     for (const p of polylinesRef.current.values()) p.remove();
+    for (const c of casingsRef.current.values()) c.remove();
     polylinesRef.current.clear();
+    casingsRef.current.clear();
     baseColorsRef.current.clear();
 
     const allPositions: L.LatLngExpression[] = [];
 
+    const built: {
+      id: string;
+      name: string;
+      positions: L.LatLngExpression[];
+      color: string;
+    }[] = [];
     routes.forEach((route, idx) => {
       if (route.routeData.length < 2) return;
       const positions: L.LatLngExpression[] = route.routeData.map((p) => [
@@ -141,33 +150,52 @@ export default function MultiRouteMapClient({
         p.lng,
       ]);
       allPositions.push(...positions);
+      built.push({
+        id: route.activityId,
+        name: route.name,
+        positions,
+        color: colorFor(route, idx),
+      });
+    });
 
-      const color = colorFor(route, idx);
-      const polyline = L.polyline(positions, {
-        color,
+    // Pass 1: white casings underneath ALL routes first, so no coloured line
+    // gets covered by another route's casing.
+    for (const b of built) {
+      const casing = L.polyline(b.positions, {
+        color: "#ffffff",
+        weight: 8,
+        opacity: 0.9,
+        interactive: false,
+        bubblingMouseEvents: false,
+      }).addTo(map);
+      casingsRef.current.set(b.id, casing);
+    }
+
+    // Pass 2: coloured, interactive route lines on top.
+    for (const b of built) {
+      const polyline = L.polyline(b.positions, {
+        color: b.color,
         weight: 4,
         opacity: 0.85,
         bubblingMouseEvents: false,
       }).addTo(map);
 
-      polyline.bindTooltip(`<strong>${escapeHtml(route.name)}</strong>`, {
+      polyline.bindTooltip(`<strong>${escapeHtml(b.name)}</strong>`, {
         sticky: true,
         direction: "top",
       });
 
       polyline.on("click", () => {
-        setSelectedId((prev) =>
-          prev === route.activityId ? null : route.activityId
-        );
+        setSelectedId((prev) => (prev === b.id ? null : b.id));
       });
-      polyline.on("mouseover", () => setHoveredId(route.activityId));
+      polyline.on("mouseover", () => setHoveredId(b.id));
       polyline.on("mouseout", () =>
-        setHoveredId((prev) => (prev === route.activityId ? null : prev))
+        setHoveredId((prev) => (prev === b.id ? null : prev))
       );
 
-      polylinesRef.current.set(route.activityId, polyline);
-      baseColorsRef.current.set(route.activityId, color);
-    });
+      polylinesRef.current.set(b.id, polyline);
+      baseColorsRef.current.set(b.id, b.color);
+    }
 
     if (allPositions.length > 0) {
       const bounds = L.latLngBounds(allPositions);
@@ -200,12 +228,20 @@ export default function MultiRouteMapClient({
         effectiveSelectedId !== null && !isSelected && !isHovered;
 
       const baseColor = baseColorsRef.current.get(id) ?? "#ffffff";
-      polyline.setStyle({
-        color: isHovered ? "#ffffff" : baseColor,
-        weight: isSelected ? 6 : isHovered ? 6 : dimmed ? 2 : 4,
-        opacity: isSelected ? 1 : isHovered ? 1 : dimmed ? 0.35 : 0.85,
-      });
-      if (isSelected || isHovered) polyline.bringToFront();
+      const weight = isSelected ? 6 : isHovered ? 6 : dimmed ? 2 : 4;
+      const opacity = isSelected ? 1 : isHovered ? 1 : dimmed ? 0.35 : 0.85;
+      polyline.setStyle({ color: baseColor, weight, opacity });
+
+      // White casing tracks the line: a few px wider, dims with it.
+      const casing = casingsRef.current.get(id);
+      casing?.setStyle({ weight: weight + 4, opacity: dimmed ? 0.35 : 0.9 });
+
+      if (isSelected || isHovered) {
+        // Casing first, then the coloured line, so the pair sits on top with
+        // the white directly beneath its own route.
+        casing?.bringToFront();
+        polyline.bringToFront();
+      }
     }
   }, [effectiveSelectedId, hoveredId]);
 
