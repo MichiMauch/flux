@@ -35,15 +35,17 @@ const OVERPASS_ENDPOINTS = [
 // often a little off the ideal line, and the POI node may sit at the building
 // rather than the trail → wider.
 const PEAK_RADIUS_M = 150;
-const HUT_RADIUS_M = 250;
+const HUT_RADIUS_M = 400;
 // Cap the polyline sent to Overpass; segments between vertices still match, so
 // this is only about query size, not coverage.
 const MAX_QUERY_POINTS = 120;
 
 // Names that mean "Alm/Hütte" but where the OSM feature is NOT tagged as an
-// alpine_hut (e.g. amenity=restaurant "Arzler Alm", tourism=information
-// "Tiefental Alm"). Matched against the feature name.
-const HUT_NAME_RE = /(^|[\s-])(alm|alp|hütte|hütt|htte)([\s-]|$)/i;
+// alpine_hut (e.g. amenity=restaurant "Arzler Alm" / "Mauchelealm",
+// tourism=information "Tiefental Alm"). Matched against the feature name.
+// "alm/alp/hütte" count as a standalone word OR a compound suffix
+// ("Söllbergalm", "Riffelseehütte") — the trailing \b anchors the word end.
+const HUT_NAME_RE = /(alm|alp|alpe|h[üu]tt?e)\b/i;
 // Reject ways/features named after an Alm that are really paths, lifts, water,
 // etc. ("Arzler Alm-Weg", "Almbahn", "Almbach").
 const NOT_A_PLACE_RE = /(weg|str(?:\.|aße|asse)|pfad|steig|bahn|lift|bach|graben|route)$/i;
