@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { reverseGeocode } from "./geocode";
+import { findRouteLandmarks, type Landmark } from "./landmarks";
 
 // Inlined to avoid pulling in `server-only` (which Next.js bundles but tsx
 // scripts can't resolve). Keep model in sync with src/lib/openai.ts.
@@ -14,6 +15,13 @@ function getOpenAIClient(): OpenAI {
 
 const LOOP_THRESHOLD_M = 200;
 const WAYPOINT_SAMPLES = 6;
+
+const LANDMARK_LABEL: Record<Landmark["kind"], string> = {
+  peak: "Gipfel",
+  alpine_hut: "Alm/Hütte",
+  pass: "Pass",
+  saddle: "Joch/Sattel",
+};
 
 export interface RoutePoint {
   lat: number;
@@ -114,18 +122,25 @@ export async function generateActivityTitle(
     let chain: string[] = [];
     let startFull: string | null = null;
     let endFull: string | null = null;
+    let landmarks: Landmark[] = [];
 
     if (route.length >= 2) {
       const samples = sampleByDistance(route, WAYPOINT_SAMPLES);
-      const geocoded = await Promise.all(
-        samples.map((p) => reverseGeocode(p.lat, p.lng))
-      );
+      // Mapbox (settlements) and Overpass (peaks/huts/passes) in parallel.
+      const [geocoded, foundLandmarks] = await Promise.all([
+        Promise.all(samples.map((p) => reverseGeocode(p.lat, p.lng))),
+        findRouteLandmarks(route),
+      ]);
       startFull = geocoded[0];
       endFull = geocoded[geocoded.length - 1];
       chain = uniqueChain(geocoded.map(placeOnly));
+      landmarks = foundLandmarks;
     }
 
     const prompt = {
+      // Named natural features along the route (Almen, Gipfel, Joche). These are
+      // far more descriptive than settlement names for mountain tours — prefer them.
+      landmarks: landmarks.map((l) => ({ name: l.name, art: LANDMARK_LABEL[l.kind] })),
       orte_kette: chain,
       start: startFull,
       ende: loop ? null : endFull,
@@ -154,18 +169,18 @@ export async function generateActivityTitle(
           role: "system",
           content:
             "Du bist ein Titel-Generator für Fitness-Aktivitäten. " +
-            "Erzeuge einen kurzen deutschen Titel (max 60 Zeichen), der ausschliesslich auf Ortsnamen basiert. " +
+            "Erzeuge einen kurzen deutschen Titel (max 60 Zeichen), der ausschliesslich auf Orts- und Geländenamen basiert. " +
             "Die Sportart wird in der UI über Icon/Farbe angezeigt — daher KEINE Sportart im Titel nennen. " +
             "Regeln: " +
-            "(1) Verwende ausschliesslich Ortsnamen aus 'orte_kette'. " +
-            "(2) Bei mehreren Orten: Kette 'Ort1–Ort2–Ort3' mit Halbgeviertstrich – (max 4 Orte, kürze sinnvoll). " +
-            "(3) Bei Loop und nur einem Ort: 'Runde um <Ort>' oder einfach '<Ort>'. " +
-            "(4) Bei Point-to-Point: 'Start–Ziel'. " +
-            "(5) NIEMALS Sportart-Wörter wie 'Velo', 'Rennrad', 'Mountainbike', 'Lauf', 'Wanderung', 'Spaziergang', 'Schwimmen', 'Tour', 'Training', 'Runde' (ausser Regel 3). " +
+            "(1) 'landmarks' (Gipfel, Almen/Hütten, Pässe, Joche entlang der Route) sind AUSSAGEKRÄFTIGER als 'orte_kette' (Dörfer/Regionen) — bevorzuge sie, wenn vorhanden. " +
+            "(2) Baue die Kette aus den markantesten Landmarks in Reihenfolge: 'Name1–Name2–Name3' mit Halbgeviertstrich – (max 3–4 Namen, wähle die charakteristischsten aus: Gipfel und Almen zuerst, kürze sinnvoll). " +
+            "(3) Verwende die Namen EXAKT wie angegeben (inkl. 'Alm', 'Spitze', 'Joch', 'Hütte' — das sind Teile des Eigennamens, keine Sportart). " +
+            "(4) Ohne Landmarks: Kette aus 'orte_kette' ('Ort1–Ort2–Ort3', max 4). Bei Loop und nur einem Ort: 'Runde um <Ort>' oder '<Ort>'. Bei Point-to-Point: 'Start–Ziel'. " +
+            "(5) NIEMALS generische Sportart-/Aktivitäts-Wörter wie 'Velo', 'Rennrad', 'Mountainbike', 'Lauf', 'Wanderung', 'Spaziergang', 'Schwimmen', 'Tour', 'Training', 'Runde' (ausser Regel 4). " +
             "(6) NIEMALS Tageszeit-Wörter ('Morgen', 'Mittag', 'Abend', 'Nacht', 'morgendlich' etc.). " +
             "(7) Kein Wochentag, kein Datum, keine Anführungszeichen, keine Emojis. " +
-            "(8) Wenn 'orte_kette' leer ist: gib einen leeren String zurück. " +
-            "Beispiele: 'Muhen–Williberg–Reitnau' — 'Brienz–Rothorn' — 'Runde um Muhen' — 'Aarau'.",
+            "(8) Wenn 'landmarks' UND 'orte_kette' leer sind: gib einen leeren String zurück. " +
+            "Beispiele: 'Arzler Alm–Kreuzjoch–Tiefental Alm' — 'Muhen–Williberg–Reitnau' — 'Brienz–Rothorn' — 'Runde um Muhen' — 'Aarau'.",
         },
         { role: "user", content: JSON.stringify(prompt) },
       ],
