@@ -38,6 +38,12 @@ export interface ActivityTitleContext {
   ascentMeters: number | null;
   routeData: RoutePoint[] | null;
   fallbackTitle: string;
+  /**
+   * Pre-fetched landmarks. Pass this to reuse a single Overpass lookup (e.g. a
+   * backfill that already called findRouteLandmarks to guard against overwrites)
+   * instead of querying Overpass a second time here. Omit for the normal path.
+   */
+  landmarks?: Landmark[];
 }
 
 function haversine(a: RoutePoint, b: RoutePoint): number {
@@ -127,9 +133,10 @@ export async function generateActivityTitle(
     if (route.length >= 2) {
       const samples = sampleByDistance(route, WAYPOINT_SAMPLES);
       // Mapbox (settlements) and Overpass (peaks/huts/passes) in parallel.
+      // Reuse caller-provided landmarks to avoid a second Overpass query.
       const [geocoded, foundLandmarks] = await Promise.all([
         Promise.all(samples.map((p) => reverseGeocode(p.lat, p.lng))),
-        findRouteLandmarks(route),
+        ctx.landmarks ?? findRouteLandmarks(route),
       ]);
       startFull = geocoded[0];
       endFull = geocoded[geocoded.length - 1];
@@ -173,7 +180,7 @@ export async function generateActivityTitle(
             "Die Sportart wird in der UI über Icon/Farbe angezeigt — daher KEINE Sportart im Titel nennen. " +
             "Regeln: " +
             "(1) 'landmarks' (Gipfel, Almen/Hütten, Pässe, Joche entlang der Route) sind AUSSAGEKRÄFTIGER als 'orte_kette' (Dörfer/Regionen) — bevorzuge sie, wenn vorhanden. " +
-            "(2) Baue die Kette aus den markantesten Landmarks in Reihenfolge: 'Name1–Name2–Name3' mit Halbgeviertstrich – (max 3–4 Namen, wähle die charakteristischsten aus: Gipfel und Almen zuerst, kürze sinnvoll). " +
+            "(2) Baue die Kette aus den Landmarks in Reihenfolge: 'Name1–Name2–Name3' mit Halbgeviertstrich – (max 3–4 Namen). Behalte IMMER den ERSTEN und LETZTEN Landmark der Liste (Start und Ziel der Tour); wenn gekürzt werden muss, entferne mittlere Einträge, niemals den ersten oder letzten. " +
             "(3) Verwende die Namen EXAKT wie angegeben (inkl. 'Alm', 'Spitze', 'Joch', 'Hütte' — das sind Teile des Eigennamens, keine Sportart). " +
             "(4) Ohne Landmarks: Kette aus 'orte_kette' ('Ort1–Ort2–Ort3', max 4). Bei Loop und nur einem Ort: 'Runde um <Ort>' oder '<Ort>'. Bei Point-to-Point: 'Start–Ziel'. " +
             "(5) NIEMALS generische Sportart-/Aktivitäts-Wörter wie 'Velo', 'Rennrad', 'Mountainbike', 'Lauf', 'Wanderung', 'Spaziergang', 'Schwimmen', 'Tour', 'Training', 'Runde' (ausser Regel 4). " +

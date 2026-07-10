@@ -114,26 +114,37 @@ function classify(tags: Record<string, string>): LandmarkKind | null {
   return null;
 }
 
+const OVERPASS_ATTEMPTS = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 async function queryOverpass(query: string): Promise<OverpassElement[] | null> {
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          // Overpass rejects requests without a User-Agent (HTTP 406).
-          "User-Agent": "flux/1.0 (activity-title-landmarks)",
-        },
-        body: "data=" + encodeURIComponent(query),
-        cache: "no-store",
-        signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS),
-      });
-      if (!res.ok) continue;
-      const data = (await res.json()) as { elements?: OverpassElement[] };
-      return data.elements ?? [];
-    } catch {
-      // try next mirror
+  // The public Overpass instances 504 under load fairly often, so retry a few
+  // rounds and rotate through mirrors before giving up.
+  for (let attempt = 0; attempt < OVERPASS_ATTEMPTS; attempt++) {
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            // Overpass rejects requests without a User-Agent (HTTP 406).
+            "User-Agent": "flux/1.0 (activity-title-landmarks)",
+          },
+          body: "data=" + encodeURIComponent(query),
+          cache: "no-store",
+          signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS),
+        });
+        if (!res.ok) continue;
+        const data = (await res.json()) as { elements?: OverpassElement[] };
+        return data.elements ?? [];
+      } catch {
+        // try next mirror / next attempt
+      }
     }
+    if (attempt < OVERPASS_ATTEMPTS - 1) await sleep(1500 * (attempt + 1));
   }
   console.warn("[landmarks] all Overpass endpoints failed/timed out");
   return null;
