@@ -31,10 +31,22 @@ const OVERPASS_ENDPOINTS = [
 ];
 
 // How close (metres) the track must pass a feature to count as "visited".
-const SEARCH_RADIUS_M = 150;
+// Peaks/passes/saddles you cross directly → tight. Huts/Almen you stop at,
+// often a little off the ideal line, and the POI node may sit at the building
+// rather than the trail → wider.
+const PEAK_RADIUS_M = 150;
+const HUT_RADIUS_M = 250;
 // Cap the polyline sent to Overpass; segments between vertices still match, so
 // this is only about query size, not coverage.
 const MAX_QUERY_POINTS = 120;
+
+// Names that mean "Alm/Hütte" but where the OSM feature is NOT tagged as an
+// alpine_hut (e.g. amenity=restaurant "Arzler Alm", tourism=information
+// "Tiefental Alm"). Matched against the feature name.
+const HUT_NAME_RE = /(^|[\s-])(alm|alp|hütte|hütt|htte)([\s-]|$)/i;
+// Reject ways/features named after an Alm that are really paths, lifts, water,
+// etc. ("Arzler Alm-Weg", "Almbahn", "Almbach").
+const NOT_A_PLACE_RE = /(weg|str(?:\.|aße|asse)|pfad|steig|bahn|lift|bach|graben|route)$/i;
 // Give up on a slow Overpass rather than stalling the upload/sync.
 const OVERPASS_TIMEOUT_MS = 12000;
 
@@ -83,10 +95,22 @@ function nearestIndex(route: RoutePoint[], p: RoutePoint): number {
 }
 
 function classify(tags: Record<string, string>): LandmarkKind | null {
-  if (tags.tourism === "alpine_hut") return "alpine_hut";
   if (tags.mountain_pass === "yes") return "pass";
   if (tags.natural === "peak") return "peak";
   if (tags.natural === "saddle") return "saddle";
+  if (tags.tourism === "alpine_hut") return "alpine_hut";
+  // Alm/Hütte by name, but not roads/lifts/waterways.
+  const name = tags.name;
+  if (
+    name &&
+    !tags.highway &&
+    !tags.waterway &&
+    !tags.route &&
+    HUT_NAME_RE.test(name) &&
+    !NOT_A_PLACE_RE.test(name)
+  ) {
+    return "alpine_hut";
+  }
   return null;
 }
 
@@ -129,13 +153,16 @@ export async function findRouteLandmarks(
 
   const pts = sampleEvenly(clean, MAX_QUERY_POINTS);
   const coords = pts.map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join(",");
-  const around = `around:${SEARCH_RADIUS_M},${coords}`;
+  const peakAround = `around:${PEAK_RADIUS_M},${coords}`;
+  const hutAround = `around:${HUT_RADIUS_M},${coords}`;
   const query =
     `[out:json][timeout:25];(` +
-    `node(${around})[natural=peak];` +
-    `node(${around})[natural=saddle];` +
-    `node(${around})[mountain_pass=yes];` +
-    `nwr(${around})[tourism=alpine_hut];` +
+    `node(${peakAround})[natural=peak];` +
+    `node(${peakAround})[natural=saddle];` +
+    `node(${peakAround})[mountain_pass=yes];` +
+    `nwr(${hutAround})[tourism=alpine_hut];` +
+    // Almen/Hütten tagged as restaurant/information/… but named "… Alm/Hütte".
+    `nwr(${hutAround})[name~"[Aa]lm|[Aa]lp|[Hh]ütte"][!highway][!waterway][!route];` +
     `);out center;`;
 
   const elements = await queryOverpass(query);
