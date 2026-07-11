@@ -10,6 +10,7 @@ const publicRoutes = [
   "/api/bloodpressure/webhook",
   "/api/cron",
   "/share",
+  "/embed",
 ];
 
 export async function proxy(request: NextRequest) {
