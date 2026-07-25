@@ -208,3 +208,83 @@ export async function findRouteLandmarks(
   }
   return result;
 }
+
+// ── Endpoint POIs ──────────────────────────────────────────────────────────
+// Route-wide landmarks (above) only know peaks/passes/huts/Almen. A point-to-
+// point tour whose DESTINATION is a named POI of another kind — a mountain
+// hotel/hospiz ("Grimsel Hospiz"), a reservoir/lake ("Grimselsee"), an isolated
+// dwelling — loses that name: Mapbox geocodes the whole valley to one
+// municipality ("Guttannen") and the route-wide query ignores hotels/lakes.
+// So we run a tight query around JUST the start and end points and pick the
+// single most destination-worthy named feature at each, to override the coarse
+// settlement name in the title.
+
+const ENDPOINT_RADIUS_M = 200;
+
+/** Score a feature by how much it reads as a tour destination. 0 = ignore. */
+function endpointPoiScore(t: Record<string, string>): number {
+  if (t.tourism === "alpine_hut" || t.tourism === "wilderness_hut") return 100;
+  if (t.mountain_pass === "yes") return 90;
+  if (t.natural === "peak") return 85;
+  if (t.natural === "saddle") return 80;
+  if (t.tourism === "hotel" || t.tourism === "hostel" || t.tourism === "guest_house" || t.tourism === "chalet") return 70;
+  if (t.natural === "water" || t.natural === "glacier") return 60;
+  if (t.tourism === "viewpoint" || t.tourism === "attraction") return 50;
+  if (t.place === "isolated_dwelling" || t.place === "hamlet" || t.place === "locality") return 40;
+  return 0;
+}
+
+export interface EndpointPois {
+  start: string | null;
+  end: string | null;
+}
+
+/**
+ * Best destination-worthy POI name within ENDPOINT_RADIUS_M of the start and end
+ * points. Returns null for an endpoint with nothing notable nearby (e.g. a
+ * village trailhead) so the caller keeps the settlement name there.
+ */
+export async function findEndpointPois(
+  start: RoutePoint,
+  end: RoutePoint
+): Promise<EndpointPois> {
+  const around = `around:${ENDPOINT_RADIUS_M},${start.lat.toFixed(5)},${start.lng.toFixed(5)},${end.lat.toFixed(5)},${end.lng.toFixed(5)}`;
+  const query =
+    `[out:json][timeout:25];(` +
+    `nwr(${around})[tourism~"^(alpine_hut|wilderness_hut|hotel|hostel|guest_house|chalet|viewpoint|attraction)$"][name];` +
+    `node(${around})[mountain_pass=yes][name];` +
+    `node(${around})[natural~"^(peak|saddle)$"][name];` +
+    `nwr(${around})[natural~"^(water|glacier)$"][name];` +
+    `node(${around})[place~"^(isolated_dwelling|hamlet|locality)$"][name];` +
+    `);out center tags;`;
+
+  const elements = await queryOverpass(query);
+  if (!elements) return { start: null, end: null };
+
+  const candidates: { name: string; score: number; lat: number; lng: number }[] = [];
+  for (const e of elements) {
+    const name = e.tags?.name?.trim();
+    if (!name || !e.tags) continue;
+    const score = endpointPoiScore(e.tags);
+    if (score === 0) continue;
+    const lat = e.lat ?? e.center?.lat;
+    const lng = e.lon ?? e.center?.lon;
+    if (lat == null || lng == null) continue;
+    candidates.push({ name, score, lat, lng });
+  }
+
+  // Pick the best (highest score, then closest) candidate for each endpoint.
+  const pick = (p: RoutePoint): string | null => {
+    let best: { name: string; score: number; d: number } | null = null;
+    for (const c of candidates) {
+      const d = haversine(p, c);
+      if (d > ENDPOINT_RADIUS_M) continue;
+      if (!best || c.score > best.score || (c.score === best.score && d < best.d)) {
+        best = { name: c.name, score: c.score, d };
+      }
+    }
+    return best?.name ?? null;
+  };
+
+  return { start: pick(start), end: pick(end) };
+}

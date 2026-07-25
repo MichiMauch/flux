@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { reverseGeocode } from "./geocode";
-import { findRouteLandmarks, type Landmark } from "./landmarks";
+import { findRouteLandmarks, findEndpointPois, type Landmark } from "./landmarks";
 
 // Inlined to avoid pulling in `server-only` (which Next.js bundles but tsx
 // scripts can't resolve). Keep model in sync with src/lib/openai.ts.
@@ -126,22 +126,28 @@ export async function generateActivityTitle(
     const loop = detectLoop(route);
 
     let chain: string[] = [];
-    let startFull: string | null = null;
-    let endFull: string | null = null;
+    let startName: string | null = null;
+    let endName: string | null = null;
     let landmarks: Landmark[] = [];
 
     if (route.length >= 2) {
       const samples = sampleByDistance(route, WAYPOINT_SAMPLES);
-      // Mapbox (settlements) and Overpass (peaks/huts/passes) in parallel.
-      // Reuse caller-provided landmarks to avoid a second Overpass query.
-      const [geocoded, foundLandmarks] = await Promise.all([
+      // Mapbox (settlements), route-wide Overpass (peaks/huts/passes) and the
+      // endpoint POI lookup (destination hut/hotel/lake/pass) in parallel.
+      // Reuse caller-provided landmarks to avoid a second route-wide query.
+      const [geocoded, foundLandmarks, endpointPois] = await Promise.all([
         Promise.all(samples.map((p) => reverseGeocode(p.lat, p.lng))),
         ctx.landmarks ?? findRouteLandmarks(route),
+        findEndpointPois(route[0], route[route.length - 1]),
       ]);
-      startFull = geocoded[0];
-      endFull = geocoded[geocoded.length - 1];
       chain = uniqueChain(geocoded.map(placeOnly));
       landmarks = foundLandmarks;
+      // Start anchor: the settlement is what you set off from — keep it, and
+      // only fall back to a POI when there is no settlement name (remote start).
+      startName = placeOnly(geocoded[0]) ?? endpointPois.start;
+      // End anchor: the destination is the point of the tour — a named POI
+      // ("Grimsel Hospiz") beats the coarse valley municipality ("Guttannen").
+      endName = endpointPois.end ?? placeOnly(geocoded[geocoded.length - 1]);
     }
 
     const prompt = {
@@ -149,8 +155,8 @@ export async function generateActivityTitle(
       // far more descriptive than settlement names for mountain tours — prefer them.
       landmarks: landmarks.map((l) => ({ name: l.name, art: LANDMARK_LABEL[l.kind] })),
       orte_kette: chain,
-      start: startFull,
-      ende: loop ? null : endFull,
+      start: startName,
+      ende: loop ? null : endName,
       ist_loop: loop,
       distanz_km:
         ctx.distanceMeters != null
@@ -181,6 +187,7 @@ export async function generateActivityTitle(
             "Regeln: " +
             "(1) 'landmarks' (Gipfel, Almen/Hütten, Pässe, Joche entlang der Route) sind AUSSAGEKRÄFTIGER als 'orte_kette' (Dörfer/Regionen) — bevorzuge sie, wenn vorhanden. " +
             "(2) Baue die Kette aus den Landmarks in Reihenfolge: 'Name1–Name2–Name3' mit Halbgeviertstrich – (max 3–4 Namen). Behalte IMMER den ERSTEN und LETZTEN Landmark der Liste (Start und Ziel der Tour); wenn gekürzt werden muss, entferne mittlere Einträge, niemals den ersten oder letzten. " +
+            "(2b) 'start' und 'ende' sind die verbindlichen Endpunkte der Tour. Bei Point-to-Point (ist_loop=false) MUSS der Titel mit 'start' beginnen und mit 'ende' enden, sofern gesetzt und nicht identisch — aussagekräftige Landmarks kommen dazwischen. Ist 'start' oder 'ende' schon als Landmark in der Kette, nicht doppeln. Beispiel: start='Guttannen', ende='Grimsel Hospiz', keine mittleren Landmarks → 'Guttannen–Grimsel Hospiz'. " +
             "(3) Verwende die Namen EXAKT wie angegeben (inkl. 'Alm', 'Spitze', 'Joch', 'Hütte' — das sind Teile des Eigennamens, keine Sportart). " +
             "(4) Ohne Landmarks: Kette aus 'orte_kette' ('Ort1–Ort2–Ort3', max 4). Bei Loop und nur einem Ort: 'Runde um <Ort>' oder '<Ort>'. Bei Point-to-Point: 'Start–Ziel'. " +
             "(5) NIEMALS generische Sportart-/Aktivitäts-Wörter wie 'Velo', 'Rennrad', 'Mountainbike', 'Lauf', 'Wanderung', 'Spaziergang', 'Schwimmen', 'Tour', 'Training', 'Runde' (ausser Regel 4). " +

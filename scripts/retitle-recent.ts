@@ -29,7 +29,7 @@ async function main() {
   const { activities } = await import("../src/lib/db/schema");
   const { gte, eq } = await import("drizzle-orm");
   const { generateActivityTitle, normalizePolarType } = await import("../src/lib/ai-title");
-  const { findRouteLandmarks } = await import("../src/lib/landmarks");
+  const { findRouteLandmarks, findEndpointPois } = await import("../src/lib/landmarks");
 
   // Metadata only (no route_data) — keep the payload small over the tunnel.
   const meta = await db
@@ -56,11 +56,20 @@ async function main() {
     }
 
     await new Promise((r) => setTimeout(r, DELAY_MS));
-    // Safety: only rewrite when we actually found named landmarks.
-    const lm = await findRouteLandmarks(route);
-    if (lm.length === 0) {
+    // Safety: only rewrite when we actually found a named feature — either a
+    // route-wide landmark (peak/hut/pass) OR a destination POI at an endpoint
+    // (hut/hotel/lake/pass). Without either, skip so we never degrade a good
+    // title to a bare settlement name on an Overpass miss.
+    const clean = route.filter((p) => p.lat != null && p.lng != null);
+    const [lm, pois] = await Promise.all([
+      findRouteLandmarks(route),
+      clean.length >= 2
+        ? findEndpointPois(clean[0], clean[clean.length - 1])
+        : Promise.resolve({ start: null, end: null }),
+    ]);
+    if (lm.length === 0 && !pois.start && !pois.end) {
       skipped++;
-      console.log(`${date}  "${a.name}"  — keine Landmarks (übersprungen)`);
+      console.log(`${date}  "${a.name}"  — keine Landmarks/POIs (übersprungen)`);
       continue;
     }
     const neu = await generateActivityTitle({
