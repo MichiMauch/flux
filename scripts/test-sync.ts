@@ -90,12 +90,17 @@ async function main() {
       });
       if (res.ok) {
         const webhook = await res.json();
-        const data = webhook.data;
-        if (data) {
-          console.log(`── Webhook ──`);
-          console.log(`  URL: ${data.url}`);
-          console.log(`  Events: ${data.events?.join(", ")}`);
-          console.log(`  Aktiv: ${data.active ? "✓ Ja" : "✗ Nein"}`);
+        // Polar returns data as an ARRAY of webhooks (one per app), not an object.
+        const hooks = Array.isArray(webhook.data) ? webhook.data : [];
+        console.log(`── Webhook ──`);
+        if (hooks.length === 0) {
+          console.log(`  ✗ Kein Webhook registriert`);
+        }
+        for (const hook of hooks) {
+          console.log(`  ID: ${hook.id}`);
+          console.log(`  URL: ${hook.url}`);
+          console.log(`  Events: ${hook.events?.join(", ")}`);
+          console.log(`  Aktiv: ${hook.active ? "✓ Ja" : "✗ Nein"}`);
         }
       }
     } catch (e) {

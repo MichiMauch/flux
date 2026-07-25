@@ -9,10 +9,15 @@
  * Called by a Coolify Scheduled Task (e.g. every 30 min).
  * Auth: `Authorization: Bearer $CRON_SECRET`.
  *
- * Strategy: ask /v3/notifications which users have pending data (one app-level
- * call). If that succeeds, only sync those users — cheap. If it fails for any
- * reason, fall back to syncing every connected user so a broken notifications
- * endpoint can never silently disable the backup.
+ * Strategy: always sync EVERY connected user. syncPolarExercises is idempotent
+ * (polar_id UNIQUE + deleted-blacklist), so re-checking a user with nothing new
+ * is a cheap no-op. We deliberately do NOT gate on /v3/notifications: that queue
+ * is acks-and-forgets like the webhook, and a lost EXERCISE notification (or a
+ * lingering SLEEP/ACTIVITY_SUMMARY notification with no EXERCISE) would make a
+ * filtered run skip users that actually have pending exercises — exactly the gap
+ * that left activities stranded until a manual sync. With only a handful of
+ * connected users a full sweep every run is trivially cheap and guarantees that
+ * anything visible in /v3/exercises lands in flux within one cron interval.
  */
 
 import type { NextRequest } from "next/server";
@@ -20,7 +25,7 @@ import { timingSafeEqual } from "node:crypto";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { isNotNull } from "drizzle-orm";
-import { listNotifications, PolarAuthError } from "@/lib/polar-client";
+import { PolarAuthError } from "@/lib/polar-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
@@ -46,39 +51,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const connected = await db.query.users.findMany({
+    // Full sweep: every connected user, every run. Idempotent + cheap.
+    const toSync = await db.query.users.findMany({
       where: isNotNull(users.polarToken),
     });
-
-    // Optional efficiency filter: only sync users Polar says have pending data.
-    // Any failure → sync everyone (safe default; correctness over cost).
-    let targetIds: Set<string> | null = null;
-    try {
-      const pending = await listNotifications();
-      if (pending.length > 0) {
-        const pendingPolarIds = new Set(
-          pending
-            .filter((n) => n["data-type"] === "EXERCISE")
-            .map((n) => String(n["user-id"]))
-        );
-        targetIds = new Set(
-          connected
-            .filter((u) => u.polarUserId && pendingPolarIds.has(u.polarUserId))
-            .map((u) => u.id)
-        );
-      } else {
-        // Endpoint reachable, nothing pending — still fall through to a full
-        // sweep below as a cheap safety net (idempotent no-ops).
-        targetIds = null;
-      }
-    } catch (e) {
-      console.warn("[cron/polar-sync] notifications unavailable, syncing all:", e);
-      targetIds = null;
-    }
-
-    const toSync = targetIds
-      ? connected.filter((u) => targetIds!.has(u.id))
-      : connected;
 
     let activitiesSynced = 0;
     let usersSynced = 0;
@@ -126,7 +102,6 @@ export async function POST(req: NextRequest) {
       usersSynced,
       activitiesSynced,
       reauthNeeded,
-      filtered: targetIds !== null,
       errors,
     });
   } catch (err) {
