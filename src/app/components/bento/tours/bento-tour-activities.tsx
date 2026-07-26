@@ -51,6 +51,10 @@ export function BentoTourActivities({
         <div className="grid gap-px border-t border-[#2a2a2a] bg-[#1a1a1a] md:grid-cols-2">
           {members.map((m, idx) => {
             const color = sportColor(m.type, idx);
+            // Prefer movingTime, but fall back to duration — Polar activities
+            // without a FIT session have movingTime=null yet a valid duration
+            // (rest of the app uses the same fallback).
+            const dur = m.movingTime ?? m.duration;
             const rowClass = `flex items-stretch gap-3 bg-[#0f0f0f] p-3 md:gap-4 md:p-5${interactive ? " transition-colors hover:bg-[#161616]" : ""}`;
             const inner = (
               <>
@@ -72,8 +76,8 @@ export function BentoTourActivities({
                     {m.distance ? (
                       <span>{formatDistanceAuto(m.distance, 1)}</span>
                     ) : null}
-                    {m.movingTime ? (
-                      <span>{formatDurationWordsSpaced(m.movingTime)}</span>
+                    {dur ? (
+                      <span>{formatDurationWordsSpaced(dur)}</span>
                     ) : null}
                     {m.ascent ? <span>{Math.round(m.ascent)} m ↑</span> : null}
                   </div>
@@ -92,9 +96,9 @@ export function BentoTourActivities({
                     {m.distance != null ? (
                       <Led value={formatDistanceKm(m.distance, 1)} unit="km" />
                     ) : null}
-                    {m.movingTime != null
+                    {dur != null
                       ? (() => {
-                          const d = formatDurationHmSplit(m.movingTime);
+                          const d = formatDurationHmSplit(dur);
                           return <Led value={d.value} unit={d.unit} />;
                         })()
                       : null}
