@@ -480,7 +480,9 @@ export async function getSleep(
 }
 
 export async function listNights(token: string): Promise<PolarSleepListItem[]> {
-  const res = await fetch(`${POLAR_API_BASE}/v3/users/nights`, {
+  // Polar's Nightly Recharge endpoint is /v3/users/nightly-recharge — the
+  // earlier /v3/users/nights path does not exist and returns 404 on every call.
+  const res = await fetch(`${POLAR_API_BASE}/v3/users/nightly-recharge`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",
@@ -500,7 +502,7 @@ export async function getNight(
   token: string,
   date: string
 ): Promise<PolarNight | null> {
-  const res = await fetch(`${POLAR_API_BASE}/v3/users/nights/${date}`, {
+  const res = await fetch(`${POLAR_API_BASE}/v3/users/nightly-recharge/${date}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",

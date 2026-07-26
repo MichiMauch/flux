@@ -21,6 +21,7 @@
  */
 
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
@@ -50,6 +51,19 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // The sweep does heavy per-exercise work (FIT download + parse, AI title,
+  // reverse-geocode) for every connected user. When several activities land at
+  // once this easily exceeds Cloudflare's ~100s edge timeout, which surfaces as
+  // a 524 and a failed Coolify scheduled task even though the work completes.
+  // Ack immediately and run the sweep in the background (maxDuration=300 keeps
+  // the runtime alive after the response). The caller is a cron, not a user —
+  // it only needs a 2xx; per-user outcomes are logged.
+  after(runFullSweep);
+
+  return Response.json({ accepted: true }, { status: 202 });
+}
+
+async function runFullSweep(): Promise<void> {
   try {
     // Full sweep: every connected user, every run. Idempotent + cheap.
     const toSync = await db.query.users.findMany({
@@ -97,21 +111,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return Response.json({
-      candidates: toSync.length,
-      usersSynced,
-      activitiesSynced,
-      reauthNeeded,
-      errors,
-    });
+    console.log(
+      `[cron/polar-sync] sweep done: candidates=${toSync.length} usersSynced=${usersSynced} activitiesSynced=${activitiesSynced} reauthNeeded=${reauthNeeded} errors=${errors.length}`
+    );
   } catch (err) {
     console.error("[cron/polar-sync] fatal:", err);
-    return Response.json(
-      {
-        error: "Cron run failed",
-        details: err instanceof Error ? err.message : String(err),
-      },
-      { status: 500 }
-    );
   }
 }
