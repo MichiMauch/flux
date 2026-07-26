@@ -114,7 +114,10 @@ export async function getTourTotals(
       count: sql<number>`count(*)::int`,
       totalDistance: sql<number>`coalesce(sum(${activities.distance}), 0)`,
       totalDuration: sql<number>`coalesce(sum(${activities.duration}), 0)`,
-      totalMovingTime: sql<number>`coalesce(sum(${activities.movingTime}), 0)`,
+      // Per-activity fallback movingTime -> duration BEFORE summing, so stages
+      // without a FIT movingTime (Polar-synced) still contribute their time.
+      // Matches the per-stage display in bento-tour-activities.tsx.
+      totalMovingTime: sql<number>`coalesce(sum(coalesce(${activities.movingTime}, ${activities.duration})), 0)`,
       totalAscent: sql<number>`coalesce(sum(${activities.ascent}), 0)`,
       totalDescent: sql<number>`coalesce(sum(${activities.descent}), 0)`,
       startDate: sql<Date | null>`min(${activities.startTime})`,
