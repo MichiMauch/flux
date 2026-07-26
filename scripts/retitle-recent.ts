@@ -76,8 +76,16 @@ async function main() {
       type: normalizePolarType(a.type, a.name), subType: a.name,
       startTime: a.startTime, distanceMeters: a.distance,
       durationSeconds: a.duration ?? a.movingTime, ascentMeters: a.ascent,
-      routeData: route, fallbackTitle: a.name, landmarks: lm,
+      // Pass the SAME landmarks + POIs the guard used, so a flaky Overpass here
+      // can't produce a barer title than the guard just approved.
+      routeData: route, fallbackTitle: a.name, landmarks: lm, endpointPois: pois,
     });
+    // Never overwrite an existing multi-part title ("A–B") with a barer one on
+    // an Overpass hiccup — that would degrade good data.
+    if (neu && a.name.includes("–") && !neu.includes("–")) {
+      console.log(`${date}  "${a.name}"  (kein Downgrade auf "${neu}" — übersprungen)`);
+      continue;
+    }
     if (neu && neu !== a.name) {
       changed++;
       console.log(`${date}  "${a.name}"  →  "${neu}"   [${lm.map((l) => l.name).join(", ")}]`);

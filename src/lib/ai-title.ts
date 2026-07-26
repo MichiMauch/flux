@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { reverseGeocode } from "./geocode";
-import { findRouteLandmarks, findEndpointPois, type Landmark } from "./landmarks";
+import { findRouteLandmarks, findEndpointPois, type Landmark, type EndpointPois } from "./landmarks";
 
 // Inlined to avoid pulling in `server-only` (which Next.js bundles but tsx
 // scripts can't resolve). Keep model in sync with src/lib/openai.ts.
@@ -44,6 +44,14 @@ export interface ActivityTitleContext {
    * instead of querying Overpass a second time here. Omit for the normal path.
    */
   landmarks?: Landmark[];
+  /**
+   * Pre-fetched endpoint POIs. Same reuse rationale as `landmarks`: a backfill
+   * that already resolved these to decide whether to overwrite MUST pass them,
+   * otherwise this function re-queries Overpass and a timeout here would silently
+   * degrade a good "Start–Ziel-POI" title back to the bare settlement — even
+   * overwriting a previously correct title. Omit for the normal path.
+   */
+  endpointPois?: EndpointPois;
 }
 
 function haversine(a: RoutePoint, b: RoutePoint): number {
@@ -138,7 +146,7 @@ export async function generateActivityTitle(
       const [geocoded, foundLandmarks, endpointPois] = await Promise.all([
         Promise.all(samples.map((p) => reverseGeocode(p.lat, p.lng))),
         ctx.landmarks ?? findRouteLandmarks(route),
-        findEndpointPois(route[0], route[route.length - 1]),
+        ctx.endpointPois ?? findEndpointPois(route[0], route[route.length - 1]),
       ]);
       chain = uniqueChain(geocoded.map(placeOnly));
       landmarks = foundLandmarks;
