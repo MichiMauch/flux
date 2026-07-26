@@ -5,6 +5,7 @@ import {
   Heart,
   Home,
   Layers,
+  Map,
   Moon,
   Sun,
   Target,
@@ -40,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/activities", label: "Aktivitäten", icon: Activity, lottieFile: "activity-feed", section: "movement", showInBottomNav: true },
   { href: "/calendar", label: "Kalender", icon: Calendar, lottieFile: "calendar", section: "movement", showInBottomNav: true },
   { href: "/tours", label: "Touren", icon: Layers, lottieFile: "map", section: "movement" },
+  { href: "/map", label: "Karte", icon: Map, section: "movement" },
   // Analyse
   { href: "/stats", label: "Statistiken", icon: BarChart3, lottieFile: "stats", section: "analysis" },
   { href: "/training-load", label: "Form", icon: TrendingUp, lottieFile: "energy", section: "analysis" },
