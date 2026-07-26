@@ -185,16 +185,17 @@ export async function generateActivityTitle(
             "Erzeuge einen kurzen deutschen Titel (max 60 Zeichen), der ausschliesslich auf Orts- und Geländenamen basiert. " +
             "Die Sportart wird in der UI über Icon/Farbe angezeigt — daher KEINE Sportart im Titel nennen. " +
             "Regeln: " +
-            "(1) 'landmarks' (Gipfel, Almen/Hütten, Pässe, Joche entlang der Route) sind AUSSAGEKRÄFTIGER als 'orte_kette' (Dörfer/Regionen) — bevorzuge sie, wenn vorhanden. " +
+            "(1) 'landmarks' (Gipfel, Almen/Hütten, Pässe, Joche entlang der Route) sind das Highlight der Tour — baue sie IMMER ein, wenn vorhanden. Bei Point-to-Point bilden sie die Kette (Regel 2); bei einem Loop kombiniere sie mit markanten Orten der 'orte_kette' (Regel 2c). " +
             "(2) Baue die Kette aus den Landmarks in Reihenfolge: 'Name1–Name2–Name3' mit Halbgeviertstrich – (max 3–4 Namen). Behalte IMMER den ERSTEN und LETZTEN Landmark der Liste (Start und Ziel der Tour); wenn gekürzt werden muss, entferne mittlere Einträge, niemals den ersten oder letzten. " +
             "(2b) 'start' und 'ende' sind die verbindlichen Endpunkte der Tour. Bei Point-to-Point (ist_loop=false) MUSS der Titel mit 'start' beginnen und mit 'ende' enden, sofern gesetzt und nicht identisch — aussagekräftige Landmarks kommen dazwischen. Ist 'start' oder 'ende' schon als Landmark in der Kette, nicht doppeln. Beispiel: start='Guttannen', ende='Grimsel Hospiz', keine mittleren Landmarks → 'Guttannen–Grimsel Hospiz'. " +
+            "(2c) Bei einem Loop (ist_loop=true) mit MEHREREN Orten in 'orte_kette' und/oder Landmarks: baue eine Kette aus 1–2 markanten, WEIT auseinanderliegenden Orten der 'orte_kette' (inkl. Startort = erster Eintrag) PLUS dem/den wichtigsten Landmark(s), in Reihenfolge entlang der Route (max 3–4 Namen). So sieht man Ausdehnung UND Highlight der Runde. Beispiel: orte_kette=['Muhen','Schöftland','Unterkulm','Teufenthal'], landmarks=['Bööler Passhöchi'] → 'Muhen–Unterkulm–Bööler Passhöchi'. Hat 'orte_kette' nur EINEN Ort UND es gibt keine Landmarks: 'Runde um <Ort>' oder '<Ort>'. " +
             "(3) Verwende die Namen EXAKT wie angegeben (inkl. 'Alm', 'Spitze', 'Joch', 'Hütte' — das sind Teile des Eigennamens, keine Sportart). " +
             "(4) Ohne Landmarks: Kette aus 'orte_kette' ('Ort1–Ort2–Ort3', max 4). Bei Loop und nur einem Ort: 'Runde um <Ort>' oder '<Ort>'. Bei Point-to-Point: 'Start–Ziel'. " +
             "(5) NIEMALS generische Sportart-/Aktivitäts-Wörter wie 'Velo', 'Rennrad', 'Mountainbike', 'Lauf', 'Wanderung', 'Spaziergang', 'Schwimmen', 'Tour', 'Training', 'Runde' (ausser Regel 4). " +
             "(6) NIEMALS Tageszeit-Wörter ('Morgen', 'Mittag', 'Abend', 'Nacht', 'morgendlich' etc.). " +
             "(7) Kein Wochentag, kein Datum, keine Anführungszeichen, keine Emojis. " +
             "(8) Wenn 'landmarks' UND 'orte_kette' leer sind: gib einen leeren String zurück. " +
-            "Beispiele: 'Arzler Alm–Kreuzjoch–Tiefental Alm' — 'Muhen–Williberg–Reitnau' — 'Brienz–Rothorn' — 'Runde um Muhen' — 'Aarau'.",
+            "Beispiele: 'Arzler Alm–Kreuzjoch–Tiefental Alm' — 'Muhen–Williberg–Reitnau' — 'Brienz–Rothorn' — 'Guttannen–Grimsel Hospiz' — 'Muhen–Unterkulm–Bööler Passhöchi' — 'Runde um Muhen' — 'Aarau'.",
         },
         { role: "user", content: JSON.stringify(prompt) },
       ],
