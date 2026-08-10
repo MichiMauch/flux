@@ -166,6 +166,10 @@ export function parseTrainingSession(raw: unknown): ParsedTraining | null {
   // Höhenband). Gegen die Höhenreihe der Route gegenprüfen, bevor der Wert
   // in die DB wandert.
   const routeElev = computeElevationStats(routeData);
+  const elevContext = {
+    distanceMeters,
+    type: polarSportIdToType(sportIdRaw),
+  };
 
   return {
     polarId,
@@ -174,8 +178,8 @@ export function parseTrainingSession(raw: unknown): ParsedTraining | null {
     durationSec,
     distanceMeters,
     calories,
-    ascent: reconcileAscent(ascent, routeElev.ascent),
-    descent: reconcileAscent(descent, routeElev.descent),
+    ascent: reconcileAscent(ascent, routeElev.ascent, elevContext),
+    descent: reconcileAscent(descent, routeElev.descent, elevContext),
     hrAvg,
     hrMax,
     fatPercentage,

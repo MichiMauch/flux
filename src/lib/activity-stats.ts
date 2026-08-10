@@ -69,17 +69,43 @@ export function computeSpeedStats(samples: SpeedSample[]): {
 const ASCENT_IMPLAUSIBLE_RATIO = 2.5;
 const ASCENT_IMPLAUSIBLE_ABS_M = 1000;
 
+// Zweites, rein physikalisches Kriterium: Höhenmeter pro Kilometer. Ein V650
+// meldete 2335 m auf 8.6 km Velofahrt — 273 Hm/km entsprechen 27 % mittlerer
+// Steigung über die gesamte Strecke. Die steilsten Passfahrten der Welt liegen
+// bei ~120 Hm/km (Zoncolan), Wandern kann kurzzeitig deutlich steiler werden.
+const MAX_ASCENT_PER_KM_WHEELS = 150;
+const MAX_ASCENT_PER_KM_FOOT = 400;
+
+function maxAscentPerKm(type: string | null | undefined): number {
+  if (!type) return MAX_ASCENT_PER_KM_FOOT;
+  const t = type.toUpperCase();
+  const onWheels =
+    t.includes("CYCL") || t.includes("BIK") || t.includes("SKAT") || t.includes("ROAD");
+  return onWheels ? MAX_ASCENT_PER_KM_WHEELS : MAX_ASCENT_PER_KM_FOOT;
+}
+
 export function reconcileAscent(
   deviceValue: number | null | undefined,
-  routeValue: number | null | undefined
+  routeValue: number | null | undefined,
+  context?: { distanceMeters?: number | null; type?: string | null }
 ): number | null {
   if (deviceValue == null || !Number.isFinite(deviceValue)) return routeValue ?? null;
   if (routeValue == null || !Number.isFinite(routeValue) || routeValue <= 0)
     return deviceValue;
-  const implausible =
+  // Verworfen wird nur ein zu HOHER Gerätewert. Ist die GPS-Höhe die grössere
+  // der beiden, taugt sie nicht als Ersatz — sonst blaest die Terrain-Regel
+  // einen plausiblen Wert auf (Kandersteg: Abstieg 1225 → 2742).
+  if (routeValue >= deviceValue) return deviceValue;
+
+  const beatsRouteImplausibly =
     deviceValue > routeValue * ASCENT_IMPLAUSIBLE_RATIO &&
     deviceValue - routeValue > ASCENT_IMPLAUSIBLE_ABS_M;
-  return implausible ? routeValue : deviceValue;
+
+  const km = (context?.distanceMeters ?? 0) / 1000;
+  const exceedsTerrainLimit =
+    km >= 1 && deviceValue / km > maxAscentPerKm(context?.type);
+
+  return beatsRouteImplausibly || exceedsTerrainLimit ? routeValue : deviceValue;
 }
 
 export function computeElevationStats(points: RoutePoint[]): {

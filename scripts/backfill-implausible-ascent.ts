@@ -13,8 +13,15 @@
  * auch um 1000 m übertreffen. Ein Barometer schlägt GPS-Höhe im Normalfall —
  * dieser Backfill greift ausschliesslich bei kaputten Werten ein.
  *
+ * Mit --ids werden zusätzlich einzelne Aktivitäten korrigiert, die manuell als
+ * falsch eingestuft wurden. Nötig, weil sich nicht jeder kaputte Wert von einer
+ * echten hügeligen Ausfahrt unterscheiden lässt: 536 m auf 40 km sind im selben
+ * Terrain sowohl als Messfehler als auch als reale Fahrt möglich. Diese Fälle
+ * gehören einzeln benannt statt über eine Schwelle geraten.
+ *
  *   npx tsx scripts/backfill-implausible-ascent.ts          # Dry-Run
  *   npx tsx scripts/backfill-implausible-ascent.ts --apply  # schreibt
+ *   npx tsx scripts/backfill-implausible-ascent.ts --ids=<id>,<id>
  */
 import { config } from "dotenv";
 import postgres from "postgres";
@@ -31,6 +38,10 @@ async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL missing");
   const apply = process.argv.includes("--apply");
+  const idsArg = process.argv.find((a) => a.startsWith("--ids="));
+  const forcedIds = new Set(
+    idsArg ? idsArg.slice("--ids=".length).split(",").map((s) => s.trim()).filter(Boolean) : []
+  );
   const sql = postgres(url);
 
   const rows = await sql<
@@ -38,12 +49,14 @@ async function main() {
       id: string;
       name: string | null;
       device: string | null;
+      type: string | null;
+      distance: number | null;
       ascent: number | null;
       descent: number | null;
       route_data: unknown;
     }[]
   >`
-    SELECT id, name, device, ascent, descent, route_data
+    SELECT id, name, device, type, distance, ascent, descent, route_data
     FROM activities
     WHERE route_data IS NOT NULL AND (ascent IS NOT NULL OR descent IS NOT NULL)
   `;
@@ -60,8 +73,12 @@ async function main() {
 
   for (const r of rows) {
     const elev = computeElevationStats(r.route_data as RoutePoint[]);
-    const newAscent = reconcileAscent(r.ascent, elev.ascent);
-    const newDescent = reconcileAscent(r.descent, elev.descent);
+    const ctx = { distanceMeters: r.distance, type: r.type };
+    // Manuell benannte Aktivitäten übernehmen den Routenwert direkt — dort hat
+    // die automatische Prüfung bereits "plausibel" gesagt und wurde überstimmt.
+    const forced = forcedIds.has(r.id);
+    const newAscent = forced ? elev.ascent : reconcileAscent(r.ascent, elev.ascent, ctx);
+    const newDescent = forced ? elev.descent : reconcileAscent(r.descent, elev.descent, ctx);
     const ascentChanged =
       r.ascent != null && newAscent != null && Math.round(newAscent) !== Math.round(r.ascent);
     const descentChanged =

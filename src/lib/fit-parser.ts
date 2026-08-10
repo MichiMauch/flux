@@ -91,6 +91,10 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
       );
 
       const s = data.sessions?.[0];
+      const elevContext = {
+        distanceMeters: s?.total_distance ?? null,
+        type: s?.sport ?? null,
+      };
 
       const session = {
         minAltitude: elev.minAlt ?? undefined,
@@ -106,9 +110,10 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
         // Nicht nur ?? — alte Polar-Geräte melden teils absurde Aufstiege
         // (V650: 13'115 m bei 1717 m Höhenband). reconcileAscent verwirft den
         // Gerätewert nur, wenn er physikalisch nicht erklärbar ist.
-        totalAscent: reconcileAscent(s?.total_ascent, elev.ascent) ?? undefined,
+        totalAscent:
+          reconcileAscent(s?.total_ascent, elev.ascent, elevContext) ?? undefined,
         totalDescent:
-          reconcileAscent(s?.total_descent, elev.descent) ?? undefined,
+          reconcileAscent(s?.total_descent, elev.descent, elevContext) ?? undefined,
         totalDistance: s?.total_distance ?? undefined,
         totalElapsedTime: s?.total_elapsed_time ?? undefined,
         totalTimerTime: s?.total_timer_time ?? undefined,
