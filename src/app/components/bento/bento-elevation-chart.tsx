@@ -1,8 +1,16 @@
 "use client";
 
+import { segmentTypeAt, type ClimbSegment, type ClimbType } from "@/lib/climbs";
+import { CLIMB_DOWN, CLIMB_UP } from "./climb-colors";
 import { useHover } from "./hover-context";
 
 const NEON = "var(--activity-color, #FF6A00)";
+
+function colorForType(type: ClimbType | null): string {
+  if (type === "up") return CLIMB_UP;
+  if (type === "down") return CLIMB_DOWN;
+  return NEON;
+}
 
 interface RoutePoint {
   lat: number;
@@ -32,14 +40,17 @@ function niceStep(range: number, targetTicks: number): number {
 
 export function BentoElevationChart({
   route,
+  segments,
   width = 900,
   height = 280,
 }: {
   route: RoutePoint[];
+  /** Climb/descent segmentation; when given, the line is coloured by type. */
+  segments?: ClimbSegment[];
   width?: number;
   height?: number;
 }) {
-  const { hoverIdx, setHoverIdx } = useHover();
+  const { hoverIdx, setHoverIdx, selection } = useHover();
 
   // Keep only points with elevation but remember their original route index
   // so hover can map back to the full routeData array used by the map.
@@ -80,15 +91,48 @@ export function BentoElevationChart({
   const xTicks: number[] = [];
   for (let v = 0; v <= totalKm + 1e-6; v += xStep) xTicks.push(v);
 
-  let line = "";
-  let area = `M${xAt(dist[0]).toFixed(1)},${(padT + plotH).toFixed(1)} `;
-  pts.forEach((x, i) => {
-    const px = xAt(dist[i]);
-    const py = yAt(x.p.elevation as number);
-    line += `${i === 0 ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)} `;
-    area += `L${px.toFixed(1)},${py.toFixed(1)} `;
-  });
+  const px = pts.map((_, i) => xAt(dist[i]));
+  const py = pts.map((x) => yAt(x.p.elevation as number));
+
+  let area = `M${px[0].toFixed(1)},${(padT + plotH).toFixed(1)} `;
+  for (let i = 0; i < px.length; i++) {
+    area += `L${px[i].toFixed(1)},${py[i].toFixed(1)} `;
+  }
   area += `L${xAt(totalKm).toFixed(1)},${(padT + plotH).toFixed(1)} Z`;
+
+  // Split the line into runs of equal segment type so each can carry its own
+  // colour. Each run restarts at the previous run's last point, so they join
+  // without a visible gap.
+  const types: (ClimbType | null)[] = segments
+    ? pts.map((x) => segmentTypeAt(segments, x.origIdx))
+    : pts.map(() => null);
+
+  const runs: { type: ClimbType | null; d: string }[] = [];
+  let run = { type: types[0], d: `M${px[0].toFixed(1)},${py[0].toFixed(1)} ` };
+  for (let i = 1; i < px.length; i++) {
+    run.d += `L${px[i].toFixed(1)},${py[i].toFixed(1)} `;
+    if (types[i] !== run.type && i < px.length - 1) {
+      runs.push(run);
+      run = { type: types[i], d: `M${px[i].toFixed(1)},${py[i].toFixed(1)} ` };
+    }
+  }
+  runs.push(run);
+
+  // Band marking the stretch selected in the kilometre or segment list.
+  const band = (() => {
+    const range = selection?.range;
+    if (!range) return null;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      const oi = pts[i].origIdx;
+      if (oi < range[0] || oi > range[1]) continue;
+      if (px[i] < lo) lo = px[i];
+      if (px[i] > hi) hi = px[i];
+    }
+    if (!Number.isFinite(lo) || hi <= lo) return null;
+    return { x: lo, w: hi - lo };
+  })();
 
   // Hover-dependent values
   const hovered = (() => {
@@ -215,15 +259,33 @@ export function BentoElevationChart({
       <line x1={padL} x2={padL} y1={padT} y2={padT + plotH} stroke="#4a4a4a" strokeWidth={1} />
 
       <path d={area} fill="url(#elev-grad)" />
-      <path
-        d={line}
-        fill="none"
-        stroke={NEON}
-        strokeWidth={2.5}
-        filter="url(#neon-glow)"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+
+      {band && (
+        <rect
+          x={band.x}
+          y={padT}
+          width={band.w}
+          height={plotH}
+          fill="#ffffff"
+          fillOpacity={0.08}
+          stroke="#ffffff"
+          strokeOpacity={0.25}
+          strokeWidth={1}
+        />
+      )}
+
+      {runs.map((r, i) => (
+        <path
+          key={i}
+          d={r.d}
+          fill="none"
+          stroke={colorForType(r.type)}
+          strokeWidth={2.5}
+          filter="url(#neon-glow)"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
 
       {/* Hover cursor */}
       {hovered && (

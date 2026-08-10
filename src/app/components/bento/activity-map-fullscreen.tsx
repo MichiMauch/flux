@@ -10,7 +10,8 @@ import {
   type RoutePoint,
   type Split,
 } from "@/lib/splits";
-import { HoverProvider, useHover } from "./hover-context";
+import { computeClimbs } from "@/lib/climbs";
+import { HoverProvider, kmFromSelectionKey, useHover } from "./hover-context";
 import { BentoElevationChart } from "./bento-elevation-chart";
 import { KilometerList } from "./kilometer-list";
 
@@ -106,8 +107,7 @@ function FullscreenContent({
 }: Omit<Props, "open">) {
   const [showKm, setShowKm] = useState(false);
   const [showElev, setShowElev] = useState(false);
-  const [selectedKm, setSelectedKm] = useState<number | null>(null);
-  const { hoverIdx } = useHover();
+  const { hoverIdx, selection, setSelection } = useHover();
 
   const splits = useMemo(
     () =>
@@ -140,14 +140,24 @@ function FullscreenContent({
     return { fastest, hottest, steepest };
   }, [splits]);
 
-  const highlightRange: [number, number] | null =
-    selectedKm != null && splits[selectedKm - 1]
-      ? [splits[selectedKm - 1].startIdx, splits[selectedKm - 1].endIdx]
-      : null;
+  const climbs = useMemo(
+    () =>
+      computeClimbs(routeData, totalDistance, totalAscent, totalDescent),
+    [routeData, totalDistance, totalAscent, totalDescent],
+  );
 
-  const handleSelectKm = useCallback((km: number | null) => {
-    setSelectedKm(km);
-  }, []);
+  const selectedKm = kmFromSelectionKey(selection?.key);
+  const highlightRange = selection?.range ?? null;
+
+  const handleSelectKm = useCallback(
+    (km: number | null) => {
+      const split = km != null ? splits[km - 1] : null;
+      setSelection(
+        split ? { key: `km:${km}`, range: [split.startIdx, split.endIdx] } : null,
+      );
+    },
+    [splits, setSelection],
+  );
 
   return (
     <div className="fixed inset-0 z-[2000] bg-black">
@@ -240,7 +250,10 @@ function FullscreenContent({
         aria-hidden={!showElev}
       >
         <div className="h-full px-4 py-3">
-          <BentoElevationChart route={routeData} />
+          <BentoElevationChart
+            route={routeData}
+            segments={climbs?.segments}
+          />
         </div>
       </div>
     </div>

@@ -26,7 +26,10 @@ export interface Split {
   descent: number;
 }
 
-function smoothElevation(data: RoutePoint[], window: number): (number | null)[] {
+export function smoothElevation(
+  data: RoutePoint[],
+  window: number
+): (number | null)[] {
   const n = data.length;
   const out: (number | null)[] = new Array(n).fill(null);
   const half = Math.floor(window / 2);
@@ -45,7 +48,7 @@ function smoothElevation(data: RoutePoint[], window: number): (number | null)[] 
   return out;
 }
 
-function haversine(a: RoutePoint, b: RoutePoint): number {
+export function haversine(a: RoutePoint, b: RoutePoint): number {
   const R = 6371000;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
   const dLng = ((b.lng - a.lng) * Math.PI) / 180;

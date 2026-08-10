@@ -6,6 +6,7 @@ import {
   TrendingDown,
   Zap,
 } from "lucide-react";
+import { BentoClimbsTile } from "@/app/components/bento/bento-climbs-tile";
 import { BentoElevationChart } from "@/app/components/bento/bento-elevation-chart";
 import { BentoElevationRangeTile } from "@/app/components/bento/bento-elevation-range-tile";
 import { BentoGpxTile } from "@/app/components/bento/bento-gpx-tile";
@@ -14,6 +15,7 @@ import { BentoPhotosTile } from "@/app/components/bento/bento-photos-tile";
 import { BentoRouteInteractive } from "@/app/components/bento/bento-route-interactive";
 import { BentoWeatherTile } from "@/app/components/bento/bento-weather-tile";
 import { HoverProvider } from "@/app/components/bento/hover-context";
+import { computeClimbs } from "@/lib/climbs";
 import type { WeatherData } from "@/lib/weather";
 import type { HrSample, RoutePoint } from "@/lib/splits";
 import type { HrZone } from "@/lib/hr-zones";
@@ -69,6 +71,10 @@ export function ActivityDetailBody({
   isOwner,
   photos,
 }: ActivityDetailBodyProps) {
+  // Computed once on the server and shared by the tile and the chart, so both
+  // agree on where a climb starts and ends.
+  const climbs = computeClimbs(route, distance, ascent, descent);
+
   return (
     <HoverProvider>
       <div className="grid gap-3 lg:grid-cols-2 items-start">
@@ -124,7 +130,10 @@ export function ActivityDetailBody({
                 </div>
               </div>
               <div className="flex-1 min-h-0">
-                <BentoElevationChart route={route} />
+                <BentoElevationChart
+                  route={route}
+                  segments={climbs?.segments}
+                />
               </div>
             </Tile>
             {hrZones && (
@@ -135,6 +144,8 @@ export function ActivityDetailBody({
           </div>
 
           <BentoElevationRangeTile route={route} />
+
+          <BentoClimbsTile climbs={climbs} isRunning={isRunning} />
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <StatTile

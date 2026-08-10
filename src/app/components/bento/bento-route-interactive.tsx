@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { ChevronDown } from "lucide-react";
 import {
@@ -9,7 +9,7 @@ import {
   type RoutePoint,
   type Split,
 } from "@/lib/splits";
-import { useHover } from "./hover-context";
+import { kmFromSelectionKey, useHover } from "./hover-context";
 import { KilometerList } from "./kilometer-list";
 import { ActivityMapFullscreen } from "./activity-map-fullscreen";
 import { ActivityFlightFullscreen } from "./activity-flight-fullscreen";
@@ -50,7 +50,6 @@ export function BentoRouteInteractive({
   photos = [],
   color,
 }: Props) {
-  const [selectedKm, setSelectedKm] = useState<number | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   // Open the 3D flight straight away when arriving via a shared flight link,
   // e.g. /share/activity/<token>?view=flight — recipient lands in the flythrough.
@@ -61,7 +60,9 @@ export function BentoRouteInteractive({
       new URLSearchParams(window.location.search).get("view") === "flight"
   );
   const [kmOpen, setKmOpen] = useState(false);
-  const { hoverIdx } = useHover();
+  // Selection lives in the shared context so the climbs tile in the other
+  // column can highlight a stretch on this map too.
+  const { hoverIdx, selection, setSelection } = useHover();
 
   const splits = useMemo(
     () =>
@@ -94,10 +95,18 @@ export function BentoRouteInteractive({
     return { fastest, hottest, steepest };
   }, [splits]);
 
-  const highlightRange: [number, number] | null =
-    selectedKm != null && splits[selectedKm - 1]
-      ? [splits[selectedKm - 1].startIdx, splits[selectedKm - 1].endIdx]
-      : null;
+  const selectedKm = kmFromSelectionKey(selection?.key);
+  const highlightRange = selection?.range ?? null;
+
+  const handleSelectKm = useCallback(
+    (km: number | null) => {
+      const split = km != null ? splits[km - 1] : null;
+      setSelection(
+        split ? { key: `km:${km}`, range: [split.startIdx, split.endIdx] } : null,
+      );
+    },
+    [splits, setSelection],
+  );
 
   const MAP_HEIGHT = 520;
 
@@ -126,7 +135,7 @@ export function BentoRouteInteractive({
               splits={splits}
               isRunning={isRunning}
               selectedKm={selectedKm}
-              onSelectKm={setSelectedKm}
+              onSelectKm={handleSelectKm}
               highlights={highlights}
               headerClassName="hidden md:block"
             />
