@@ -1,6 +1,7 @@
 import FitParser from "fit-file-parser";
 import {
   computeElevationStats,
+  reconcileAscent,
   computeMovingTimeSec,
   computeSpeedStats,
   type RoutePoint,
@@ -102,8 +103,12 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
         avgHeartRate: s?.avg_heart_rate ?? undefined,
         maxHeartRate: s?.max_heart_rate ?? undefined,
         totalCalories: s?.total_calories ?? undefined,
-        totalAscent: s?.total_ascent ?? elev.ascent ?? undefined,
-        totalDescent: s?.total_descent ?? elev.descent ?? undefined,
+        // Nicht nur ?? — alte Polar-Geräte melden teils absurde Aufstiege
+        // (V650: 13'115 m bei 1717 m Höhenband). reconcileAscent verwirft den
+        // Gerätewert nur, wenn er physikalisch nicht erklärbar ist.
+        totalAscent: reconcileAscent(s?.total_ascent, elev.ascent) ?? undefined,
+        totalDescent:
+          reconcileAscent(s?.total_descent, elev.descent) ?? undefined,
         totalDistance: s?.total_distance ?? undefined,
         totalElapsedTime: s?.total_elapsed_time ?? undefined,
         totalTimerTime: s?.total_timer_time ?? undefined,

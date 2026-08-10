@@ -1,4 +1,9 @@
-import { haversine, smoothElevation, type RoutePoint } from "./splits";
+import {
+  buildTimePrefix,
+  haversine,
+  smoothElevation,
+  type RoutePoint,
+} from "./splits";
 
 export type ClimbType = "up" | "down" | "flat";
 
@@ -291,40 +296,6 @@ function classify(
   const grade = (Math.abs(elevationChange) / distanceM) * 100;
   if (grade < opts.minGradePct) return "flat";
   return elevationChange > 0 ? "up" : "down";
-}
-
-/**
- * Cumulative seconds up to each route index, with pauses removed.
- *
- * Tracks are recorded at a fixed interval, so a step far above that interval is
- * a stopped recording, not time spent moving. Taking end-minus-start instead
- * would fold every break into the segment it interrupts — one hike in the data
- * spans 12:39 h wall clock for 4:37 h of actual activity.
- */
-function buildTimePrefix(routeData: RoutePoint[]): number[] {
-  const n = routeData.length;
-  const prefix: number[] = new Array(n).fill(0);
-  const times = routeData.map((p) =>
-    p.time ? new Date(p.time).getTime() : NaN
-  );
-
-  const deltas: number[] = [];
-  for (let i = 1; i < n; i++) {
-    const d = times[i] - times[i - 1];
-    if (Number.isFinite(d) && d > 0) deltas.push(d);
-  }
-  if (deltas.length === 0) return prefix;
-
-  deltas.sort((a, b) => a - b);
-  const median = deltas[Math.floor(deltas.length / 2)];
-  const cap = Math.max(5000, median * 4);
-
-  for (let i = 1; i < n; i++) {
-    const d = times[i] - times[i - 1];
-    const step = Number.isFinite(d) && d > 0 ? Math.min(d, cap) : 0;
-    prefix[i] = prefix[i - 1] + step / 1000;
-  }
-  return prefix;
 }
 
 function totalsFor(segments: ClimbSegment[], type: ClimbType): ClimbTotals {

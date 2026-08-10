@@ -48,6 +48,40 @@ export function smoothElevation(
   return out;
 }
 
+/**
+ * Cumulative seconds up to each route index, with pauses removed.
+ *
+ * Tracks are recorded at a fixed interval, so a step far above that interval is
+ * a stopped recording, not time spent moving. Taking end-minus-start instead
+ * would fold every break into the split it interrupts — one hike in the data
+ * spans 12:39 h wall clock for 4:37 h of actual activity.
+ */
+export function buildTimePrefix(routeData: RoutePoint[]): number[] {
+  const n = routeData.length;
+  const prefix: number[] = new Array(n).fill(0);
+  const times = routeData.map((p) =>
+    p.time ? new Date(p.time).getTime() : NaN
+  );
+
+  const deltas: number[] = [];
+  for (let i = 1; i < n; i++) {
+    const d = times[i] - times[i - 1];
+    if (Number.isFinite(d) && d > 0) deltas.push(d);
+  }
+  if (deltas.length === 0) return prefix;
+
+  deltas.sort((a, b) => a - b);
+  const median = deltas[Math.floor(deltas.length / 2)];
+  const cap = Math.max(5000, median * 4);
+
+  for (let i = 1; i < n; i++) {
+    const d = times[i] - times[i - 1];
+    const step = Number.isFinite(d) && d > 0 ? Math.min(d, cap) : 0;
+    prefix[i] = prefix[i - 1] + step / 1000;
+  }
+  return prefix;
+}
+
 export function haversine(a: RoutePoint, b: RoutePoint): number {
   const R = 6371000;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
@@ -112,6 +146,8 @@ export function computeSplits(
     for (let i = 0; i < segDescent.length; i++) segDescent[i] *= k;
   }
 
+  const timePrefix = buildTimePrefix(routeData);
+
   const splits: Split[] = [];
   let splitStart = 0;
   let splitStartDist = 0;
@@ -126,11 +162,7 @@ export function computeSplits(
 
     const nextKmMark = (splits.length + 1) * 1000;
     if (cumDist >= nextKmMark || i === routeData.length - 1) {
-      const startTime = routeData[splitStart].time
-        ? new Date(routeData[splitStart].time!).getTime()
-        : 0;
-      const endTime = curr.time ? new Date(curr.time).getTime() : 0;
-      const durationSec = Math.max(0, (endTime - startTime) / 1000);
+      const durationSec = Math.max(0, timePrefix[i] - timePrefix[splitStart]);
       cumDurationSec += durationSec;
       const distanceM = cumDist - splitStartDist;
       const distanceKm = distanceM / 1000;

@@ -7,6 +7,7 @@
  * tables.
  */
 
+import { computeElevationStats, reconcileAscent } from "./activity-stats";
 import { polarSportIdToType } from "./polar-sport-map";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -161,6 +162,11 @@ export function parseTrainingSession(raw: unknown): ParsedTraining | null {
   const maxAltitude =
     altitudeValues.length > 0 ? Math.round(Math.max(...altitudeValues)) : null;
 
+  // Der V650 meldet im Export teils absurde Aufstiege (13'115 m bei 1717 m
+  // Höhenband). Gegen die Höhenreihe der Route gegenprüfen, bevor der Wert
+  // in die DB wandert.
+  const routeElev = computeElevationStats(routeData);
+
   return {
     polarId,
     startTime,
@@ -168,8 +174,8 @@ export function parseTrainingSession(raw: unknown): ParsedTraining | null {
     durationSec,
     distanceMeters,
     calories,
-    ascent,
-    descent,
+    ascent: reconcileAscent(ascent, routeElev.ascent),
+    descent: reconcileAscent(descent, routeElev.descent),
     hrAvg,
     hrMax,
     fatPercentage,
