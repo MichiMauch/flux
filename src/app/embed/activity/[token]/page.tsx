@@ -186,7 +186,7 @@ function CompactEmbed({
   shareUrl: string;
 }) {
   const avgSpeedKmh =
-    activity.avgSpeed != null ? (activity.avgSpeed * 3.6).toFixed(1) : null;
+    activity.avgSpeed != null ? activity.avgSpeed.toFixed(1) : null;
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-3 p-3">

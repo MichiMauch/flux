@@ -102,6 +102,8 @@ export function parseFitFile(buffer: ArrayBuffer): Promise<ParsedFitData> {
         avgCadence: s?.avg_cadence ?? undefined,
         maxCadence: s?.max_cadence ?? undefined,
         totalSteps: s?.total_cycles ?? undefined,
+        // km/h — Polar liefert die Session-Werte bereits so, und computeSpeedStats
+        // mittelt über speedData, das ebenfalls km/h ist. Nicht umrechnen.
         avgSpeed: s?.avg_speed ?? sp.avg ?? undefined,
         maxSpeed: s?.max_speed ?? sp.max ?? undefined,
         avgHeartRate: s?.avg_heart_rate ?? undefined,

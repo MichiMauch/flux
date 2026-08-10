@@ -107,9 +107,13 @@ export function parseStravaActivity(
     type: stravaSportToType(activity.sport_type),
     sportTypeRaw: activity.sport_type,
     device: activity.device_name ?? "Strava",
+    // Strava liefert Geschwindigkeit in m/s, die Spalte hält km/h.
     avgSpeed:
-      typeof activity.average_speed === "number" ? activity.average_speed : null,
-    maxSpeed: typeof activity.max_speed === "number" ? activity.max_speed : null,
+      typeof activity.average_speed === "number"
+        ? activity.average_speed * 3.6
+        : null,
+    maxSpeed:
+      typeof activity.max_speed === "number" ? activity.max_speed * 3.6 : null,
     minAltitude: typeof activity.elev_low === "number" ? Math.round(activity.elev_low) : null,
     maxAltitude: typeof activity.elev_high === "number" ? Math.round(activity.elev_high) : null,
     routeData: routeData.length > 0 ? routeData : null,

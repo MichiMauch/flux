@@ -47,7 +47,7 @@ export async function BentoDashboardRecords({ userId }: { userId: string }) {
       icon: <Gauge className="h-3 w-3" />,
       label: "Höchste Ø-Speed",
       row: fastest,
-      format: (r) => `${(((r.avgSpeed ?? 0) * 3.6)).toFixed(1)} km/h`,
+      format: (r) => `${(r.avgSpeed ?? 0).toFixed(1)} km/h`,
     },
     {
       icon: <Zap className="h-3 w-3" />,

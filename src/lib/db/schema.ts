@@ -136,6 +136,8 @@ export const activities = pgTable(
     avgCadence: integer("avg_cadence"),
     maxCadence: integer("max_cadence"),
     totalSteps: integer("total_steps"),
+    // km/h — NICHT m/s. Polar liefert km/h, Strava m/s; letzteres wird beim
+    // Import umgerechnet. Verbraucher dürfen nicht mit 3.6 multiplizieren.
     avgSpeed: real("avg_speed"),
     maxSpeed: real("max_speed"),
     cardioLoad: real("cardio_load"),

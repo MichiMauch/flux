@@ -188,7 +188,7 @@ export function ActivityDetailBody({
             <StatTile
               icon={<ActivityIcon />}
               label="Ø Tempo"
-              value={fmt(avgSpeed != null ? avgSpeed * 3.6 : null, 1)}
+              value={fmt(avgSpeed, 1)}
               unit="km/h"
               className="order-4 sm:order-6"
             />
