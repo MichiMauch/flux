@@ -10,6 +10,7 @@ import { BentoTourMap } from "../../components/bento/tours/bento-tour-map";
 import { BentoTourActivities } from "../../components/bento/tours/bento-tour-activities";
 import { BentoTourPhotos } from "../../components/bento/tours/bento-tour-photos";
 import { PhotoLightbox } from "../../components/photo-lightbox";
+import { DoneRibbon } from "../../components/done-ribbon";
 import type { MultiRouteEntry } from "../../components/multi-route-map-client";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
@@ -144,22 +145,13 @@ export default async function TourDetailPage({
         }
       />
 
-      {(tour.completed || (!isOwner && ownerName)) ? (
+      {!isOwner && ownerName ? (
         <div className="flex flex-wrap items-center gap-2">
-          {tour.completed ? (
-            <span
-              className={`${spaceMono.className} inline-flex items-center rounded-md bg-[#ff6a00] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-black`}
-            >
-              Done
-            </span>
-          ) : null}
-          {!isOwner && ownerName ? (
-            <div
-              className={`${spaceMono.className} inline-flex items-center gap-2 rounded-md border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
-            >
-              Von <span className="text-white">{ownerName}</span> geteilt
-            </div>
-          ) : null}
+          <div
+            className={`${spaceMono.className} inline-flex items-center gap-2 rounded-md border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
+          >
+            Von <span className="text-white">{ownerName}</span> geteilt
+          </div>
         </div>
       ) : null}
 
@@ -183,10 +175,22 @@ export default async function TourDetailPage({
               {tour.description}
             </div>
           ) : null}
+          {tour.completed ? <DoneRibbon /> : null}
         </div>
-      ) : tour.description ? (
-        <p className="text-sm text-[#a3a3a3]">{tour.description}</p>
-      ) : null}
+      ) : (
+        <>
+          {tour.completed ? (
+            <span
+              className={`${spaceMono.className} inline-flex items-center rounded-md bg-[#ff6a00] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-black`}
+            >
+              Done
+            </span>
+          ) : null}
+          {tour.description ? (
+            <p className="text-sm text-[#a3a3a3]">{tour.description}</p>
+          ) : null}
+        </>
+      )}
 
       <div className="grid grid-cols-1 gap-4">
         <BentoTourStats totals={totals} dateRangeLabel={dateRangeLabel} />
