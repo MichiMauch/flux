@@ -58,3 +58,6 @@ next-env.d.ts
 
 # graphify
 /graphify-out/
+
+# generierte Poster-Plates (lokal)
+/poster/
