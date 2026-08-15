@@ -4,7 +4,11 @@ echo "Running database migrations..."
 # 2026-05-25) oder eine Migration manuell vorab via Tunnel angewendet wurde,
 # soll der Container trotzdem starten. Schemastand muss bei Bedarf manuell
 # geprueft werden.
-if timeout 30 npx drizzle-kit migrate --config=drizzle.config.ts; then
+# Direkt die Binary aufrufen, nicht ueber npx: der Container laeuft als
+# unprivilegierter User 'nextjs' ohne beschreibbares HOME, und npx legt vor
+# jedem Lauf seinen _npx-Cache an. Schlaegt das fehl, bricht npx sofort mit
+# Exit 1 und leerem stderr ab — genau die Signatur vom 2026-05-25.
+if timeout 30 node node_modules/drizzle-kit/bin.cjs migrate --config=drizzle.config.ts; then
   echo "Migrations complete."
 else
   echo "Migration step failed or timed out — continuing without blocking startup."
