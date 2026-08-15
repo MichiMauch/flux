@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { spaceMono } from "../bento-fonts";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
@@ -256,6 +257,7 @@ export function WeightSparkline({ points }: { points: Point[] }) {
           <span className="font-bold">{hover.weight.toFixed(1)} kg</span>
           <span className="text-[#9ca3af] ml-1.5">
             {new Date(hover.date).toLocaleDateString("de-CH", {
+              timeZone: APP_TIME_ZONE,
               day: "2-digit",
               month: "short",
             })}

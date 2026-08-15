@@ -4,6 +4,7 @@ import { ActivityLottie } from "./activity-lottie";
 import { RouteMapStatic } from "./route-map-static";
 import { activityTypeColor } from "@/lib/activity-types";
 import {
+  APP_TIME_ZONE,
   formatDurationWords as formatDuration,
   formatDistanceAuto,
 } from "@/lib/activity-format";
@@ -27,12 +28,14 @@ interface ActivityFeedCardProps {
 
 export function ActivityFeedCard(a: ActivityFeedCardProps) {
   const dateLabel = a.startTime.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
   const timeLabel = a.startTime.toLocaleTimeString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   });

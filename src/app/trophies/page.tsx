@@ -12,6 +12,7 @@ import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoTile } from "../components/bento/bento-tile";
 import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const CATEGORY_LABEL: Record<TrophyCategory, string> = {
   single: "Einzelne Aktivität",
@@ -206,7 +207,7 @@ export default async function TrophiesPage() {
                           <div
                             className={`${spaceMono.className} mt-1.5 text-[10px] text-[#9ca3af]`}
                           >
-                            {new Date(unlockedAt).toLocaleDateString("de-CH")}{" "}
+                            {new Date(unlockedAt).toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE })}{" "}
                             · +{def.xpReward} XP
                           </div>
                         )}

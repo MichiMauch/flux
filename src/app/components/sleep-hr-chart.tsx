@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { spaceMono } from "./bento/bento-fonts";
 import { SevenSegDisplay } from "./bento/seven-seg";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 interface SleepHrChartProps {
   samples: unknown;
@@ -427,6 +428,7 @@ export function SleepHrChart({ samples, sleepStart }: SleepHrChartProps) {
               className={`${spaceMono.className} text-[9px] font-bold uppercase tracking-[0.18em] text-[#9ca3af]`}
             >
               {new Date(hover.t).toLocaleTimeString("de-CH", {
+                timeZone: APP_TIME_ZONE,
                 hour: "2-digit",
                 minute: "2-digit",
               })}

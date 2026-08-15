@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
 import {
+  APP_TIME_ZONE,
   formatDistanceKm as sharedFormatDistanceKm,
   formatDurationWordsPadded,
 } from "@/lib/activity-format";
@@ -114,6 +115,7 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
 
   const dateLabel = start
     .toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       weekday: "short",
       day: "2-digit",
       month: "short",
@@ -121,6 +123,7 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
     })
     .toUpperCase();
   const timeLabel = start.toLocaleTimeString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   });

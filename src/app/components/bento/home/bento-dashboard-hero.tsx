@@ -9,6 +9,7 @@ import { SportChip } from "@/app/components/sport-chip";
 import { rajdhani, spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import {
+  APP_TIME_ZONE,
   formatDurationShort,
   formatDistanceKm,
 } from "@/lib/activity-format";
@@ -71,12 +72,12 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
     weekday: "long",
     day: "2-digit",
     month: "long",
-    timeZone: "Europe/Zurich",
+    timeZone: APP_TIME_ZONE,
   });
   const timeLabel = latest.startTime.toLocaleTimeString("de-CH", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Europe/Zurich",
+    timeZone: APP_TIME_ZONE,
   });
 
   return (

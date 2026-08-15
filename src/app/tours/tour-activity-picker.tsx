@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { toast } from "sonner";
 import { addActivitiesToTour } from "./actions";
-import { formatDistanceAuto } from "@/lib/activity-format";
+import { APP_TIME_ZONE, formatDistanceAuto } from "@/lib/activity-format";
 
 export interface PickableActivity {
   id: string;
@@ -215,6 +215,7 @@ export function TourActivityPicker({
                       <span>{a.type}</span>
                       <span>
                         {new Date(a.startTime).toLocaleDateString("de-CH", {
+                          timeZone: APP_TIME_ZONE,
                           day: "2-digit",
                           month: "short",
                           year: "numeric",

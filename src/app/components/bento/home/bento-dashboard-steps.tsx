@@ -4,6 +4,7 @@ import { dailyActivity } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { BentoDashboardStepsChart } from "./bento-dashboard-steps-chart";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
@@ -61,6 +62,7 @@ export async function BentoDashboardSteps({ userId }: { userId: string }) {
       key: k,
       label: WEEKDAYS[d.getDay()],
       dateLabel: d.toLocaleDateString("de-CH", {
+        timeZone: APP_TIME_ZONE,
         weekday: "short",
         day: "2-digit",
         month: "short",

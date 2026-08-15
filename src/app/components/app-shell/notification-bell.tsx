@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 export interface NotificationItem {
   id: string;
@@ -37,6 +38,7 @@ function formatRelative(iso: string): string {
   if (diffSec < 172800) return "gestern";
   if (diffSec < 7 * 86400) return `vor ${Math.round(diffSec / 86400)} Tagen`;
   return d.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",

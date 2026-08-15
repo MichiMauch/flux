@@ -7,7 +7,7 @@ import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { spaceMono } from "../components/bento/bento-fonts";
 import { DoneRibbon } from "../components/done-ribbon";
 import { listToursForUser } from "./data";
-import { formatDistanceAuto } from "@/lib/activity-format";
+import { APP_TIME_ZONE, formatDistanceAuto } from "@/lib/activity-format";
 
 function toDate(v: Date | string | null | undefined): Date | null {
   if (!v) return null;
@@ -24,6 +24,7 @@ function formatDateRange(
   if (!start && !end) return "—";
   const fmt = (d: Date) =>
     d.toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "short",
       year: "numeric",

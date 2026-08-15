@@ -6,6 +6,7 @@ import type { WeatherData } from "@/lib/weather";
 import { activityTypeLabel } from "@/lib/activity-types";
 import type { HrSample } from "@/lib/hr-zones";
 import {
+  APP_TIME_ZONE,
   formatDistanceValue,
   formatDurationHMS,
 } from "@/lib/activity-format";
@@ -83,12 +84,14 @@ export function ActivitySummary({
   const hasLeftContent = photos.length > 0 || !!activity.notes;
 
   const dateLabel = activity.startTime.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
   const timeLabel = activity.startTime.toLocaleTimeString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   });

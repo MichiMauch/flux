@@ -1,5 +1,5 @@
 import { Activity, Flame, Footprints, Ruler, Target, Clock, Moon, AlarmClock } from "lucide-react";
-import { formatDurationWordsSpaced, formatDistanceAuto } from "@/lib/activity-format";
+import { APP_TIME_ZONE, formatDurationWordsSpaced, formatDistanceAuto } from "@/lib/activity-format";
 
 interface DailyRow {
   date: string;
@@ -237,6 +237,7 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
                       <span className="text-sm font-bold tabular-nums text-white font-mono">
                         {valid
                           ? d.toLocaleTimeString("de-CH", {
+                              timeZone: APP_TIME_ZONE,
                               hour: "2-digit",
                               minute: "2-digit",
                             })
@@ -245,6 +246,7 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
                       <span className="text-[9px] text-[#9ca3af] tabular-nums">
                         {valid
                           ? d.toLocaleDateString("de-CH", {
+                              timeZone: APP_TIME_ZONE,
                               day: "2-digit",
                               month: "2-digit",
                             })
@@ -328,7 +330,7 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
       </details>
 
       <div className="text-[10px] text-[#9ca3af] font-mono text-center">
-        Synced: {data.updatedAt.toLocaleString("de-CH")}
+        Synced: {data.updatedAt.toLocaleString("de-CH", { timeZone: APP_TIME_ZONE })}
       </div>
     </div>
   );
@@ -564,7 +566,7 @@ function parseIsoDur(s: string | undefined | null): number {
 function formatStamp(ts: string): string {
   try {
     const d = new Date(ts);
-    return d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString("de-CH", { timeZone: APP_TIME_ZONE, hour: "2-digit", minute: "2-digit" });
   } catch {
     return ts;
   }

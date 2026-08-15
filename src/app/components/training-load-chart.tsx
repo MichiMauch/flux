@@ -12,6 +12,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { TrainingLoadPoint } from "@/lib/training-load";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 const CTL_COLOR = "#60A5FA"; // blue — Fitness
@@ -30,7 +31,7 @@ interface BandPoint extends TrainingLoadPoint {
 
 function formatTick(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("de-CH", { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE, day: "2-digit", month: "short" });
 }
 
 export function TrainingLoadChart({ data }: Props) {
@@ -97,6 +98,7 @@ export function TrainingLoadChart({ data }: Props) {
           labelFormatter={(label) =>
             typeof label === "string"
               ? new Date(label).toLocaleDateString("de-CH", {
+                  timeZone: APP_TIME_ZONE,
                   weekday: "short",
                   day: "2-digit",
                   month: "short",

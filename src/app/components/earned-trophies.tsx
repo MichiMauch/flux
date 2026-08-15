@@ -5,6 +5,7 @@ import { userTrophies } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getTrophy } from "@/lib/trophies";
 import { TrophyIcon } from "./trophy-icon";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 export async function EarnedTrophies({ userId }: { userId: string }) {
   const rows = await db
@@ -39,7 +40,7 @@ export async function EarnedTrophies({ userId }: { userId: string }) {
             <Link
               key={r.code}
               href="/trophies"
-              title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH")}`}
+              title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE })}`}
               className="flex aspect-square items-center justify-center rounded-md bg-background border border-border hover:bg-surface transition-colors"
             >
               <TrophyIcon

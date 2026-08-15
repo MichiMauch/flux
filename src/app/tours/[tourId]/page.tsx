@@ -24,6 +24,7 @@ import {
 } from "../data";
 import { TourSortToggle } from "../tour-sort-toggle";
 import { ShareButton } from "@/app/components/share-button";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 function toDate(v: Date | string | null | undefined): Date | null {
   if (!v) return null;
@@ -40,6 +41,7 @@ function formatDateRangeLabel(
   if (!start && !end) return "—";
   const fmt = (d: Date) =>
     d.toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "short",
       year: "numeric",

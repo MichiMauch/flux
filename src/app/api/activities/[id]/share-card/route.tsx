@@ -6,7 +6,7 @@ import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { readFile } from "fs/promises";
 import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
-import { formatDurationHMS } from "@/lib/activity-format";
+import { APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
 
 export const runtime = "nodejs";
 
@@ -56,6 +56,7 @@ function formatDistance(distance: number | null): string {
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     weekday: "short",
     day: "2-digit",
     month: "short",

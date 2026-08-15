@@ -21,7 +21,7 @@ import { dimColor, km } from "@/app/activity/[id]/helpers";
 import { ActivityDetailBody } from "@/app/activity/[id]/activity-detail-body";
 import { ActivityDetailHero } from "@/app/activity/[id]/activity-detail-hero";
 import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
-import { formatDurationHMS } from "@/lib/activity-format";
+import { APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
 import type { HrSample, RoutePoint } from "@/lib/splits";
 import { EmbedAutoHeight } from "./embed-auto-height";
 
@@ -74,6 +74,7 @@ export default async function EmbeddedActivityPage({
 
   const dateLabel = activity.startTime
     .toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       weekday: "long",
       day: "2-digit",
       month: "short",

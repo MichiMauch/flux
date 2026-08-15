@@ -21,6 +21,7 @@ import { BentoDashboardYtdAscent } from "./components/bento/home/bento-dashboard
 import { BentoDashboardYtdTime } from "./components/bento/home/bento-dashboard-ytd-time";
 import { BentoDashboardConsistency } from "./components/bento/home/bento-dashboard-consistency";
 import { BentoDashboardRecords } from "./components/bento/home/bento-dashboard-records";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
@@ -51,6 +52,7 @@ export default async function DashboardPage() {
               ► FLUX // DASHBOARD ·{" "}
               {new Date()
                 .toLocaleDateString("de-CH", {
+                  timeZone: APP_TIME_ZONE,
                   day: "2-digit",
                   month: "short",
                   year: "numeric",

@@ -5,6 +5,7 @@ import { desc, eq } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
 import { WeightSparkline } from "./weight-sparkline";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 const UP = "#FF6A00";
@@ -70,6 +71,7 @@ export async function BentoDashboardWeight({ userId }: { userId: string }) {
           className={`${spaceMono.className} text-[10px] font-bold uppercase tracking-[0.12em] text-[#a3a3a3] tabular-nums`}
         >
           {new Date(latest.date).toLocaleDateString("de-CH", {
+            timeZone: APP_TIME_ZONE,
             day: "2-digit",
             month: "short",
           })}

@@ -13,6 +13,7 @@ import { LedValue } from "../components/bento/led-value";
 import { SleepHypnogram } from "../components/sleep-hypnogram";
 import { SleepHrChart } from "../components/sleep-hr-chart";
 import { SleepHistoryChart } from "../components/sleep-history-chart";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 function parseDateParam(v: string | undefined): string | null {
   if (!v) return null;
@@ -72,7 +73,7 @@ function fmtTime(d: Date | null | undefined): string {
   return d.toLocaleTimeString("de-CH", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Europe/Zurich",
+    timeZone: APP_TIME_ZONE,
   });
 }
 

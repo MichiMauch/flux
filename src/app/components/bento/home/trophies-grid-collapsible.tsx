@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { getTrophy, tierColor } from "@/lib/trophies";
 import { TrophyIcon } from "@/app/components/trophy-icon";
 import { spaceMono } from "../bento-fonts";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 const VISIBLE_ROW_SIZE = 6;
@@ -39,7 +40,7 @@ export function TrophiesGridCollapsible({ trophies }: { trophies: TrophyRow[] })
           return (
             <span
               key={r.code}
-              title={`${def.title} · ${new Date(r.unlockedAtIso).toLocaleDateString("de-CH")}`}
+              title={`${def.title} · ${new Date(r.unlockedAtIso).toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE })}`}
               className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] p-0.5"
               style={{ boxShadow: `inset 0 0 6px ${glow}22` }}
             >

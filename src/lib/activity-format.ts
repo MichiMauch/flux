@@ -1,3 +1,13 @@
+/**
+ * Every date/time the app renders is shown in Swiss local time, regardless of
+ * where it is formatted. The Docker container runs in UTC, so a server
+ * component without an explicit timeZone renders 1–2 h too early; the browser
+ * would then re-render the same instant in the visitor's zone and React
+ * reports a hydration mismatch. Pass this to every toLocaleDate/TimeString
+ * call that formats a Date.
+ */
+export const APP_TIME_ZONE = "Europe/Zurich";
+
 // ----- Distance ---------------------------------------------------------
 
 /** Returns the distance as a bare number string in km with the given decimals. */
@@ -116,6 +126,7 @@ export function formatPace(meters: number | null, seconds: number | null): strin
 
 export function formatDateLabel(date: Date): string {
   return date.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     weekday: "short",
     day: "2-digit",
     month: "short",
@@ -124,6 +135,7 @@ export function formatDateLabel(date: Date): string {
 
 export function formatTimeLabel(date: Date): string {
   return date.toLocaleTimeString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   });

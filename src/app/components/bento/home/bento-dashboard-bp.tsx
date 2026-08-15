@@ -4,6 +4,7 @@ import { bloodPressureSessions } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { spaceMono } from "../bento-fonts";
 import { SevenSegDisplay } from "../seven-seg";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
@@ -70,6 +71,7 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
 
   const cls = classify(latest.systolicAvg, latest.diastolicAvg);
   const dateLabel = (latest.measuredAt ?? new Date(latest.date)).toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "short",
   });

@@ -12,6 +12,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { setTargetWeight } from "@/app/health/actions";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 interface WeightChartProps {
   data: {
@@ -58,7 +59,7 @@ function linearRegression(points: { x: number; y: number }[]) {
   return { slope, intercept };
 }
 
-const fmtDate = (t: number) => new Date(t).toLocaleDateString("de-CH");
+const fmtDate = (t: number) => new Date(t).toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE });
 
 export function WeightChart({ data, initialTargetWeight }: WeightChartProps) {
   const [showTrend, setShowTrend] = useState(true);

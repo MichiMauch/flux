@@ -6,6 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { getTrophy, tierColor } from "@/lib/trophies";
 import { TrophyIcon } from "@/app/components/trophy-icon";
 import { spaceMono } from "../bento-fonts";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
@@ -46,7 +47,7 @@ export async function BentoHomeTrophies({ userId }: { userId: string }) {
             <Link
               key={r.code}
               href="/trophies"
-              title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH")}`}
+              title={`${def.title} · ${new Date(r.unlockedAt).toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE })}`}
               className="flex aspect-square items-center justify-center rounded-md border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#4a4a4a] transition-colors p-1"
               style={{ boxShadow: `inset 0 0 6px ${glow}22` }}
             >

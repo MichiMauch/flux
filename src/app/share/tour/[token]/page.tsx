@@ -19,6 +19,7 @@ import {
   getTourPhotos,
 } from "@/app/tours/data";
 import { ShareTokenProvider, appendShareToken } from "@/lib/share-context";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -46,6 +47,7 @@ function formatDateRangeLabel(
   if (!start && !end) return "—";
   const fmt = (d: Date) =>
     d.toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "short",
       year: "numeric",

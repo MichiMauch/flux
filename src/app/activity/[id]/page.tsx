@@ -22,6 +22,7 @@ import { ActivityDetailBody } from "./activity-detail-body";
 import { ActivityDetailHero } from "./activity-detail-hero";
 import { getToursForActivity } from "@/app/tours/data";
 import { getActivityPersonalBests } from "@/lib/personal-bests";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 export default async function ActivityBentoPage({
   params,
@@ -125,6 +126,7 @@ export default async function ActivityBentoPage({
 
   const dateLabel = activity.startTime
     .toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       weekday: "long",
       day: "2-digit",
       month: "short",

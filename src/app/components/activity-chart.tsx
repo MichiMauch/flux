@@ -13,6 +13,7 @@ import {
   ReferenceLine,
   CartesianGrid,
 } from "recharts";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 interface RoutePoint {
   lat: number;
@@ -171,13 +172,14 @@ export function ActivityChart({
       let timeLabel: string | null = null;
       if (sourceTime) {
         timeLabel = new Date(sourceTime).toLocaleTimeString("de-CH", {
+          timeZone: APP_TIME_ZONE,
           hour: "2-digit",
           minute: "2-digit",
         });
       } else if (startMs != null && duration) {
         timeLabel = new Date(startMs + ratio * duration * 1000).toLocaleTimeString(
           "de-CH",
-          { hour: "2-digit", minute: "2-digit" }
+          { timeZone: APP_TIME_ZONE, hour: "2-digit", minute: "2-digit" }
         );
       }
       const tsMs = sourceTime
@@ -222,7 +224,7 @@ export function ActivityChart({
   const sunriseX = findDistanceAt(sunrise ?? null);
   const sunsetX = findDistanceAt(sunset ?? null);
   const formatTime = (d: Date) =>
-    d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+    d.toLocaleTimeString("de-CH", { timeZone: APP_TIME_ZONE, hour: "2-digit", minute: "2-digit" });
 
   // X-axis: fixed 2 km steps
   const totalKm = chartData[chartData.length - 1]?.distance ?? 0;

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Mountain, Bike, Satellite, X } from "lucide-react";
 import { sportColor } from "@/lib/sport-colors";
 import {
+  APP_TIME_ZONE,
   formatDistanceAuto,
   formatDurationWordsSpaced,
 } from "@/lib/activity-format";
@@ -71,6 +72,7 @@ function formatStartLabel(start: MultiRouteEntry["startTime"]): string | null {
   const d = start instanceof Date ? start : new Date(start);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",

@@ -20,6 +20,7 @@ import type {
   WeeklyBriefingWarning,
 } from "@/lib/weekly-briefing-prompt";
 import type { WeeklyRecap } from "@/lib/weekly-recap";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
@@ -78,7 +79,7 @@ function formatWeekRange(start: string, end: string): string {
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
   const f = (d: Date) =>
-    d.toLocaleDateString("de-CH", { day: "2-digit", month: "short" });
+    d.toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE, day: "2-digit", month: "short" });
   return `${f(s)} – ${f(e)}`;
 }
 
@@ -305,6 +306,7 @@ function SectionLabel({ label }: { label: string }) {
 function formatRelativeDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     weekday: "short",
     day: "2-digit",
     month: "short",

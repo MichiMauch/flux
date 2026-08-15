@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Trophy, Ruler, Mountain, Zap, Gauge } from "lucide-react";
 import { spaceMono } from "../bento-fonts";
 import { getRecordsYtd, type RecordRow } from "@/lib/cache/home-stats";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
   });

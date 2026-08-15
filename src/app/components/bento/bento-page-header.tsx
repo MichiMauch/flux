@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { rajdhani, spaceMono } from "./bento-fonts";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 const NEON = "#FF6A00";
 
@@ -18,6 +19,7 @@ export function BentoPageHeader({
 }: BentoPageHeaderProps) {
   const dateLabel = new Date()
     .toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "short",
       year: "numeric",

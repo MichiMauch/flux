@@ -18,6 +18,7 @@ import { dimColor, km } from "@/app/activity/[id]/helpers";
 import { ActivityDetailBody } from "@/app/activity/[id]/activity-detail-body";
 import { ActivityDetailHero } from "@/app/activity/[id]/activity-detail-hero";
 import { ShareTokenProvider } from "@/lib/share-context";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -149,6 +150,7 @@ export default async function SharedActivityPage({
 
   const dateLabel = activity.startTime
     .toLocaleDateString("de-CH", {
+      timeZone: APP_TIME_ZONE,
       weekday: "long",
       day: "2-digit",
       month: "short",
