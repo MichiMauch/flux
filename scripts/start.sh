@@ -8,7 +8,10 @@ echo "Running database migrations..."
 # unprivilegierter User 'nextjs' ohne beschreibbares HOME, und npx legt vor
 # jedem Lauf seinen _npx-Cache an. Schlaegt das fehl, bricht npx sofort mit
 # Exit 1 und leerem stderr ab — genau die Signatur vom 2026-05-25.
-if timeout 30 node node_modules/drizzle-kit/bin.cjs migrate --config=drizzle.config.ts; then
+# 180s statt 30s: die timestamptz-Migration (0034) braucht allein schon ~20s,
+# weil ALTER COLUMN ... SET DATA TYPE jede Tabelle neu schreibt. Eine
+# Schema-Migration darf laenger dauern als ein Startup-Ping.
+if timeout 180 node node_modules/drizzle-kit/bin.cjs migrate --config=drizzle.config.ts; then
   echo "Migrations complete."
 else
   echo "Migration step failed or timed out — continuing without blocking startup."

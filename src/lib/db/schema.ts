@@ -20,13 +20,13 @@ export const users = pgTable("user", {
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name"),
   email: text("email").unique(),
-  emailVerified: timestamp("emailVerified", { mode: "date" }),
+  emailVerified: timestamp("emailVerified", { withTimezone: true, mode: "date" }),
   password: text("password"), // bcrypt hash
   polarUserId: text("polar_user_id").unique(),
   polarToken: text("polar_token"),
   withingsAccessToken: text("withings_access_token"),
   withingsRefreshToken: text("withings_refresh_token"),
-  withingsTokenExpiry: timestamp("withings_token_expiry"),
+  withingsTokenExpiry: timestamp("withings_token_expiry", { withTimezone: true }),
   withingsUserId: text("withings_user_id"),
   // Per-user random secret for the Withings webhook URL. Withings can't send
   // custom auth headers, so the secret has to be in the URL — but a per-user
@@ -34,7 +34,7 @@ export const users = pgTable("user", {
   // re-syncable, not all users).
   withingsWebhookToken: text("withings_webhook_token").unique(),
   image: text("image"),
-  birthday: timestamp("birthday", { mode: "date" }),
+  birthday: timestamp("birthday", { withTimezone: true, mode: "date" }),
   sex: text("sex"), // 'male' | 'female'
   heightCm: integer("height_cm"),
   weightKg: real("weight_kg"),
@@ -47,10 +47,10 @@ export const users = pgTable("user", {
   trainingBackground: text("training_background"), // e.g. OCCASIONAL/REGULAR/FREQUENT/HEAVY/SEMI_PRO/PRO
   typicalDay: text("typical_day"), // MOSTLY_SITTING/MOSTLY_STANDING/MOSTLY_MOVING
   sleepGoalSec: integer("sleep_goal_sec"),
-  physicalInfoSyncedAt: timestamp("physical_info_synced_at"),
+  physicalInfoSyncedAt: timestamp("physical_info_synced_at", { withTimezone: true }),
   partnerId: text("partner_id"),
   partnerPushEnabled: boolean("partner_push_enabled").notNull().default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ── NextAuth Tables ────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ export const sessions = pgTable("session", {
   userId: text("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { mode: "date" }).notNull(),
+  expires: timestamp("expires", { withTimezone: true, mode: "date" }).notNull(),
 });
 
 export const verificationTokens = pgTable(
@@ -92,7 +92,7 @@ export const verificationTokens = pgTable(
   {
     identifier: text("identifier").notNull(),
     token: text("token").notNull(),
-    expires: timestamp("expires", { mode: "date" }).notNull(),
+    expires: timestamp("expires", { withTimezone: true, mode: "date" }).notNull(),
   },
   (vt) => [
     primaryKey({
@@ -115,7 +115,7 @@ export const activities = pgTable(
       .references(() => users.id),
     name: text("name").notNull(),
     type: text("type").notNull(), // RUNNING, CYCLING, SWIMMING, etc.
-    startTime: timestamp("start_time").notNull(),
+    startTime: timestamp("start_time", { withTimezone: true }).notNull(),
     duration: integer("duration"), // seconds (elapsed time, incl. pauses)
     movingTime: integer("moving_time"), // seconds (timer time, excl. pauses)
     distance: real("distance"), // meters
@@ -150,12 +150,12 @@ export const activities = pgTable(
     device: text("device"),
     fitFilePath: text("fit_file_path"),
     weather: json("weather"), // {temp, feelsLike, windSpeed, windDeg, clouds, description, icon, humidity}
-    weatherFetchedAt: timestamp("weather_fetched_at"),
+    weatherFetchedAt: timestamp("weather_fetched_at", { withTimezone: true }),
     locality: text("locality"), // Stadt/Stadtteil aus routeData[0] via Mapbox
     country: text("country"), // ISO-2 Country-Code (z.B. "CH", "FR")
-    geocodedAt: timestamp("geocoded_at"),
+    geocodedAt: timestamp("geocoded_at", { withTimezone: true }),
     shareToken: text("share_token").unique(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
     index("activities_user_start_idx").on(t.userId, t.startTime),
@@ -173,7 +173,7 @@ export const deletedPolarActivities = pgTable("deleted_polar_activities", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   polarId: text("polar_id").notNull().unique(),
-  deletedAt: timestamp("deleted_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ── Activity Photos ────────────────────────────────────────────────────────
@@ -191,11 +191,11 @@ export const activityPhotos = pgTable(
     thumbnailPath: text("thumbnail_path").notNull(),
     lat: real("lat"),
     lng: real("lng"),
-    takenAt: timestamp("taken_at"),
+    takenAt: timestamp("taken_at", { withTimezone: true }),
     location: text("location"),
     width: integer("width"),
     height: integer("height"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("activity_photos_activity_idx").on(t.activityId)],
 );
@@ -214,7 +214,7 @@ export const activityBoosts = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     uniqueByUserAndActivity: uniqueIndex("activity_boosts_user_activity_unique").on(
@@ -241,8 +241,8 @@ export const goals = pgTable(
     timeframe: text("timeframe").notNull(), // 'week' | 'month' | 'year'
     targetValue: real("target_value").notNull(),
     active: boolean("active").notNull().default(true),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("goals_user_active_idx").on(t.userId, t.active)],
 );
@@ -260,7 +260,7 @@ export const userTrophies = pgTable("user_trophies", {
   activityId: text("activity_id").references(() => activities.id, {
     onDelete: "set null",
   }),
-  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+  unlockedAt: timestamp("unlocked_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const pendingUnlocks = pgTable("pending_unlocks", {
@@ -271,7 +271,7 @@ export const pendingUnlocks = pgTable("pending_unlocks", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   trophyCode: text("trophy_code").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ── Daily Activity (Polar Activity Transactions) ───────────────────────────
@@ -301,8 +301,8 @@ export const dailyActivity = pgTable(
     inactiveDurationSec: integer("inactive_duration_sec"),
     raw: json("raw"), // full Polar response for debug
     rawV3: json("raw_v3"), // v3 endpoint response (richer)
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("daily_activity_user_date_idx").on(t.userId, t.date)],
 );
@@ -342,8 +342,8 @@ export const dailyPolarExtras = pgTable(
     skinContactsRaw: json("skin_contacts_raw"),
     spo2Raw: json("spo2_raw"),
     wristEcgRaw: json("wrist_ecg_raw"), // /v3/users/biosensing/ecg
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
     uniqueIndex("daily_polar_extras_user_date_idx").on(t.userId, t.date),
@@ -362,12 +362,12 @@ export const weightMeasurements = pgTable(
       .notNull()
       .references(() => users.id),
     withingsId: text("withings_id").unique(),
-    date: timestamp("date").notNull(),
+    date: timestamp("date", { withTimezone: true }).notNull(),
     weight: real("weight").notNull(), // kg
     fatMass: real("fat_mass"), // kg
     muscleMass: real("muscle_mass"), // kg
     bmi: real("bmi"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("weight_measurements_user_date_idx").on(t.userId, t.date)],
 );
@@ -386,8 +386,8 @@ export const sleepSessions = pgTable(
     date: text("date").notNull(), // YYYY-MM-DD (wake-up day per Polar)
     polarUserId: text("polar_user_id"),
     deviceId: text("device_id"),
-    sleepStartTime: timestamp("sleep_start_time"),
-    sleepEndTime: timestamp("sleep_end_time"),
+    sleepStartTime: timestamp("sleep_start_time", { withTimezone: true }),
+    sleepEndTime: timestamp("sleep_end_time", { withTimezone: true }),
     totalSleepSec: integer("total_sleep_sec"),
     continuity: real("continuity"),
     continuityClass: integer("continuity_class"),
@@ -409,8 +409,8 @@ export const sleepSessions = pgTable(
     hypnogram: json("hypnogram"),
     heartRateSamples: json("heart_rate_samples"),
     raw: json("raw"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("sleep_sessions_user_date_idx").on(t.userId, t.date)],
 );
@@ -438,8 +438,8 @@ export const nightlyRecharge = pgTable(
     sleepCharge: integer("sleep_charge"),
     sleepChargeStatus: integer("sleep_charge_status"),
     raw: json("raw"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("nightly_recharge_user_date_idx").on(t.userId, t.date)],
 );
@@ -457,8 +457,8 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
   userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
 });
 
 // ── Blood Pressure (from blood-pressure-tracker) ───────────────────────────
@@ -473,14 +473,14 @@ export const bloodPressureSessions = pgTable(
       .notNull()
       .references(() => users.id),
     sourceId: integer("source_id").unique(), // ID from blood-pressure-tracker
-    measuredAt: timestamp("measured_at"), // real timestamp for sorting
+    measuredAt: timestamp("measured_at", { withTimezone: true }), // real timestamp for sorting
     date: text("date").notNull(),
     time: text("time"),
     systolicAvg: real("systolic_avg").notNull(),
     diastolicAvg: real("diastolic_avg").notNull(),
     pulseAvg: real("pulse_avg"),
     note: text("note"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
     index("blood_pressure_sessions_user_measured_idx").on(
@@ -500,7 +500,7 @@ export const coachSuggestions = pgTable("coach_suggestions", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   contextHash: text("context_hash").notNull(),
-  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  generatedAt: timestamp("generated_at", { withTimezone: true }).defaultNow().notNull(),
   model: text("model").notNull(),
   context: json("context").notNull(),
   suggestions: json("suggestions").notNull(),
@@ -520,14 +520,14 @@ export const weeklyBriefings = pgTable(
     isoWeek: text("iso_week").notNull(), // YYYY-WW, references the recapped (completed) week
     weekStart: text("week_start").notNull(), // YYYY-MM-DD (Monday of recapped week)
     weekEnd: text("week_end").notNull(), // YYYY-MM-DD (Sunday of recapped week)
-    generatedAt: timestamp("generated_at").defaultNow().notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).defaultNow().notNull(),
     model: text("model").notNull(),
     recap: json("recap").notNull(),
     summary: text("summary").notNull(),
     highlights: json("highlights").notNull(),
     warnings: json("warnings").notNull(),
     suggestions: json("suggestions").notNull(),
-    seenAt: timestamp("seen_at"),
+    seenAt: timestamp("seen_at", { withTimezone: true }),
   },
   (t) => [uniqueIndex("weekly_briefings_user_iso_week_idx").on(t.userId, t.isoWeek)]
 );
@@ -548,8 +548,8 @@ export const notifications = pgTable(
     url: text("url").notNull().default("/"),
     kind: text("kind"),
     tag: text("tag"),
-    readAt: timestamp("read_at"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("notifications_user_created_idx").on(t.userId, t.createdAt)],
 );
@@ -574,14 +574,14 @@ export const activityTours = pgTable("activity_groups", {
   sharedWithPartner: boolean("shared_with_partner").default(false).notNull(),
   shareToken: text("share_token").unique(),
   completed: boolean("completed").default(false).notNull(),
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
+  startDate: timestamp("start_date", { withTimezone: true }),
+  endDate: timestamp("end_date", { withTimezone: true }),
   // Legacy: war als 'date' | 'manual'-Schalter geplant. Inzwischen leitet sich
   // die Verfügbarkeit der manuellen Reihenfolge aus activityTourMembers.sortOrder
   // ab — Spalte bleibt aus Migrationsgründen, wird aber nicht mehr gelesen.
   sortMode: text("sort_mode").default("date").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const activityTourMembers = pgTable(
@@ -594,7 +594,7 @@ export const activityTourMembers = pgTable(
       .notNull()
       .references(() => activities.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order"),
-    addedAt: timestamp("added_at").defaultNow().notNull(),
+    addedAt: timestamp("added_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
     primaryKey({ columns: [t.tourId, t.activityId] }),
