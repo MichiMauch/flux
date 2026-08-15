@@ -373,6 +373,16 @@ export function getConsistency(userId: string): Promise<ConsistencyData> {
 
 // ── Records YTD ────────────────────────────────────────────────────────────
 
+/**
+ * Ø-Geschwindigkeit in km/h aus Distanz und Bewegungszeit — das SQL-Pendant
+ * zu avgSpeedKmh() in activity-format.ts. NULLIF faengt Aktivitaeten ohne
+ * Zeitangabe ab, sonst wuerde die Division die Query kippen.
+ */
+const AVG_SPEED_SQL = sql<number | null>`
+  (${activities.distance} / 1000.0)
+  / NULLIF(COALESCE(${activities.movingTime}, ${activities.duration}), 0)
+  * 3600.0`;
+
 export interface RecordRow {
   id: string;
   name: string;
@@ -408,7 +418,11 @@ export function getRecordsYtd(userId: string): Promise<RecordsYtdData> {
         startTime: activities.startTime,
         distance: activities.distance,
         ascent: activities.ascent,
-        avgSpeed: activities.avgSpeed,
+        // Selbst gerechnet statt activities.avgSpeed: der Geraetewert
+        // meint je nach Importweg Gesamt- oder Bewegungszeit (siehe
+        // avgSpeedKmh in activity-format.ts), Rekorde waeren damit ueber
+        // die Jahre nicht vergleichbar.
+        avgSpeed: AVG_SPEED_SQL,
         trimp: activities.trimp,
       } as const;
       const where = and(
@@ -429,7 +443,7 @@ export function getRecordsYtd(userId: string): Promise<RecordsYtdData> {
         await Promise.all([
           topBy(sql`${activities.distance} DESC NULLS LAST`),
           topBy(sql`${activities.ascent} DESC NULLS LAST`),
-          topBy(sql`${activities.avgSpeed} DESC NULLS LAST`),
+          topBy(sql`${AVG_SPEED_SQL} DESC NULLS LAST`),
           topBy(sql`${activities.trimp} DESC NULLS LAST`),
         ]);
 

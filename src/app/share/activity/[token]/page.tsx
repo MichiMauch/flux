@@ -18,7 +18,7 @@ import { dimColor, km } from "@/app/activity/[id]/helpers";
 import { ActivityDetailBody } from "@/app/activity/[id]/activity-detail-body";
 import { ActivityDetailHero } from "@/app/activity/[id]/activity-detail-hero";
 import { ShareTokenProvider } from "@/lib/share-context";
-import { APP_TIME_ZONE } from "@/lib/activity-format";
+import { avgSpeedKmh, APP_TIME_ZONE } from "@/lib/activity-format";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -213,7 +213,11 @@ export default async function SharedActivityPage({
             maxHr={activity.maxHeartRate}
             totalSteps={activity.totalSteps}
             trimp={activity.trimp}
-            avgSpeed={activity.avgSpeed}
+            avgSpeed={avgSpeedKmh(
+              activity.distance,
+              activity.movingTime,
+              activity.duration
+            )}
             duration={duration}
             isRunning={isRunning}
             color={color}

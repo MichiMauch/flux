@@ -21,7 +21,7 @@ import { dimColor, km } from "@/app/activity/[id]/helpers";
 import { ActivityDetailBody } from "@/app/activity/[id]/activity-detail-body";
 import { ActivityDetailHero } from "@/app/activity/[id]/activity-detail-hero";
 import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
-import { APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
+import { avgSpeedKmh, APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
 import type { HrSample, RoutePoint } from "@/lib/splits";
 import { EmbedAutoHeight } from "./embed-auto-height";
 
@@ -141,7 +141,8 @@ type CompactActivity = {
   name: string;
   type: string | null;
   distance: number | null;
-  avgSpeed: number | null;
+  movingTime: number | null;
+  duration: number | null;
   avgHeartRate: number | null;
 };
 
@@ -186,8 +187,12 @@ function CompactEmbed({
   dateLabel: string;
   shareUrl: string;
 }) {
-  const avgSpeedKmh =
-    activity.avgSpeed != null ? activity.avgSpeed.toFixed(1) : null;
+  const speed = avgSpeedKmh(
+    activity.distance,
+    activity.movingTime,
+    activity.duration
+  );
+  const avgSpeedLabel = speed != null ? speed.toFixed(1) : null;
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-3 p-3">
@@ -235,11 +240,11 @@ function CompactEmbed({
             unit="m"
           />
         )}
-        {avgSpeedKmh != null ? (
+        {avgSpeedLabel != null ? (
           <StatTile
             icon={<Gauge />}
             label="Ø Tempo"
-            value={avgSpeedKmh}
+            value={avgSpeedLabel}
             unit="km/h"
           />
         ) : activity.avgHeartRate != null ? (
@@ -342,7 +347,11 @@ function FullEmbed({
         maxHr={activity.maxHeartRate}
         totalSteps={activity.totalSteps}
         trimp={activity.trimp}
-        avgSpeed={activity.avgSpeed}
+        avgSpeed={avgSpeedKmh(
+          activity.distance,
+          activity.movingTime,
+          activity.duration
+        )}
         duration={duration}
         isRunning={isRunning}
         color={color}

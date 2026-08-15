@@ -22,7 +22,7 @@ import { ActivityDetailBody } from "./activity-detail-body";
 import { ActivityDetailHero } from "./activity-detail-hero";
 import { getToursForActivity } from "@/app/tours/data";
 import { getActivityPersonalBests } from "@/lib/personal-bests";
-import { APP_TIME_ZONE } from "@/lib/activity-format";
+import { avgSpeedKmh, APP_TIME_ZONE } from "@/lib/activity-format";
 
 export default async function ActivityBentoPage({
   params,
@@ -122,7 +122,12 @@ export default async function ActivityBentoPage({
   const maxHr = activity.maxHeartRate;
   const totalSteps = activity.totalSteps;
   const trimp = activity.trimp;
-  const avgSpeed = activity.avgSpeed;
+  // Selbst gerechnet statt activity.avgSpeed — siehe avgSpeedKmh().
+  const avgSpeed = avgSpeedKmh(
+    activity.distance,
+    activity.movingTime,
+    activity.duration
+  );
 
   const dateLabel = activity.startTime
     .toLocaleDateString("de-CH", {

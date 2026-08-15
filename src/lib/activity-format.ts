@@ -113,6 +113,27 @@ export function formatDurationHmSplit(sec: number): {
 
 // ----- Pace -------------------------------------------------------------
 
+/**
+ * Ø-Geschwindigkeit in km/h aus Distanz und Bewegungszeit.
+ *
+ * Bewusst selbst gerechnet statt activities.avgSpeed zu nehmen: dieser
+ * Geraetewert stammt aus der FIT-Session und bedeutet je nach Importweg
+ * etwas anderes — Aktivitaeten aus dem Polar-Bulk-Import (bis 03/2026)
+ * entsprechen der Bewegungszeit, die live gesyncten (ab 04/2026) der
+ * Gesamtzeit. Werte waeren damit ueber die Jahre nicht vergleichbar.
+ *
+ * Faellt auf die Gesamtdauer zurueck, wenn keine Bewegungszeit vorliegt.
+ */
+export function avgSpeedKmh(
+  meters: number | null,
+  movingSeconds: number | null,
+  totalSeconds: number | null = null
+): number | null {
+  const seconds = movingSeconds ?? totalSeconds;
+  if (!meters || !seconds || meters <= 0 || seconds <= 0) return null;
+  return meters / 1000 / (seconds / 3600);
+}
+
 /** "5:30" pace per km, or "–" if inputs missing. */
 export function formatPace(meters: number | null, seconds: number | null): string {
   if (!meters || !seconds) return "–";
