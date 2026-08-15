@@ -42,7 +42,9 @@ export default async function ClassicHomePage({
       movingTime: activities.movingTime,
       avgHeartRate: activities.avgHeartRate,
       ascent: activities.ascent,
-      routeData: activities.routeData,
+      // Listen zeigen nur die Mini-Vorschau — die vereinfachte Geometrie
+      // reicht und spart pro Karte den ~100KB-Track.
+      routeData: activities.routeGeometry,
     })
     .from(activities)
     .where(and(...conditions))

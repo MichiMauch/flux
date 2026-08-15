@@ -156,7 +156,10 @@ export async function getTourActivities(
       distance: activities.distance,
       ascent: activities.ascent,
       descent: activities.descent,
-      routeData: activities.routeData,
+      // Tour-Karte und Listen-Vorschau zeichnen nur den groben Verlauf —
+      // die vereinfachte Geometrie reicht und spart pro Aktivitaet den
+      // vollen Track.
+      routeData: activities.routeGeometry,
       locality: activities.locality,
       country: activities.country,
       sortOrder: activityTourMembers.sortOrder,

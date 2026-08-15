@@ -35,9 +35,17 @@ async function main() {
       const inputLen = Array.isArray(row.route_data)
         ? (row.route_data as unknown[]).length
         : 0;
+      // sql.json(), NICHT ${JSON.stringify(geom)}::json — postgres.js bindet
+      // den Parameter wegen des ::json-Casts selbst als JSON und stringifyt
+      // den bereits fertigen String ein zweites Mal. In der Spalte landet dann
+      // ein JSON-*String* statt eines Arrays, und jede Route-Vorschau faellt
+      // still auf Array.isArray() === false zurueck.
       await sql`
         UPDATE activities
-        SET route_geometry = ${JSON.stringify(geom)}::json
+        SET route_geometry = ${sql.json(
+          // postgres.js' JSONValue deckt Arrays auf oberster Ebene nicht ab.
+          geom as unknown as Parameters<typeof sql.json>[0]
+        )}
         WHERE id = ${id}
       `;
       written++;
