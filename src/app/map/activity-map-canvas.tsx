@@ -40,9 +40,18 @@ const LAYERS: Record<
 
 /** px hit-test tolerance from click point to a route line */
 const HIT_TOLERANCE = 12;
-/** per-line alpha; overlaps accumulate under 'lighter' → density glow */
-const LINE_ALPHA = 0.5;
-const LINE_WEIGHT = 2;
+
+// Rendering is layered so routes stay crisp and recognisable (like the
+// single-activity map) while still hinting at density:
+//   1. GLOW underlay — wide, additive ('lighter'), low alpha. Only bleeds
+//      beyond the casing where many routes overlap → density halo.
+//   2. CASING — dark outline so coloured lines pop on light + satellite tiles.
+//   3. LINE — solid per-sport colour on top.
+const GLOW_WEIGHT = 10;
+const GLOW_ALPHA = 0.1;
+const CASING_WEIGHT = 5;
+const CASING_COLOR = "rgba(10,10,10,0.6)";
+const LINE_WEIGHT = 2.5;
 
 function distToSegSq(
   px: number,
@@ -202,11 +211,12 @@ class RouteGlowLayer {
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    // Pass 1: all non-selected routes, additive → density glow.
-    ctx.globalCompositeOperation = "lighter";
-    ctx.lineWidth = LINE_WEIGHT;
-    ctx.globalAlpha = LINE_ALPHA;
     let selectedIdx = -1;
+
+    // Pass 1: additive glow underlay (density halo in dense corridors).
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineWidth = GLOW_WEIGHT;
+    ctx.globalAlpha = GLOW_ALPHA;
     for (let i = 0; i < this.routes.length; i++) {
       if (this.routes[i].id === this.selectedId) {
         selectedIdx = i;
@@ -218,7 +228,29 @@ class RouteGlowLayer {
       this.strokePath(pts);
     }
 
-    // Pass 2: selected route on top — white casing + solid colour.
+    // Pass 2: dark casing under every route for contrast.
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = CASING_WEIGHT;
+    ctx.strokeStyle = CASING_COLOR;
+    for (let i = 0; i < this.routes.length; i++) {
+      if (i === selectedIdx) continue;
+      const pts = this.projected[i];
+      if (!pts || pts.length < 2) continue;
+      this.strokePath(pts);
+    }
+
+    // Pass 3: solid per-sport line on top.
+    ctx.lineWidth = LINE_WEIGHT;
+    for (let i = 0; i < this.routes.length; i++) {
+      if (i === selectedIdx) continue;
+      const pts = this.projected[i];
+      if (!pts || pts.length < 2) continue;
+      ctx.strokeStyle = sportColor(this.routes[i].type, i);
+      this.strokePath(pts);
+    }
+
+    // Pass 4: selected route on top — white casing + solid colour.
     if (selectedIdx >= 0) {
       const pts = this.projected[selectedIdx];
       if (pts && pts.length >= 2) {
