@@ -25,6 +25,7 @@ import { parseStravaActivity, type ParsedStravaActivity } from "../src/lib/strav
 import { computeTrimp, type Sex } from "../src/lib/trimp";
 import { generateActivityTitle } from "../src/lib/ai-title";
 import { buildRouteGeometry } from "../src/lib/activities/route-geometry";
+import { APP_TIME_ZONE } from "../src/lib/activity-format";
 
 interface Args {
   month: string;
@@ -356,7 +357,12 @@ function isoDate(d: Date): string {
   return d.toISOString().replace("T", " ").slice(0, 16);
 }
 function fmtDate(d: Date): string {
-  return d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 function fmtMeters(m: number | null | undefined): string {
   if (m == null) return "-";

@@ -79,9 +79,9 @@ async function importFit(filePath: string, userId: string) {
       ${session.total_calories ?? null},
       ${session.avg_heart_rate ?? null}, ${session.max_heart_rate ?? null},
       ${ascent}, ${descent},
-      ${JSON.stringify(routeData)},
-      ${JSON.stringify(heartRateData)},
-      ${JSON.stringify(speedData)},
+      ${sql.json(routeData)},
+      ${sql.json(heartRateData)},
+      ${sql.json(speedData)},
       NOW()
     )
   `;

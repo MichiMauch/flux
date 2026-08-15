@@ -27,6 +27,7 @@ import { parseTrainingSession, parseDailyActivity } from "../src/lib/polar-expor
 import { computeTrimp, type Sex } from "../src/lib/trimp";
 import { generateActivityTitle } from "../src/lib/ai-title";
 import { buildRouteGeometry } from "../src/lib/activities/route-geometry";
+import { APP_TIME_ZONE } from "../src/lib/activity-format";
 
 interface Args {
   dir: string;
@@ -495,6 +496,7 @@ function isoDate(d: Date): string {
 
 function fmtDate(d: Date): string {
   return d.toLocaleDateString("de-CH", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

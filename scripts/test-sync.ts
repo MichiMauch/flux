@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { APP_TIME_ZONE } from "../src/lib/activity-format";
 
 async function main() {
   const dbUrl = process.env.DATABASE_URL || "postgres://flux:flux-prod-2026@localhost:5432/flux";
@@ -47,7 +48,7 @@ async function main() {
         for (const ex of exercises) {
           const existing = await sql`SELECT id FROM activities WHERE polar_id = ${ex.id}`;
           const status = existing.length > 0 ? "bereits gesynct" : "NEU";
-          const date = new Date(ex.start_time).toLocaleDateString("de-CH");
+          const date = new Date(ex.start_time).toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE });
           const sport = ex.detailed_sport_info || ex.sport || "?";
           const dist = ex.distance ? `${(ex.distance / 1000).toFixed(1)} km` : "–";
           console.log(`    ${status === "NEU" ? "→" : "✓"} [${status}] ${date} ${sport} (${dist})`);
@@ -69,7 +70,7 @@ async function main() {
     `;
     console.log(`  ✓ ${activities.length} Aktivität(en) in DB:`);
     for (const a of activities) {
-      const date = new Date(a.start_time).toLocaleDateString("de-CH");
+      const date = new Date(a.start_time).toLocaleDateString("de-CH", { timeZone: APP_TIME_ZONE });
       const dist = a.distance ? `${(a.distance / 1000).toFixed(1)} km` : "–";
       console.log(`    • ${date} ${a.name} (${dist})`);
     }

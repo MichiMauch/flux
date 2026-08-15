@@ -17,7 +17,8 @@
     "release": "npx tsx scripts/release.ts",
     "release:dry": "npx tsx scripts/release.ts --dry",
     "deploy": "git push --follow-tags",
-    "ship": "npm run release && git push --follow-tags"
+    "ship": "npm run release && git push --follow-tags",
+    "check:json-shape": "npx tsx scripts/fix-double-encoded-route-json.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.52",

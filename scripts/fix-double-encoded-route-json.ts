@@ -1,25 +1,28 @@
 /**
- * Repariert doppelt kodierte Routen-JSONs.
+ * Findet und repariert doppelt kodierte JSON-Werte in activities.
  *
- * scripts/backfill-route-geometry.ts hat route_geometry frueher mit
- * `${JSON.stringify(geom)}::json` geschrieben. postgres.js bindet den
- * Parameter wegen des Casts selbst als JSON und stringifyt den fertigen
- * String ein zweites Mal — in der Spalte steht dann ein JSON-*String*
- * statt eines Arrays. Die Karten pruefen Array.isArray() und zeigen
- * fuer solche Zeilen gar keine Route.
+ * postgres.js leitet den Typ eines Parameters aus der Zielspalte ab. Steht da
+ * json, serialisiert der Treiber den Wert selbst — ein bereits fertiger
+ * JSON-String wird also ein zweites Mal stringifyt, und in der Spalte landet
+ * ein JSON-*String* statt eines Arrays. Das passiert mit und ohne
+ * ::json-Cast; richtig ist sql.json(wert) oder ein Write ueber Drizzle.
+ *
+ * Der Fehler ist lautlos: die Spalte ist gefuellt, aber jede Stelle die
+ * Array.isArray() prueft (Routen-Vorschauen, Karten, HR- und Speed-Charts)
+ * zeigt einfach nichts an.
  *
  * Der Fix packt den String wieder aus: (spalte #>> '{}')::json.
- * Idempotent — betrifft nur Zeilen mit json_typeof() = 'string'.
+ * Idempotent — betrifft nur Zellen mit json_typeof() = 'string'.
  *
- *   npx tsx scripts/fix-double-encoded-route-json.ts          # Dry-Run
- *   npx tsx scripts/fix-double-encoded-route-json.ts --write  # schreibt
+ * Ohne --write ist das ein reiner Report und taugt als Invarianten-Check:
+ *
+ *   npm run check:json-shape          # Dry-Run / Audit
+ *   npx tsx scripts/fix-double-encoded-route-json.ts --write
  */
 import { config as loadEnv } from "dotenv";
 loadEnv({ path: ".env.local" });
 
 import postgres from "postgres";
-
-const COLUMNS = ["route_geometry", "route_data"] as const;
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -28,55 +31,47 @@ async function main() {
   const sql = postgres(url, { max: 1, onnotice: () => {} });
 
   try {
-    for (const col of COLUMNS) {
-      const affected = await sql<{ id: string; punkte: number }[]>`
-        SELECT id,
-               json_array_length((${sql(col)} #>> '{}')::json) AS punkte
-        FROM activities
-        WHERE json_typeof(${sql(col)}) = 'string'
-        ORDER BY start_time DESC
+    // Alle json/jsonb-Spalten der Tabelle, damit eine neue Spalte nicht
+    // stillschweigend aus dem Check faellt.
+    const cols = await sql<{ column_name: string }[]>`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'activities' AND data_type IN ('json', 'jsonb')
+      ORDER BY column_name
+    `;
+
+    let broken = 0;
+
+    for (const { column_name: col } of cols) {
+      const [{ n }] = await sql<{ n: string }[]>`
+        SELECT count(*) AS n FROM activities WHERE json_typeof(${sql(col)}) = 'string'
       `;
+      const count = Number(n);
 
-      if (affected.length === 0) {
-        console.log(`✓ ${col}: nichts zu tun`);
+      if (count === 0) {
+        console.log(`✓ ${col.padEnd(18)} sauber`);
         continue;
       }
 
-      const pts = affected.map((r) => r.punkte);
-      console.log(
-        `${col}: ${affected.length} Zeilen doppelt kodiert ` +
-          `(${Math.min(...pts)}–${Math.max(...pts)} Punkte je Route)`
-      );
+      broken += count;
+      console.log(`✗ ${col.padEnd(18)} ${count} Zellen doppelt kodiert`);
 
-      if (!write) {
-        console.log(`  Dry-Run — mit --write ausfuehren`);
-        continue;
-      }
+      if (!write) continue;
 
-      // Ein Statement, damit die Tabelle nicht zeilenweise halb repariert
+      // Ein Statement pro Spalte, damit die Tabelle nicht halb repariert
       // dasteht falls unterwegs etwas schiefgeht.
       const res = await sql`
         UPDATE activities
         SET ${sql(col)} = (${sql(col)} #>> '{}')::json
         WHERE json_typeof(${sql(col)}) = 'string'
       `;
-      console.log(`  ✓ ${res.count} Zeilen repariert`);
+      console.log(`  ✓ ${res.count} repariert`);
     }
 
-    const check = await sql<{ col: string; strings: string; arrays: string }[]>`
-      SELECT 'route_geometry' AS col,
-             count(*) FILTER (WHERE json_typeof(route_geometry) = 'string') AS strings,
-             count(*) FILTER (WHERE json_typeof(route_geometry) = 'array')  AS arrays
-      FROM activities
-      UNION ALL
-      SELECT 'route_data',
-             count(*) FILTER (WHERE json_typeof(route_data) = 'string'),
-             count(*) FILTER (WHERE json_typeof(route_data) = 'array')
-      FROM activities
-    `;
-    console.log("\nStand danach:");
-    for (const r of check) {
-      console.log(`  ${r.col.padEnd(15)} array=${r.arrays}  string=${r.strings}`);
+    if (broken === 0) {
+      console.log("\nAlles sauber.");
+    } else if (!write) {
+      console.log(`\n${broken} Zellen betroffen — mit --write reparieren.`);
+      process.exitCode = 1;
     }
   } finally {
     await sql.end();
