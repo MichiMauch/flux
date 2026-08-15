@@ -55,3 +55,6 @@ next-env.d.ts
 .dolt/
 *.db
 .beads-credential-key
+
+# graphify
+/graphify-out/

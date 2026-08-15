@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { activities } from "@/lib/db/schema";
+
+/**
+ * Sport types shown on the overview map. Deliberately scoped to route-heavy
+ * outdoor sports — everyday WALKING (the largest bucket) is left out to keep
+ * the map (and payload) focused. Add types here to surface them.
+ */
+const MAP_SPORT_TYPES = ["HIKING", "CYCLING", "ROAD_BIKING"];
 
 export interface MapRoutePoint {
   lat: number;
@@ -52,7 +59,11 @@ export async function GET() {
     })
     .from(activities)
     .where(
-      and(eq(activities.userId, userId), isNotNull(activities.routeGeometry)),
+      and(
+        eq(activities.userId, userId),
+        isNotNull(activities.routeGeometry),
+        inArray(activities.type, MAP_SPORT_TYPES),
+      ),
     )
     .orderBy(desc(activities.startTime));
 
