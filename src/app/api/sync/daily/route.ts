@@ -77,7 +77,12 @@ export async function POST() {
 export async function syncDailyActivity(
   userId: string,
   polarToken: string,
+  options: { extras?: boolean } = {},
 ): Promise<number> {
+  // Die Extras kosten 9 Polar-Requests pro Tag. Wer nur die Tagessummen
+  // braucht (ACTIVITY_SUMMARY-Webhook), holt sie nicht mit — sie kommen im
+  // nächsten geplanten Lauf, siehe sync-schedule.ts.
+  const withExtras = options.extras !== false;
   const from = daysAgoIso(DEFAULT_SYNC_DAYS);
   const to = todayIso();
   console.log(`[daily-sync] from=${from} to=${to}`);
@@ -97,10 +102,12 @@ export async function syncDailyActivity(
     if (!date) continue;
     try {
       await upsertDailyActivity(userId, day, date);
-      try {
-        await upsertDailyPolarExtras(userId, polarToken, date);
-      } catch (e) {
-        console.warn(`[daily-sync] extras failed for ${date}:`, e);
+      if (withExtras) {
+        try {
+          await upsertDailyPolarExtras(userId, polarToken, date);
+        } catch (e) {
+          console.warn(`[daily-sync] extras failed for ${date}:`, e);
+        }
       }
       synced++;
     } catch (e) {

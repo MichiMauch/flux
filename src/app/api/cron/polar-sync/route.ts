@@ -9,6 +9,11 @@
  * Called by a Coolify Scheduled Task (e.g. every 30 min).
  * Auth: `Authorization: Bearer $CRON_SECRET`.
  *
+ * Umfang: Jeder Lauf holt die Aktivitäten (ein Request pro User). Tagesdaten,
+ * Schlaf und Physical Info sind um ein Vielfaches teurer und laufen nur zu den
+ * Slot-Stunden aus sync-schedule.ts mit — vorher hat der Sweep damit jeden Tag
+ * die Polar-App-Quote aufgebraucht und danach synct gar nichts mehr.
+ *
  * Strategy: always sync EVERY connected user. syncPolarExercises is idempotent
  * (polar_id UNIQUE + deleted-blacklist), so re-checking a user with nothing new
  * is a cheap no-op. We deliberately do NOT gate on /v3/notifications: that queue
@@ -25,12 +30,17 @@ import { after } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { isNotNull } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { PolarAuthError } from "@/lib/polar-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
 import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
+import {
+  DAILY_SYNC_HOURS,
+  SLEEP_SYNC_HOURS,
+  isSlotDue,
+} from "@/lib/sync-schedule";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -82,21 +92,45 @@ async function runFullSweep(): Promise<void> {
         activitiesSynced += synced;
         usersSynced++;
 
-        // Daily / sleep / physical — best effort, never block the loop.
-        try {
-          await syncDailyActivity(user.id, user.polarToken);
-        } catch (e) {
-          console.error(`[cron/polar-sync] daily failed user=${user.id}:`, e);
+        // Daily / sleep / physical — best effort, never block the loop. Nur zu
+        // den Slot-Stunden, sonst frisst der Sweep die Polar-Tagesquote auf
+        // (siehe sync-schedule.ts). Der Stempel wird erst nach Erfolg gesetzt,
+        // damit ein fehlgeschlagener Lauf im selben Slot nochmal drankommt.
+        const now = new Date();
+
+        if (isSlotDue(user.dailySyncedAt, DAILY_SYNC_HOURS, now)) {
+          try {
+            const days = await syncDailyActivity(user.id, user.polarToken);
+            await db
+              .update(users)
+              .set({ dailySyncedAt: new Date() })
+              .where(eq(users.id, user.id));
+            console.log(
+              `[cron/polar-sync] daily slot done user=${user.id} days=${days}`
+            );
+          } catch (e) {
+            console.error(`[cron/polar-sync] daily failed user=${user.id}:`, e);
+          }
+          try {
+            await syncPhysicalInfo(user.id, user.polarToken);
+          } catch (e) {
+            console.error(`[cron/polar-sync] physical-info failed user=${user.id}:`, e);
+          }
         }
-        try {
-          await syncSleep(user.id, user.polarToken);
-        } catch (e) {
-          console.error(`[cron/polar-sync] sleep failed user=${user.id}:`, e);
-        }
-        try {
-          await syncPhysicalInfo(user.id, user.polarToken);
-        } catch (e) {
-          console.error(`[cron/polar-sync] physical-info failed user=${user.id}:`, e);
+
+        if (isSlotDue(user.sleepSyncedAt, SLEEP_SYNC_HOURS, now)) {
+          try {
+            const r = await syncSleep(user.id, user.polarToken);
+            await db
+              .update(users)
+              .set({ sleepSyncedAt: new Date() })
+              .where(eq(users.id, user.id));
+            console.log(
+              `[cron/polar-sync] sleep slot done user=${user.id} sleep=${r.sleepSynced} nights=${r.nightsSynced}`
+            );
+          } catch (e) {
+            console.error(`[cron/polar-sync] sleep failed user=${user.id}:`, e);
+          }
         }
       } catch (e) {
         if (e instanceof PolarAuthError) {

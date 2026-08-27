@@ -48,6 +48,10 @@ export const users = pgTable("user", {
   typicalDay: text("typical_day"), // MOSTLY_SITTING/MOSTLY_STANDING/MOSTLY_MOVING
   sleepGoalSec: integer("sleep_goal_sec"),
   physicalInfoSyncedAt: timestamp("physical_info_synced_at", { withTimezone: true }),
+  // Letzter erfolgreicher Lauf der beiden teuren Polar-Syncs. Steuert die
+  // Slot-Logik in sync-schedule.ts — siehe dort, warum das nötig ist.
+  dailySyncedAt: timestamp("daily_synced_at", { withTimezone: true }),
+  sleepSyncedAt: timestamp("sleep_synced_at", { withTimezone: true }),
   partnerId: text("partner_id"),
   partnerPushEnabled: boolean("partner_push_enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

@@ -48,7 +48,12 @@ export async function POST(request: NextRequest) {
     if (event === "EXERCISE") {
       await syncPolarExercises(user);
     } else if (event === "ACTIVITY_SUMMARY") {
-      const synced = await syncDailyActivity(user.id, user.polarToken);
+      // Ohne Extras: Der Webhook meldet neue Tagessummen, und die kommen aus
+      // einem einzigen Request. Die 9 Extras-Endpunkte pro Tag würden hier bei
+      // jedem Summary-Event erneut anfallen — die holt der geplante Lauf.
+      const synced = await syncDailyActivity(user.id, user.polarToken, {
+        extras: false,
+      });
       console.log(`[webhook] ACTIVITY_SUMMARY: ${synced} days synced for ${user.name}`);
     } else if (event === "SLEEP") {
       const result = await syncSleep(user.id, user.polarToken);
