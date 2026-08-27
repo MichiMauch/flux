@@ -5,7 +5,11 @@ import { activities, activityPhotos, users } from "@/lib/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { readFile } from "fs/promises";
-import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
+import {
+  activityTypeColor,
+  activityTypeLabel,
+  showsTerrain,
+} from "@/lib/activity-types";
 import { APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
 
 export const runtime = "nodejs";
@@ -370,8 +374,12 @@ export async function GET(
   const accent = activityTypeColor(data.type);
   const dimAccent = `${accent}66`;
 
-  const routeForMap =
-    data.routeGeometry && data.routeGeometry.length > 1
+  // Yoga & Co.: keine Karte im Hintergrund, kein Routen-Pfad, keine
+  // Aufstieg-Kachel — der Hintergrund fällt auf Foto bzw. Verlauf zurück.
+  const terrain = showsTerrain(data.type);
+  const routeForMap = !terrain
+    ? null
+    : data.routeGeometry && data.routeGeometry.length > 1
       ? data.routeGeometry
       : data.routeData;
 
@@ -654,12 +662,14 @@ export async function GET(
                 value={formatDurationHMS(duration)}
                 accent={accent}
               />
-              <Stat
-                label="Aufstieg"
-                value={metricValue(data.ascent)}
-                unit="m"
-                accent={accent}
-              />
+              {terrain && (
+                <Stat
+                  label="Aufstieg"
+                  value={metricValue(data.ascent)}
+                  unit="m"
+                  accent={accent}
+                />
+              )}
             </div>
           </div>
         </div>

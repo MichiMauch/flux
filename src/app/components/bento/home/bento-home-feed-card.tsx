@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Clock, Heart, Mountain, Ruler, Image as ImageIcon } from "lucide-react";
-import { activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor, showsTerrain } from "@/lib/activity-types";
 import { SportChip } from "@/app/components/sport-chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BoostButton, type Booster } from "@/app/components/boost-button";
@@ -50,7 +50,10 @@ function getInitials(name: string): string {
 
 export function BentoHomeFeedCard(a: Props) {
   const color = activityTypeColor(a.type);
-  const hasRoute = Array.isArray(a.routeData) && (a.routeData as unknown[]).length >= 2;
+  // Yoga & Co.: keine Karten-Vorschau, kein Aufstieg.
+  const terrain = showsTerrain(a.type);
+  const hasRoute =
+    terrain && Array.isArray(a.routeData) && (a.routeData as unknown[]).length >= 2;
   const activeDuration = a.movingTime ?? a.duration;
   const dateLabel = formatDateLabel(a.startTime);
   const timeLabel = formatTimeLabel(a.startTime);
@@ -135,7 +138,7 @@ export function BentoHomeFeedCard(a: Props) {
               unit={activeDuration >= 3600 ? "h" : "min"}
             />
           )}
-          {a.ascent != null && a.ascent > 0 && (
+          {terrain && a.ascent != null && a.ascent > 0 && (
             <ActivityMetric
               icon={<Mountain className="h-3 w-3" />}
               value={String(Math.round(a.ascent))}

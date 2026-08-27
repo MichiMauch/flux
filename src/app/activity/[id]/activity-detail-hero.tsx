@@ -3,6 +3,7 @@ import { ActivityActionsMenu } from "@/app/components/activity-actions-menu";
 import { BoostButton, type Booster } from "@/app/components/boost-button";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
 import { PersonalBestLine } from "@/app/components/personal-best-line";
+import { showsTerrain } from "@/lib/activity-types";
 import { formatDurationHMS } from "@/lib/activity-format";
 import type { PrBadge } from "@/lib/personal-bests";
 import { fmt } from "./helpers";
@@ -59,6 +60,8 @@ export function ActivityDetailHero({
   personalBests,
 }: Props) {
   const showBoost = boostable || boosters.length > 0;
+  // Yoga hat keinen Auf-/Abstieg — die Kachel fällt weg, das Raster rückt auf 3.
+  const terrain = showsTerrain(activity.type);
   return (
     <>
       <div
@@ -115,7 +118,11 @@ export function ActivityDetailHero({
           borderColor: HERO_BORDER,
         }}
       >
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start">
+        <div
+          className={`grid grid-cols-2 gap-4 items-start ${
+            terrain ? "md:grid-cols-4" : "md:grid-cols-3"
+          }`}
+        >
           <SevenSegTile
             icon={<Clock />}
             value={duration > 0 ? formatDurationHMS(duration) : "–"}
@@ -132,12 +139,14 @@ export function ActivityDetailHero({
             suffix="km"
             label="Distanz"
           />
-          <SevenSegTile
-            icon={<Mountain />}
-            value={fmt(ascent)}
-            suffix="m"
-            label="Aufstieg"
-          />
+          {terrain && (
+            <SevenSegTile
+              icon={<Mountain />}
+              value={fmt(ascent)}
+              suffix="m"
+              label="Aufstieg"
+            />
+          )}
           <SevenSegTile
             icon={<Flame />}
             value={fmt(calories)}

@@ -66,3 +66,19 @@ export function activityTypeColor(type: string): string {
   if (t.includes("INDOOR") || t.includes("STRENGTH") || t.includes("CORE")) return "#FF4DD2"; // magenta
   return "#B026FF";
 }
+
+/**
+ * Sportarten ohne Gelände-Bezug. Für sie werden Karte, Höhenprofil,
+ * Auf-/Abstieg und die davon abgeleiteten Kacheln (Anstiege, Splits,
+ * Höhenbereich) ausgeblendet — auch wenn das Gerät zufällig Werte geliefert
+ * hat, denn 3 Höhenmeter im Yogaraum sind Messrauschen, keine Information.
+ *
+ * Bewusst nur YOGA. Andere Indoor-Typen (CORE, STRENGTH_TRAINING …) bleiben
+ * vorerst aussen vor; die Liste wird nur auf Zuruf erweitert.
+ */
+const TYPES_WITHOUT_TERRAIN = ["YOGA"];
+
+export function showsTerrain(type: string | null | undefined): boolean {
+  if (!type) return true;
+  return !TYPES_WITHOUT_TERRAIN.includes(type.trim().toUpperCase());
+}

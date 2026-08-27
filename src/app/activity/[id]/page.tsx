@@ -15,7 +15,7 @@ import { PhotoLightbox } from "@/app/components/photo-lightbox";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { spaceMono } from "@/app/components/bento/bento-fonts";
-import { activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor, showsTerrain } from "@/lib/activity-types";
 import type { HrSample, RoutePoint } from "@/lib/splits";
 import { dimColor, km } from "./helpers";
 import { ActivityDetailBody } from "./activity-detail-body";
@@ -203,6 +203,7 @@ export default async function ActivityBentoPage({
 
         <ActivityDetailBody
           activityId={activity.id}
+          type={activity.type}
           distance={activity.distance}
           ascent={ascent}
           descent={descent}
@@ -223,7 +224,7 @@ export default async function ActivityBentoPage({
           photos={photos}
         />
 
-        {route.length > 0 && (
+        {showsTerrain(activity.type) && route.length > 0 && (
           <BentoSplitsTable
             routeData={route}
             heartRateData={hr}

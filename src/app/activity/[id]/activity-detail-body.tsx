@@ -15,6 +15,7 @@ import { BentoPhotosTile } from "@/app/components/bento/bento-photos-tile";
 import { BentoRouteInteractive } from "@/app/components/bento/bento-route-interactive";
 import { BentoWeatherTile } from "@/app/components/bento/bento-weather-tile";
 import { HoverProvider } from "@/app/components/bento/hover-context";
+import { showsTerrain } from "@/lib/activity-types";
 import { computeClimbs } from "@/lib/climbs";
 import type { WeatherData } from "@/lib/weather";
 import type { HrSample, RoutePoint } from "@/lib/splits";
@@ -25,6 +26,7 @@ import { HrZonesTile } from "./hr-zones-tile";
 
 export interface ActivityDetailBodyProps {
   activityId: string;
+  type: string;
   distance: number | null;
   ascent: number | null;
   descent: number | null;
@@ -52,6 +54,7 @@ export interface ActivityDetailBodyProps {
 
 export function ActivityDetailBody({
   activityId,
+  type,
   distance,
   ascent,
   descent,
@@ -71,15 +74,18 @@ export function ActivityDetailBody({
   isOwner,
   photos,
 }: ActivityDetailBodyProps) {
+  // Yoga & Co. haben keinen Gelände-Bezug: Karte, Höhenprofil, Anstiege,
+  // Höhenbereich, Auf-/Abstieg und GPX fallen komplett weg.
+  const terrain = showsTerrain(type);
   // Computed once on the server and shared by the tile and the chart, so both
   // agree on where a climb starts and ends.
-  const climbs = computeClimbs(route, distance, ascent, descent);
+  const climbs = terrain ? computeClimbs(route, distance, ascent, descent) : null;
 
   return (
     <HoverProvider>
       <div className="grid gap-3 lg:grid-cols-2 items-start">
         <div className="flex flex-col gap-3">
-          {route.length > 0 ? (
+          {!terrain ? null : route.length > 0 ? (
             <BentoRouteInteractive
               routeData={route}
               heartRateData={hr}
@@ -118,34 +124,46 @@ export function ActivityDetailBody({
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 h-[520px]">
-            <Tile className="flex-1 flex flex-col min-h-0">
-              <div className="flex items-center justify-between mb-2">
-                <TileLabel>Höhenprofil</TileLabel>
-                <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]">
-                  Aufstieg{" "}
-                  <span className="text-white tabular-nums">
-                    {ascent != null ? `${ascent} m` : "–"}
-                  </span>
+          {terrain ? (
+            // Feste Höhe, damit die rechte Spalte mit der Kartenkachel links
+            // auf einer Linie endet.
+            <div className="flex flex-col gap-3 h-[520px]">
+              <Tile className="flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between mb-2">
+                  <TileLabel>Höhenprofil</TileLabel>
+                  <div className="[font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3]">
+                    Aufstieg{" "}
+                    <span className="text-white tabular-nums">
+                      {ascent != null ? `${ascent} m` : "–"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 min-h-0">
-                <BentoElevationChart
-                  route={route}
-                  segments={climbs?.segments}
-                />
-              </div>
-            </Tile>
-            {hrZones && (
-              <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0">
+                  <BentoElevationChart
+                    route={route}
+                    segments={climbs?.segments}
+                  />
+                </div>
+              </Tile>
+              {hrZones && (
+                <div className="flex-1 min-h-0">
+                  <HrZonesTile zones={hrZones} />
+                </div>
+              )}
+            </div>
+          ) : (
+            // Ohne Karte gibt es nichts auszurichten — die Zonen-Kachel steht
+            // für sich und braucht nur ihre eigene Höhe.
+            hrZones && (
+              <div className="h-[260px]">
                 <HrZonesTile zones={hrZones} />
               </div>
-            )}
-          </div>
+            )
+          )}
 
-          <BentoElevationRangeTile route={route} />
+          {terrain && <BentoElevationRangeTile route={route} />}
 
-          <BentoClimbsTile climbs={climbs} isRunning={isRunning} />
+          {terrain && <BentoClimbsTile climbs={climbs} isRunning={isRunning} />}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <StatTile
@@ -162,13 +180,15 @@ export function ActivityDetailBody({
               unit="bpm"
               className="order-2 sm:order-2"
             />
-            <StatTile
-              icon={<TrendingDown />}
-              label="Abstieg"
-              value={fmt(descent)}
-              unit="m"
-              className="order-3 sm:order-3"
-            />
+            {terrain && (
+              <StatTile
+                icon={<TrendingDown />}
+                label="Abstieg"
+                value={fmt(descent)}
+                unit="m"
+                className="order-3 sm:order-3"
+              />
+            )}
             <DotsTile
               icon={<Zap />}
               label="TRIMP"
@@ -202,7 +222,7 @@ export function ActivityDetailBody({
                 value={fmt(totalSteps)}
               />
             )}
-            {route.length > 0 && (
+            {terrain && route.length > 0 && (
               <BentoGpxTile
                 activityId={activityId}
                 className="col-span-2 sm:col-span-1"

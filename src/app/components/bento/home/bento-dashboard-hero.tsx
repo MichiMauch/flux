@@ -3,7 +3,7 @@ import { Activity, Clock, Heart, Mountain, Ruler } from "lucide-react";
 import { db } from "@/lib/db";
 import { activities, activityPhotos } from "@/lib/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
-import { activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor, showsTerrain } from "@/lib/activity-types";
 import { RouteMapStatic } from "@/app/components/route-map-static";
 import { SportChip } from "@/app/components/sport-chip";
 import { rajdhani, spaceMono } from "../bento-fonts";
@@ -63,7 +63,10 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
   }
 
   const color = activityTypeColor(latest.type);
+  // Yoga & Co.: keine Karten-Vorschau, kein Aufstieg.
+  const terrain = showsTerrain(latest.type);
   const hasRoute =
+    terrain &&
     Array.isArray(latest.routeData) && (latest.routeData as unknown[]).length >= 2;
   const activeDuration = latest.movingTime ?? latest.duration;
   // Server kann je nach Umgebung in UTC laufen (Docker default) — ohne
@@ -135,7 +138,7 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
               unit={activeDuration >= 3600 ? "h" : "min"}
             />
           )}
-          {latest.ascent != null && latest.ascent > 0 && (
+          {terrain && latest.ascent != null && latest.ascent > 0 && (
             <Metric
               icon={<Mountain className="h-3.5 w-3.5" />}
               value={String(Math.round(latest.ascent))}

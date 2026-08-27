@@ -20,7 +20,11 @@ import { StatTile } from "@/app/activity/[id]/tiles";
 import { dimColor, km } from "@/app/activity/[id]/helpers";
 import { ActivityDetailBody } from "@/app/activity/[id]/activity-detail-body";
 import { ActivityDetailHero } from "@/app/activity/[id]/activity-detail-hero";
-import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
+import {
+  activityTypeColor,
+  activityTypeLabel,
+  showsTerrain,
+} from "@/lib/activity-types";
 import { avgSpeedKmh, APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
 import type { HrSample, RoutePoint } from "@/lib/splits";
 import { EmbedAutoHeight } from "./embed-auto-height";
@@ -193,6 +197,8 @@ function CompactEmbed({
     activity.duration
   );
   const avgSpeedLabel = speed != null ? speed.toFixed(1) : null;
+  // Yoga: weder Karte noch Aufstieg.
+  const terrain = showsTerrain(activity.type);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-3 p-3">
@@ -208,7 +214,7 @@ function CompactEmbed({
         </h1>
       </div>
 
-      {withMap && route.length > 0 && (
+      {terrain && withMap && route.length > 0 && (
         <BentoRouteInteractive
           routeData={route}
           heartRateData={hr}
@@ -232,7 +238,7 @@ function CompactEmbed({
           label="Zeit"
           value={formatDurationHMS(duration)}
         />
-        {ascent != null && (
+        {terrain && ascent != null && (
           <StatTile
             icon={<Mountain />}
             label="Aufstieg"
@@ -340,6 +346,7 @@ function FullEmbed({
 
       <ActivityDetailBody
         activityId={activity.id}
+        type={activity.type}
         distance={activity.distance}
         ascent={ascent}
         descent={descent}
@@ -364,7 +371,7 @@ function FullEmbed({
         photos={[]}
       />
 
-      {route.length > 0 && (
+      {showsTerrain(activity.type) && route.length > 0 && (
         <BentoSplitsTable
           routeData={route}
           heartRateData={hr}

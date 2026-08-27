@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { activityTypeColor, activityTypeLabel } from "@/lib/activity-types";
+import {
+  activityTypeColor,
+  activityTypeLabel,
+  showsTerrain,
+} from "@/lib/activity-types";
 import {
   APP_TIME_ZONE,
   formatDistanceKm as sharedFormatDistanceKm,
@@ -99,7 +103,9 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
   const color = activityTypeColor(a.type);
   const cfg = SIZE_CFG[size];
   const hasRoute =
-    Array.isArray(a.routeData) && (a.routeData as unknown[]).length >= 2;
+    showsTerrain(a.type) &&
+    Array.isArray(a.routeData) &&
+    (a.routeData as unknown[]).length >= 2;
   const start = new Date(a.startTime);
   const hour = start.getHours();
   const gradientColor = hourGradient(hour);
@@ -112,6 +118,24 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
     activeDuration
       ? formatPaceMinPerKm(a.distance, activeDuration)
       : null;
+
+  // Ohne Route füllt eine grosse Kennzahl die Fläche. Bei Yoga & Co. gibt es
+  // keine Distanz — dann ist die Dauer die Schlagzeile statt eines „— KM".
+  const headline: { value: string; unit: string } | null =
+    a.distance != null
+      ? { value: formatDistanceKm(a.distance), unit: "KM" }
+      : activeDuration != null && activeDuration > 0
+        ? activeDuration >= 3600
+          ? {
+              value: `${Math.floor(activeDuration / 3600)}:${Math.round(
+                (activeDuration % 3600) / 60
+              )
+                .toString()
+                .padStart(2, "0")}`,
+              unit: "H",
+            }
+          : { value: String(Math.round(activeDuration / 60)), unit: "MIN" }
+        : null;
 
   const dateLabel = start
     .toLocaleDateString("de-CH", {
@@ -227,7 +251,7 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
           </div>
         )}
 
-        {!hasRoute && (
+        {!hasRoute && headline && (
           <div
             className="relative flex items-center justify-center"
             style={{ ...svgArea, zIndex: 2, padding: cfg.padding }}
@@ -242,12 +266,12 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
                 textShadow: `0 0 18px ${color}55, 0 0 40px ${color}33`,
               }}
             >
-              {a.distance != null ? formatDistanceKm(a.distance) : "—"}
+              {headline.value}
               <span
                 className={`${spaceMono.className} align-top ml-2 text-[0.22em] tracking-[0.18em]`}
                 style={{ color: "#a3a3a3" }}
               >
-                KM
+                {headline.unit}
               </span>
             </div>
           </div>
@@ -328,7 +352,7 @@ export function EditorialCard({ a, size, mirror, revealIndex }: Props) {
             )}
             <span className="hover-only flex items-baseline gap-x-5 gap-y-2 flex-wrap">
               {pace && <Meta label="PACE" value={pace} accent={color} />}
-              {a.ascent != null && a.ascent > 0 && (
+              {showsTerrain(a.type) && a.ascent != null && a.ascent > 0 && (
                 <Meta
                   label="HM"
                   value={`${Math.round(a.ascent)} M`}

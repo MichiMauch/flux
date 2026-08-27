@@ -6,7 +6,7 @@ import {
   Mountain,
   Ruler,
 } from "lucide-react";
-import { activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor, showsTerrain } from "@/lib/activity-types";
 import { SportChip } from "@/app/components/sport-chip";
 import {
   formatDateLabel,
@@ -23,7 +23,9 @@ import { SportIconPlaceholder } from "./sport-icon-placeholder";
 export function ActivityListRow(a: ActivityFeedItem) {
   const color = activityTypeColor(a.type);
   const hasRoute =
-    Array.isArray(a.routeData) && (a.routeData as unknown[]).length >= 2;
+    showsTerrain(a.type) &&
+    Array.isArray(a.routeData) &&
+    (a.routeData as unknown[]).length >= 2;
   const activeDuration = a.movingTime ?? a.duration;
 
   return (
@@ -90,7 +92,7 @@ export function ActivityListRow(a: ActivityFeedItem) {
               unit={activeDuration >= 3600 ? "h" : "min"}
             />
           )}
-          {a.ascent != null && a.ascent > 0 && (
+          {showsTerrain(a.type) && a.ascent != null && a.ascent > 0 && (
             <ActivityMetric
               icon={<Mountain className="h-3 w-3" />}
               value={String(Math.round(a.ascent))}

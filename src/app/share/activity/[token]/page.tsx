@@ -12,7 +12,7 @@ import { fetchHistoricalWeather, type WeatherData } from "@/lib/weather";
 import { BentoSplitsTable } from "@/app/components/bento/bento-splits-table";
 import { PhotoLightbox } from "@/app/components/photo-lightbox";
 import { spaceMono } from "@/app/components/bento/bento-fonts";
-import { activityTypeColor } from "@/lib/activity-types";
+import { activityTypeColor, showsTerrain } from "@/lib/activity-types";
 import type { HrSample, RoutePoint } from "@/lib/splits";
 import { dimColor, km } from "@/app/activity/[id]/helpers";
 import { ActivityDetailBody } from "@/app/activity/[id]/activity-detail-body";
@@ -206,6 +206,7 @@ export default async function SharedActivityPage({
 
           <ActivityDetailBody
             activityId={activity.id}
+            type={activity.type}
             distance={activity.distance}
             ascent={ascent}
             descent={descent}
@@ -230,7 +231,7 @@ export default async function SharedActivityPage({
             photos={photos}
           />
 
-          {route.length > 0 && (
+          {showsTerrain(activity.type) && route.length > 0 && (
             <BentoSplitsTable
               routeData={route}
               heartRateData={hr}
