@@ -1,7 +1,5 @@
 import { Footprints } from "lucide-react";
-import { db } from "@/lib/db";
-import { dailyActivity } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { recentStepDays } from "@/lib/daily-activity-query";
 import { spaceMono } from "../bento-fonts";
 import { BentoDashboardStepsChart } from "./bento-dashboard-steps-chart";
 import { APP_TIME_ZONE } from "@/lib/activity-format";
@@ -15,21 +13,9 @@ function dayKey(d: Date): string {
 const WEEKDAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 export async function BentoDashboardSteps({ userId }: { userId: string }) {
-  const raw = await db
-    .select({
-      date: dailyActivity.date,
-      steps: dailyActivity.steps,
-      activeSteps: dailyActivity.activeSteps,
-    })
-    .from(dailyActivity)
-    .where(eq(dailyActivity.userId, userId))
-    .orderBy(desc(dailyActivity.date))
-    .limit(7);
-
-  const rows = raw.map((r) => ({
-    date: r.date,
-    steps: r.steps ?? r.activeSteps ?? 0,
-  }));
+  // Leseschicht statt Direktzugriff — sonst erscheint ein Tag mit zwei Uhren
+  // zweimal in der Sieben-Tage-Reihe und verdraengt einen aelteren.
+  const rows = await recentStepDays(userId, 7);
 
   if (rows.length === 0) {
     return (

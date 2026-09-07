@@ -3,6 +3,8 @@ import { APP_TIME_ZONE, formatDurationWordsSpaced, formatDistanceAuto } from "@/
 
 interface DailyRow {
   date: string;
+  /** "polar" | "google" — bestimmt, was hier ueberhaupt gefuellt sein kann. */
+  source: string;
   steps: number | null;
   activeSteps: number | null;
   calories: number | null;
@@ -19,6 +21,13 @@ interface DailyRow {
   rawV3: unknown;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Anzeigename der Quelle. Unbekannte Werte unveraendert zeigen statt raten. */
+function sourceLabel(source: string): string {
+  if (source === "polar") return "Polar";
+  if (source === "google") return "Pixel Watch";
+  return source;
 }
 
 function formatDuration(sec: number | null): string {
@@ -315,22 +324,27 @@ export function DailyActivityView({ data }: { data: DailyRow }) {
         </div>
       )}
 
-      {/* Raw JSON dump */}
-      <details className="rounded-lg border border-[#2a2a2a] bg-black/40">
-        <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3] hover:text-white">
-          Raw Polar-Daten
-        </summary>
-        <pre className="px-4 pb-3 text-[11px] font-mono overflow-x-auto text-[#9ca3af] whitespace-pre-wrap">
-          {JSON.stringify(
-            data.rawV3 ? { transaction: data.raw, v3: data.rawV3 } : data.raw,
-            null,
-            2,
-          )}
-        </pre>
-      </details>
+      {/* Raw JSON dump. Google-Tage fuellen raw/rawV3 nicht — die Rohantworten
+          der Rollups liegen in daily_google_extras, nicht hier. Ohne Inhalt
+          waere ein aufklappbarer Block nur eine leere Klammer. */}
+      {(data.raw != null || data.rawV3 != null) && (
+        <details className="rounded-lg border border-[#2a2a2a] bg-black/40">
+          <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a3a3] hover:text-white">
+            Rohdaten · {sourceLabel(data.source)}
+          </summary>
+          <pre className="px-4 pb-3 text-[11px] font-mono overflow-x-auto text-[#9ca3af] whitespace-pre-wrap">
+            {JSON.stringify(
+              data.rawV3 ? { transaction: data.raw, v3: data.rawV3 } : data.raw,
+              null,
+              2,
+            )}
+          </pre>
+        </details>
+      )}
 
       <div className="text-[10px] text-[#9ca3af] font-mono text-center">
-        Synced: {data.updatedAt.toLocaleString("de-CH", { timeZone: APP_TIME_ZONE })}
+        {sourceLabel(data.source)} · Synced:{" "}
+        {data.updatedAt.toLocaleString("de-CH", { timeZone: APP_TIME_ZONE })}
       </div>
     </div>
   );

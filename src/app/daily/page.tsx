@@ -1,8 +1,12 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { dailyActivity, dailyPolarExtras } from "@/lib/db/schema";
-import { and, eq, desc } from "drizzle-orm";
+import {
+  availableDailyDates,
+  winningDailyRow,
+} from "@/lib/daily-activity-query";
+import { dailyPolarExtras } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 import { DailyActivityView } from "@/app/components/daily-activity-view";
 import { DailyPolarExtrasView } from "@/app/components/daily-polar-extras-view";
 import Link from "next/link";
@@ -48,22 +52,14 @@ export default async function DailyPage({
 
   let date = requestedDate;
   if (!date) {
-    const latest = await db
-      .select({ date: dailyActivity.date })
-      .from(dailyActivity)
-      .where(eq(dailyActivity.userId, session.user.id))
-      .orderBy(desc(dailyActivity.date))
-      .limit(1);
-    date = latest[0]?.date ?? new Date().toISOString().slice(0, 10);
+    const dates = await availableDailyDates(session.user.id);
+    date = dates[0] ?? new Date().toISOString().slice(0, 10);
   }
 
   const [row, extras] = await Promise.all([
-    db.query.dailyActivity.findFirst({
-      where: and(
-        eq(dailyActivity.userId, session.user.id),
-        eq(dailyActivity.date, date),
-      ),
-    }),
+    // Leseschicht: bei zwei Uhren am selben Tag gewinnt die Quelle mit den
+    // meisten Schritten, und alle Werte stammen aus derselben Zeile.
+    winningDailyRow(session.user.id, date),
     db.query.dailyPolarExtras.findFirst({
       where: and(
         eq(dailyPolarExtras.userId, session.user.id),

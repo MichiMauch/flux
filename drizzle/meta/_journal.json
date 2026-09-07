@@ -267,6 +267,13 @@
       "when": 1788806182469,
       "tag": "0037_dear_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788808745051,
+      "tag": "0038_bitter_loners",
+      "breakpoints": true
     }
   ]
 }

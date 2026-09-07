@@ -388,6 +388,39 @@ export const dailyPolarExtras = pgTable(
   ],
 );
 
+// ── Daily Google Extras (Zonenminuten, Intensitätsverteilung) ─────────────
+// Google liefert zum Tag mehr als Polar: Active Zone Minutes nach Herzzone und
+// aktive Minuten nach Intensität. Dafür gibt es in daily_activity keine
+// Spalten, und daily_polar_extras ist die falsche Tabelle — dort steht
+// Polar-Eigenes wie Cardio Load und Nightly Recharge, das Google gar nicht hat.
+
+export const dailyGoogleExtras = pgTable(
+  "daily_google_extras",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD
+    // ── Active Zone Minutes, nach Herzfrequenzzone ──
+    azmFatBurn: integer("azm_fat_burn"),
+    azmCardio: integer("azm_cardio"),
+    azmPeak: integer("azm_peak"),
+    // ── Aktive Minuten nach Intensität ──
+    activeMinutesLight: integer("active_minutes_light"),
+    activeMinutesModerate: integer("active_minutes_moderate"),
+    activeMinutesVigorous: integer("active_minutes_vigorous"),
+    // Die vollständigen Rollup-Antworten, damit neue Felder ohne Migration
+    // sichtbar bleiben — dasselbe Vorgehen wie bei daily_polar_extras.
+    raw: json("raw"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("daily_google_extras_user_date_idx").on(t.userId, t.date)],
+);
+
 // ── Weight (Withings) ──────────────────────────────────────────────────────
 
 export const weightMeasurements = pgTable(

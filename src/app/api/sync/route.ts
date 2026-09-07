@@ -7,6 +7,7 @@ import { PolarAuthError } from "@/lib/polar-client";
 import { GoogleAuthError } from "@/lib/google-health-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
 import { syncGoogleActivities } from "@/lib/google-sync";
+import { syncGoogleDaily } from "@/lib/google-daily-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
@@ -31,6 +32,7 @@ export async function POST() {
   // Google zuerst und unabhängig: eine tote Polar-Verbindung darf die
   // Pixel-Watch-Aktivitäten nicht mit blockieren, und umgekehrt.
   let googleSynced = 0;
+  let googleDaysSynced = 0;
   let googleUnlocked: string[] = [];
   let googleNeedsReauth = false;
   if (user.googleRefreshToken) {
@@ -38,6 +40,12 @@ export async function POST() {
       const r = await syncGoogleActivities(user);
       googleSynced = r.synced;
       googleUnlocked = r.unlockedTrophies;
+      try {
+        const d = await syncGoogleDaily(user);
+        googleDaysSynced = d.synced;
+      } catch (e) {
+        console.error("Google-Tagesdaten fehlgeschlagen:", e);
+      }
     } catch (e) {
       if (e instanceof GoogleAuthError) {
         googleNeedsReauth = true;
@@ -52,6 +60,7 @@ export async function POST() {
     return NextResponse.json({
       synced: googleSynced,
       googleSynced,
+      googleDaysSynced,
       unlockedTrophies: googleUnlocked,
       ...(googleNeedsReauth
         ? { error: "Google-Verbindung abgelaufen — bitte neu verbinden", needsReauth: true }
@@ -93,6 +102,7 @@ export async function POST() {
       synced: synced + googleSynced,
       polarSynced: synced,
       googleSynced,
+      googleDaysSynced,
       dailySynced,
       sleepSynced,
       nightsSynced,

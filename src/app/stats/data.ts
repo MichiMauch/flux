@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { winningDailyRows } from "@/lib/daily-activity-query";
 import {
   activities,
   sleepSessions,
@@ -270,20 +271,25 @@ export async function getBloodPressureData(
 
 export async function getDailyActivityData(userId: string, range: TimeRange) {
   const { start, end } = rangeBounds(range);
-  const parts = [eq(dailyActivity.userId, userId)];
-  if (start) parts.push(gte(dailyActivity.date, textDateStr(start)));
-  if (end) parts.push(lt(dailyActivity.date, textDateStr(end)));
 
-  return db
-    .select({
-      date: dailyActivity.date,
-      // Polar liefert via API nur active-steps; ältere Tage aus dem Export-ZIP
-      // haben dafür steps. Beide sind semantisch ≈ Tagesschritte — Fallback:
-      steps: sql<number | null>`COALESCE(${dailyActivity.steps}, ${dailyActivity.activeSteps})`,
-      durationSec: dailyActivity.durationSec,
-      calories: dailyActivity.calories,
-    })
-    .from(dailyActivity)
-    .where(and(...parts))
-    .orderBy(asc(dailyActivity.date));
+  // Über die Leseschicht, weil ein Tag mit zwei Uhren zwei Zeilen hat und die
+  // Diagramme sonst doppelt zählen würden. Schritte, Dauer und Kalorien
+  // stammen dabei garantiert aus derselben Zeile — gemischte Werte ergäben
+  // Zahlen, die nicht zueinander passen.
+  const rows = await winningDailyRows(userId, {
+    from: start ? textDateStr(start) : undefined,
+    // winningDailyRows grenzt einschliessend ab, rangeBounds liefert eine
+    // ausschliessende Obergrenze. Einen Tag zurück, damit das Fenster gleich
+    // bleibt.
+    to: end ? textDateStr(new Date(end.getTime() - 86_400_000)) : undefined,
+  });
+
+  return rows.map((r) => ({
+    date: r.date,
+    // Polar liefert via API nur active-steps; ältere Tage aus dem Export-ZIP
+    // haben dafür steps. Beide sind semantisch ≈ Tagesschritte — Fallback:
+    steps: r.steps ?? r.activeSteps ?? null,
+    durationSec: r.durationSec,
+    calories: r.calories,
+  }));
 }

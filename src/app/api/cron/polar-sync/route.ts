@@ -35,6 +35,7 @@ import { PolarAuthError } from "@/lib/polar-client";
 import { GoogleAuthError } from "@/lib/google-health-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
 import { syncGoogleActivities } from "@/lib/google-sync";
+import { syncGoogleDaily } from "@/lib/google-daily-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
 import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
@@ -87,11 +88,21 @@ async function runGoogleSweep(): Promise<void> {
   });
 
   let synced = 0;
+  let days = 0;
   let reauth = 0;
   for (const user of toSync) {
     try {
       const r = await syncGoogleActivities(user);
       synced += r.synced;
+      // Tagesdaten laufen bei jedem Sweep mit. Die Slot-Logik aus
+      // sync-schedule.ts ist hier nicht noetig: sechs Requests pro Lauf gegen
+      // ein Kontingent von 300 pro Minute und User.
+      try {
+        const d = await syncGoogleDaily(user);
+        days += d.synced;
+      } catch (e) {
+        console.error(`[cron/sync] Google-Tagesdaten fehlgeschlagen user=${user.id}:`, e);
+      }
     } catch (e) {
       if (e instanceof GoogleAuthError) {
         reauth++;
@@ -102,7 +113,7 @@ async function runGoogleSweep(): Promise<void> {
     }
   }
   console.log(
-    `[cron/sync] Google: kandidaten=${toSync.length} aktivitaeten=${synced} reauth=${reauth}`
+    `[cron/sync] Google: kandidaten=${toSync.length} aktivitaeten=${synced} tage=${days} reauth=${reauth}`
   );
 }
 

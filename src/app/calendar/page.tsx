@@ -2,9 +2,10 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { ActivityCalendar } from "@/app/components/activity-calendar";
 import { db } from "@/lib/db";
-import { activities, dailyActivity } from "@/lib/db/schema";
-import { and, eq, gte, lt, lte, or } from "drizzle-orm";
+import { activities } from "@/lib/db/schema";
+import { and, eq, gte, lt } from "drizzle-orm";
 import { STEPS_STREAK_THRESHOLD } from "@/lib/streak";
+import { daysReachingSteps } from "@/lib/daily-activity-query";
 import {
   monthRange,
   parseMonthParam,
@@ -73,24 +74,12 @@ export default async function CalendarPage({
           lt(activities.startTime, gridTo),
         ),
       ),
-    db
-      .select({
-        date: dailyActivity.date,
-        steps: dailyActivity.steps,
-        activeSteps: dailyActivity.activeSteps,
-      })
-      .from(dailyActivity)
-      .where(
-        and(
-          eq(dailyActivity.userId, session.user.id),
-          gte(dailyActivity.date, gridFromKey),
-          lte(dailyActivity.date, gridToKey),
-          or(
-            gte(dailyActivity.steps, STEPS_STREAK_THRESHOLD),
-            gte(dailyActivity.activeSteps, STEPS_STREAK_THRESHOLD),
-          ),
-        ),
-      ),
+    // Leseschicht statt Direktzugriff — bei zwei Quellen pro Tag siehe
+    // daily-activity-query.ts.
+    daysReachingSteps(session.user.id, STEPS_STREAK_THRESHOLD, {
+      from: gridFromKey,
+      to: gridToKey,
+    }),
   ]);
 
   const byDay: Record<
@@ -117,7 +106,7 @@ export default async function CalendarPage({
 
   const stepsByDay: Record<string, number> = {};
   for (const r of stepRows) {
-    stepsByDay[r.date] = Math.max(r.steps ?? 0, r.activeSteps ?? 0);
+    stepsByDay[r.date] = r.steps;
   }
 
   const prev = shiftMonth(year, month, -1);

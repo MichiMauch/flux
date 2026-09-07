@@ -1,10 +1,9 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { and, desc, eq, gte, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activities,
-  dailyActivity,
   goals,
   sleepSessions,
   users,
@@ -15,6 +14,7 @@ import { computeHrZones, type HrZone, type HrSample } from "@/lib/hr-zones";
 import { computeGoalProgress } from "@/lib/goals-server";
 import type { Goal } from "@/lib/goals";
 import { getDailyTrimp } from "@/lib/training-load-query";
+import { daysReachingSteps } from "@/lib/daily-activity-query";
 import {
   CTL_TAU_DAYS,
   computeReadiness,
@@ -245,18 +245,9 @@ export async function buildCoachContext(
   // Volle Historie laden, damit currentStreak/daysSinceLastActive auch ältere
   // Streaks korrekt sehen (recent28 ist nur das 28-Tage-Fenster).
   const [stepDayRows, activityDayRows] = await Promise.all([
-    db
-      .select({ date: dailyActivity.date })
-      .from(dailyActivity)
-      .where(
-        and(
-          eq(dailyActivity.userId, userId),
-          or(
-            gte(dailyActivity.steps, STEPS_STREAK_THRESHOLD),
-            gte(dailyActivity.activeSteps, STEPS_STREAK_THRESHOLD),
-          ),
-        ),
-      ),
+    // Leseschicht statt Direktzugriff — bei zwei Quellen pro Tag siehe
+    // daily-activity-query.ts.
+    daysReachingSteps(userId, STEPS_STREAK_THRESHOLD),
     db
       .selectDistinct({
         day: sql<string>`to_char(${activities.startTime}, 'YYYY-MM-DD')`,
