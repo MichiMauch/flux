@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "nightly_recharge_user_date_uniq" ON "nightly_recharge" USING btree ("user_id","date");

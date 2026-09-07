@@ -521,7 +521,15 @@ export const nightlyRecharge = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("nightly_recharge_user_date_idx").on(t.userId, t.date)],
+  (t) => [
+    index("nightly_recharge_user_date_idx").on(t.userId, t.date),
+    // Derselbe Wettlauf wie bei daily_activity und sleep_sessions: laufen
+    // Webhook und Cron gleichzeitig, finden beide nichts und fügen beide ein.
+    // Hier ist noch nichts passiert (die Tabelle war leer), der Index schliesst
+    // es aber dauerhaft aus. Keine source-Spalte — Nightly Recharge ist
+    // Polar-eigen und hat bei Google keine Entsprechung.
+    uniqueIndex("nightly_recharge_user_date_uniq").on(t.userId, t.date),
+  ],
 );
 
 // ── Push Subscriptions (Web Push / VAPID) ─────────────────────────────────

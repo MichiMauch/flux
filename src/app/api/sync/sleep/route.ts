@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { users, sleepSessions, nightlyRecharge } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   listSleep,
   getSleep,
@@ -159,21 +159,16 @@ async function upsertNight(userId: string, data: PolarNight): Promise<void> {
     updatedAt: new Date(),
   };
 
-  const existing = await db.query.nightlyRecharge.findFirst({
-    where: and(
-      eq(nightlyRecharge.userId, userId),
-      eq(nightlyRecharge.date, date)
-    ),
-  });
-
-  if (existing) {
-    await db
-      .update(nightlyRecharge)
-      .set(values)
-      .where(eq(nightlyRecharge.id, existing.id));
-  } else {
-    await db.insert(nightlyRecharge).values(values);
-  }
+  // Ein Statement statt lesen-dann-schreiben, aus demselben Grund wie bei
+  // upsertSleep und upsertDailyActivity: bei parallelem Lauf von Webhook und
+  // Cron entstünden sonst zwei Zeilen für dieselbe Nacht.
+  await db
+    .insert(nightlyRecharge)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [nightlyRecharge.userId, nightlyRecharge.date],
+      set: values,
+    });
 }
 
 function intOrNull(v: unknown): number | null {

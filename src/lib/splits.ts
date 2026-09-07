@@ -94,6 +94,17 @@ export function haversine(a: RoutePoint, b: RoutePoint): number {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
+/**
+ * Mindestfenster fuer die Bestzeit einer Runde, in Sekunden.
+ *
+ * Zehn Sekunden sind kurz genug, um einen echten Zwischenspurt zu erfassen, und
+ * lang genug, dass ein einzelner GPS-Ausreisser den Wert nicht bestimmt. Der
+ * TCX-Parser glaettet die Geschwindigkeitsreihe aus demselben Grund, dort mit
+ * drei Sekunden — hier darf es traeger sein, weil ein "Bestwert" ohnehin etwas
+ * Gehaltenes beschreiben soll.
+ */
+const PACE_WINDOW_SEC = 10;
+
 export function computeSplits(
   routeData: RoutePoint[],
   heartRateData: HrSample[],
@@ -105,9 +116,14 @@ export function computeSplits(
   const hrTimes = heartRateData.map((h) => new Date(h.time).getTime());
   const hrBpms = heartRateData.map((h) => h.bpm);
 
+  // Kumulierte Distanz bis zum jeweiligen Punkt. Wird fuer die Bestzeit pro
+  // Runde gebraucht, die ueber ein Zeitfenster statt von Punkt zu Punkt
+  // gerechnet wird — siehe PACE_WINDOW_SEC.
+  const distPrefix: number[] = new Array(routeData.length).fill(0);
   let haversineTotal = 0;
   for (let i = 1; i < routeData.length; i++) {
     haversineTotal += haversine(routeData[i - 1], routeData[i]);
+    distPrefix[i] = haversineTotal;
   }
   const scale =
     totalDistanceMeters && haversineTotal > 0
@@ -174,15 +190,28 @@ export function computeSplits(
       let ascent = 0;
       let descent = 0;
       let bestPace: number | null = null;
+      // Nachlaufender Index fuer das Pace-Fenster. Waechst mit j mit, damit die
+      // Schleife linear bleibt.
+      let w = splitStart;
       for (let j = splitStart + 1; j <= i; j++) {
-        const pp = routeData[j - 1];
         const pc = routeData[j];
         ascent += segAscent[j];
         descent += segDescent[j];
-        if (pp.time && pc.time) {
-          const dt = (new Date(pc.time).getTime() - new Date(pp.time).getTime()) / 1000;
-          const dd = haversine(pp, pc) * scale;
-          if (dt > 0 && dd > 0) {
+
+        // Bestzeit ueber mindestens PACE_WINDOW_SEC statt von Punkt zu Punkt.
+        // Bei 1-Hz-Aufzeichnung schlaegt sonst jeder GPS-Sprung voll durch,
+        // vor allem der erste Fix am Start: aus 3 Metern in einer Sekunde
+        // wurden 11.9 km/h Bestwert bei einem Spaziergang mit 5.5 km/h Schnitt.
+        while (
+          w < j - 1 &&
+          timePrefix[j] - timePrefix[w + 1] >= PACE_WINDOW_SEC
+        ) {
+          w++;
+        }
+        const dt = timePrefix[j] - timePrefix[w];
+        if (dt >= PACE_WINDOW_SEC) {
+          const dd = (distPrefix[j] - distPrefix[w]) * scale;
+          if (dd > 0) {
             const pace = dt / (dd / 1000);
             if (pace > 60 && pace < 1800) {
               if (bestPace == null || pace < bestPace) bestPace = pace;

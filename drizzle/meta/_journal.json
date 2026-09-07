@@ -281,6 +281,13 @@
       "when": 1788810841522,
       "tag": "0039_true_luke_cage",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1788811888011,
+      "tag": "0040_light_the_spike",
+      "breakpoints": true
     }
   ]
 }
