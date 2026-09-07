@@ -7,6 +7,11 @@ const publicRoutes = [
   "/api/auth",
   "/api/polar/webhook",
   "/api/withings/webhook",
+  // Nur der Webhook, nicht authorize/callback — die beiden gehören zu einem
+  // angemeldeten Nutzer. Ohne diesen Eintrag leitet die Middleware Googles
+  // Anfragen mit 307 auf /login um, und die Verifikation beim Anlegen des
+  // Subscribers scheitert: sie verlangt 401 ohne Zugangsdaten.
+  "/api/google/webhook",
   "/api/bloodpressure/webhook",
   "/api/cron",
   "/share",
