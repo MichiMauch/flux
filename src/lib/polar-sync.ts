@@ -138,6 +138,7 @@ export async function syncPolarExercises(
       .insert(activities)
       .values({
         polarId: exercise.id,
+        source: "polar",
         userId: user.id,
         name: aiName,
         type: normalizedType,

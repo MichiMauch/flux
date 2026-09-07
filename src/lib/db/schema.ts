@@ -113,7 +113,15 @@ export const activities = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
+    // Externer Schlüssel ALLER Quellen, nicht nur Polar. Polar-Aktivitäten
+    // stehen ohne Prefix drin (historisch), alle anderen mit: "strava:<id>",
+    // "google:<dataPointId>". Handimporte haben NULL. Die UNIQUE-Bedingung
+    // hält den Sync jeder Quelle idempotent.
     polarId: text("polar_id").unique(),
+    // Woher die Aktivität stammt. Steuert die Anzeige (Quellen-Badge) und
+    // welche Kacheln die Detailansicht zeigt — Google liefert z.B. keine
+    // Trittfrequenz.
+    source: text("source").notNull().default("polar"),
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
@@ -290,6 +298,11 @@ export const dailyActivity = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     date: text("date").notNull(), // YYYY-MM-DD local to device
+    // Eine Zeile pro Quelle und Tag. Trägt man morgens die Pixel Watch und
+    // nachmittags die Polar, deckt keine der beiden Zeilen den Tag vollständig
+    // ab — welche angezeigt wird, entscheidet die Leseschicht, nicht der Sync.
+    // Aufaddieren wäre falsch, weil sich die Zeiträume überlappen können.
+    source: text("source").notNull().default("polar"),
     polarActivityId: text("polar_activity_id"),
     steps: integer("steps"),
     activeSteps: integer("active_steps"),
@@ -308,7 +321,15 @@ export const dailyActivity = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("daily_activity_user_date_idx").on(t.userId, t.date)],
+  (t) => [
+    index("daily_activity_user_date_idx").on(t.userId, t.date),
+    // Ohne diese Bedingung legten Webhook und Cron bei gleichzeitigem Lauf
+    // zwei Zeilen für denselben Tag an: beide fanden nichts, beide fügten ein.
+    // Danach aktualisierte findFirst nur noch eine davon, die andere blieb mit
+    // veralteten Werten liegen und konnte vom Leser erwischt werden. 13 solcher
+    // Paare lagen in der Produktionsdatenbank.
+    uniqueIndex("daily_activity_user_date_source_idx").on(t.userId, t.date, t.source),
+  ],
 );
 
 // ── Daily Polar Extras (cardio-load, continuous-HR, sleep-wise, etc.) ──────
@@ -388,6 +409,9 @@ export const sleepSessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     date: text("date").notNull(), // YYYY-MM-DD (wake-up day per Polar)
+    // Wie bei daily_activity: eine Zeile pro Quelle. Nachts wird zwar meist nur
+    // eine Uhr getragen, aber die Regel bleibt dieselbe.
+    source: text("source").notNull().default("polar"),
     polarUserId: text("polar_user_id"),
     deviceId: text("device_id"),
     sleepStartTime: timestamp("sleep_start_time", { withTimezone: true }),
@@ -416,7 +440,10 @@ export const sleepSessions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("sleep_sessions_user_date_idx").on(t.userId, t.date)],
+  (t) => [
+    index("sleep_sessions_user_date_idx").on(t.userId, t.date),
+    uniqueIndex("sleep_sessions_user_date_source_idx").on(t.userId, t.date, t.source),
+  ],
 );
 
 // ── Nightly Recharge (Polar AccessLink /v3/users/nights) ──────────────────

@@ -95,6 +95,7 @@ async function upsertSleep(userId: string, data: PolarSleep): Promise<void> {
   const values = {
     userId,
     date,
+    source: "polar",
     polarUserId: toStr(data.polar_user),
     deviceId: data.device_id ?? null,
     sleepStartTime: toDate(data.sleep_start_time),
@@ -124,21 +125,17 @@ async function upsertSleep(userId: string, data: PolarSleep): Promise<void> {
     updatedAt: new Date(),
   };
 
-  const existing = await db.query.sleepSessions.findFirst({
-    where: and(
-      eq(sleepSessions.userId, userId),
-      eq(sleepSessions.date, date)
-    ),
-  });
-
-  if (existing) {
-    await db
-      .update(sleepSessions)
-      .set(values)
-      .where(eq(sleepSessions.id, existing.id));
-  } else {
-    await db.insert(sleepSessions).values(values);
-  }
+  // Ein Statement statt lesen-dann-schreiben, aus demselben Grund wie in
+  // api/sync/daily: bei parallelem Lauf von Webhook und Cron entstanden sonst
+  // zwei Zeilen für dieselbe Nacht. Drei solcher Paare lagen in der
+  // Produktionsdatenbank.
+  await db
+    .insert(sleepSessions)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [sleepSessions.userId, sleepSessions.date, sleepSessions.source],
+      set: values,
+    });
 }
 
 async function upsertNight(userId: string, data: PolarNight): Promise<void> {

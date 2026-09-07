@@ -152,13 +152,17 @@ export async function upsertDailyActivity(
       ? v3.inactivity_alert_count
       : null;
 
+  // Nur noch für den Schrittziel-Vergleich weiter unten gelesen. Der Schreibpfad
+  // verlässt sich nicht darauf, siehe onConflictDoUpdate.
   const existing = await db.query.dailyActivity.findFirst({
-    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.date, date)),
+    where: (t, { and, eq }) =>
+      and(eq(t.userId, userId), eq(t.date, date), eq(t.source, "polar")),
   });
 
   const values = {
     userId,
     date,
+    source: "polar",
     polarActivityId: null,
     steps: stepsTotal,
     // v3 only returns total `steps` — keep activeSteps in sync (semantically
@@ -179,14 +183,19 @@ export async function upsertDailyActivity(
     updatedAt: new Date(),
   };
 
-  if (existing) {
-    await db
-      .update(dailyActivity)
-      .set(values)
-      .where(eq(dailyActivity.id, existing.id));
-  } else {
-    await db.insert(dailyActivity).values(values);
-  }
+  // Ein einziges Statement statt lesen-dann-schreiben. Webhook und Cron können
+  // denselben Tag gleichzeitig verarbeiten; mit dem alten Ablauf fanden dann
+  // beide nichts und legten je eine Zeile an. Das Ergebnis waren 13 doppelte
+  // Tage in der Produktionsdatenbank, von denen der Leser mal die eine, mal die
+  // andere erwischte. Der UNIQUE-Index auf (user_id, date, source) und dieser
+  // Upsert schliessen das zusammen aus.
+  await db
+    .insert(dailyActivity)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [dailyActivity.userId, dailyActivity.date, dailyActivity.source],
+      set: values,
+    });
 
   const newlyReached =
     date === todayIso() &&

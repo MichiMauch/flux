@@ -221,6 +221,7 @@ async function main() {
 
     const row = {
       polarId: parsed.polarId,
+      source: "strava",
       userId: user.id,
       name,
       type: parsed.type,
