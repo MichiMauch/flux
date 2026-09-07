@@ -47,6 +47,31 @@ export async function updateProfile(formData: FormData): Promise<{ ok?: boolean;
   return { ok: true };
 }
 
+/**
+ * Google-Verbindung trennen.
+ *
+ * googleConnectedAt bleibt bewusst stehen. Es ist der Stichtag, ab dem
+ * importiert wird — wer trennt und später neu verbindet, soll nicht plötzlich
+ * die Lücke dazwischen nachgeliefert bekommen. Bereits importierte Aktivitäten
+ * bleiben ebenfalls, sie gehören dem User und nicht der Verbindung.
+ */
+export async function disconnectGoogle(): Promise<{ ok?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Nicht angemeldet" };
+
+  await db
+    .update(users)
+    .set({
+      googleAccessToken: null,
+      googleRefreshToken: null,
+      googleTokenExpiry: null,
+    })
+    .where(eq(users.id, session.user.id));
+
+  revalidatePath("/profile");
+  return { ok: true };
+}
+
 export async function setPartnerPushEnabled(enabled: boolean): Promise<{ ok?: boolean; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Nicht angemeldet" };

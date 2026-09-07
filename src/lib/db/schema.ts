@@ -33,6 +33,19 @@ export const users = pgTable("user", {
   // token bounds the blast radius if the URL leaks (only that user's data is
   // re-syncable, not all users).
   withingsWebhookToken: text("withings_webhook_token").unique(),
+  // ── Google Health (Pixel Watch) ──
+  googleAccessToken: text("google_access_token"),
+  googleRefreshToken: text("google_refresh_token"),
+  googleTokenExpiry: timestamp("google_token_expiry", { withTimezone: true }),
+  // Die Nummer aus dem Ressourcennamen (users/<id>/dataTypes/...). Nur darüber
+  // lässt sich eine Webhook-Notification einem flux-User zuordnen, im Payload
+  // steht ausschliesslich diese healthUserId.
+  googleHealthUserId: text("google_health_user_id").unique(),
+  // Stichtag: es wird nichts importiert, was zeitlich davor liegt. Verhindert,
+  // dass beim Verbinden die gesamte Google-Historie hereinbricht.
+  googleConnectedAt: timestamp("google_connected_at", { withTimezone: true }),
+  googleDailySyncedAt: timestamp("google_daily_synced_at", { withTimezone: true }),
+  googleSleepSyncedAt: timestamp("google_sleep_synced_at", { withTimezone: true }),
   image: text("image"),
   birthday: timestamp("birthday", { withTimezone: true, mode: "date" }),
   sex: text("sex"), // 'male' | 'female'

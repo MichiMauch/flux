@@ -7,6 +7,8 @@ import { ProfileForm } from "./profile-form";
 import { PortraitUpload } from "./portrait-upload";
 import { PushNotificationsToggle } from "./push-notifications-toggle";
 import { PartnerPushToggle } from "./partner-push-toggle";
+import { Connections } from "./connections";
+import { APP_TIME_ZONE } from "@/lib/activity-format";
 import { computeLevel } from "@/lib/trophies-server";
 import { formatXp } from "@/lib/trophies";
 import { Trophy } from "lucide-react";
@@ -78,6 +80,26 @@ export default async function ProfilePage() {
                 restHeartRate: user.restHeartRate ?? null,
                 aerobicThreshold: user.aerobicThreshold ?? null,
                 anaerobicThreshold: user.anaerobicThreshold ?? null,
+              }}
+            />
+          </BentoTile>
+        </div>
+
+        <div className="md:col-span-6">
+          <BentoTile label="Quellen" title="Verbundene Dienste">
+            <Connections
+              state={{
+                polar: !!user.polarToken,
+                google: !!user.googleRefreshToken,
+                withings: !!user.withingsRefreshToken,
+                googleConnectedAt: user.googleConnectedAt
+                  ? user.googleConnectedAt.toLocaleDateString("de-CH", {
+                      timeZone: APP_TIME_ZONE,
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })
+                  : null,
               }}
             />
           </BentoTile>

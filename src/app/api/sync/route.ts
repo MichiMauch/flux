@@ -4,7 +4,9 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { PolarAuthError } from "@/lib/polar-client";
+import { GoogleAuthError } from "@/lib/google-health-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
+import { syncGoogleActivities } from "@/lib/google-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
@@ -19,11 +21,42 @@ export async function POST() {
     where: eq(users.id, session.user.id),
   });
 
-  if (!user?.polarToken) {
+  if (!user?.polarToken && !user?.googleRefreshToken) {
     return NextResponse.json(
-      { error: "Polar nicht verbunden", needsReauth: true },
+      { error: "Keine Quelle verbunden", needsReauth: true },
       { status: 400 }
     );
+  }
+
+  // Google zuerst und unabhängig: eine tote Polar-Verbindung darf die
+  // Pixel-Watch-Aktivitäten nicht mit blockieren, und umgekehrt.
+  let googleSynced = 0;
+  let googleUnlocked: string[] = [];
+  let googleNeedsReauth = false;
+  if (user.googleRefreshToken) {
+    try {
+      const r = await syncGoogleActivities(user);
+      googleSynced = r.synced;
+      googleUnlocked = r.unlockedTrophies;
+    } catch (e) {
+      if (e instanceof GoogleAuthError) {
+        googleNeedsReauth = true;
+        console.warn("Google-Sync abgebrochen — Token abgelehnt:", e.message);
+      } else {
+        console.error("Google-Sync fehlgeschlagen:", e);
+      }
+    }
+  }
+
+  if (!user.polarToken) {
+    return NextResponse.json({
+      synced: googleSynced,
+      googleSynced,
+      unlockedTrophies: googleUnlocked,
+      ...(googleNeedsReauth
+        ? { error: "Google-Verbindung abgelaufen — bitte neu verbinden", needsReauth: true }
+        : {}),
+    });
   }
 
   try {
@@ -57,11 +90,14 @@ export async function POST() {
     }
 
     return NextResponse.json({
-      synced,
+      synced: synced + googleSynced,
+      polarSynced: synced,
+      googleSynced,
       dailySynced,
       sleepSynced,
       nightsSynced,
-      unlockedTrophies,
+      unlockedTrophies: [...unlockedTrophies, ...googleUnlocked],
+      ...(googleNeedsReauth ? { googleNeedsReauth: true } : {}),
     });
   } catch (error) {
     // A dead/revoked Polar token is unrecoverable without a fresh OAuth flow —

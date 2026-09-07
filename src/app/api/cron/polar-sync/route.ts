@@ -32,7 +32,9 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq, isNotNull } from "drizzle-orm";
 import { PolarAuthError } from "@/lib/polar-client";
+import { GoogleAuthError } from "@/lib/google-health-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
+import { syncGoogleActivities } from "@/lib/google-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
 import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
@@ -73,7 +75,46 @@ export async function POST(req: NextRequest) {
   return Response.json({ accepted: true }, { status: 202 });
 }
 
+/**
+ * Google-Durchgang. Getrennt vom Polar-Sweep, weil die beiden Quellen
+ * unterschiedliche Grenzen haben: Polars App-Quote von 5200 Requests zwingt zur
+ * Slot-Logik in sync-schedule.ts, Google erlaubt 300 Requests pro Minute und
+ * User und braucht keine.
+ */
+async function runGoogleSweep(): Promise<void> {
+  const toSync = await db.query.users.findMany({
+    where: isNotNull(users.googleRefreshToken),
+  });
+
+  let synced = 0;
+  let reauth = 0;
+  for (const user of toSync) {
+    try {
+      const r = await syncGoogleActivities(user);
+      synced += r.synced;
+    } catch (e) {
+      if (e instanceof GoogleAuthError) {
+        reauth++;
+        console.warn(`[cron/sync] Google-Token abgelehnt user=${user.id} — neu verbinden`);
+        continue;
+      }
+      console.error(`[cron/sync] Google-Sync fehlgeschlagen user=${user.id}:`, e);
+    }
+  }
+  console.log(
+    `[cron/sync] Google: kandidaten=${toSync.length} aktivitaeten=${synced} reauth=${reauth}`
+  );
+}
+
 async function runFullSweep(): Promise<void> {
+  // Google zuerst und in eigenem try: ein Fehler dort darf den Polar-Sweep
+  // nicht verhindern, und umgekehrt.
+  try {
+    await runGoogleSweep();
+  } catch (e) {
+    console.error("[cron/sync] Google-Durchgang fatal:", e);
+  }
+
   try {
     // Full sweep: every connected user, every run. Idempotent + cheap.
     const toSync = await db.query.users.findMany({

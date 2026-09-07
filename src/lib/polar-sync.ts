@@ -18,18 +18,12 @@
 
 import { listExercises, downloadFit, parsePolarStartTime } from "@/lib/polar-client";
 import { parseFitFile } from "@/lib/fit-parser";
-import { computeTrimp, type Sex } from "@/lib/trimp";
-import { generateActivityTitle, normalizePolarType } from "@/lib/ai-title";
-import { buildRouteGeometry } from "@/lib/activities/route-geometry";
-import { revalidateTag } from "next/cache";
-import { homeCacheTag } from "@/lib/cache/home-stats";
-import { reverseGeocodeStructured } from "@/lib/geocode";
+import { normalizePolarType } from "@/lib/ai-title";
+import { enrichActivity } from "@/lib/activities/ingest";
+import { insertActivity, finishIngest } from "@/lib/activities/ingest-effects";
 import { db } from "@/lib/db";
 import { users, activities, deletedPolarActivities } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { evaluateTrophies } from "@/lib/trophies-server";
-import { TROPHIES } from "@/lib/trophies";
-import { sendPushToUser, sendActivityPushes } from "@/lib/push";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
@@ -95,136 +89,51 @@ export async function syncPolarExercises(
 
     const avgHr = exercise.heart_rate?.average ?? fitSession?.avgHeartRate ?? null;
     const maxHr = exercise.heart_rate?.maximum ?? fitSession?.maxHeartRate ?? null;
-    const trimp = computeTrimp(
-      {
-        sex: user.sex as Sex,
-        birthday: user.birthday,
-        maxHeartRate: user.maxHeartRate,
-        restHeartRate: user.restHeartRate,
-      },
-      { avgHeartRate: avgHr, maxHeartRate: maxHr, duration: durationSeconds },
-      heartRateData as { time: string; bpm: number }[] | null
-    );
-
     const normalizedType = normalizePolarType(exercise.sport, exercise.detailed_sport_info);
-    const fallbackName = exercise.detailed_sport_info || exercise.sport || "Training";
     const startTime = parsePolarStartTime(exercise.start_time, exercise.start_time_utc_offset);
-    const aiName = await generateActivityTitle({
+
+    const row = await enrichActivity(user, {
+      source: "polar",
+      externalId: exercise.id,
       type: normalizedType,
       subType: exercise.detailed_sport_info ?? null,
+      fallbackTitle: exercise.detailed_sport_info || exercise.sport || "Training",
       startTime,
-      distanceMeters: exercise.distance ?? null,
-      durationSeconds,
-      ascentMeters: fitSession?.totalAscent ?? null,
-      routeData: routeData as { lat: number; lng: number; time?: string }[] | null,
-      fallbackTitle: fallbackName,
+      duration: durationSeconds,
+      movingTime: fitSession?.movingTime ?? null,
+      distance: exercise.distance ?? null,
+      calories: exercise.calories ?? null,
+      avgHeartRate: avgHr,
+      maxHeartRate: maxHr,
+      ascent: fitSession?.totalAscent ?? null,
+      descent: fitSession?.totalDescent ?? null,
+      minAltitude: fitSession?.minAltitude ?? null,
+      maxAltitude: fitSession?.maxAltitude ?? null,
+      avgCadence: fitSession?.avgCadence ?? null,
+      maxCadence: fitSession?.maxCadence ?? null,
+      totalSteps: fitSession?.totalSteps ?? null,
+      avgSpeed: fitSession?.avgSpeed ?? null,
+      maxSpeed: fitSession?.maxSpeed ?? null,
+      fatPercentage: exercise.fat_percentage ?? null,
+      carbPercentage: exercise.carbohydrate_percentage ?? null,
+      proteinPercentage: exercise.protein_percentage ?? null,
+      cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
+      cardioLoadInterpretation:
+        exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
+      routeData,
+      heartRateData,
+      speedData,
+      device: exercise.device ?? null,
+      filePath: fitFilePath,
     });
 
-    // Reverse-Geocode (best effort — bei Failure NULL, Backfill kann später nachholen)
-    let locality: string | null = null;
-    let country: string | null = null;
-    let geocodedAt: Date | null = null;
-    const startPoint = (routeData as { lat: number; lng: number }[] | null)?.[0];
-    if (startPoint && typeof startPoint.lat === "number" && typeof startPoint.lng === "number") {
-      const loc = await reverseGeocodeStructured(startPoint.lat, startPoint.lng);
-      if (loc) {
-        locality = loc.locality;
-        country = loc.country;
-        geocodedAt = new Date();
-      }
-    }
-
-    const [inserted] = await db
-      .insert(activities)
-      .values({
-        polarId: exercise.id,
-        source: "polar",
-        userId: user.id,
-        name: aiName,
-        type: normalizedType,
-        startTime,
-        duration: durationSeconds,
-        movingTime: fitSession?.movingTime ?? null,
-        distance: exercise.distance,
-        calories: exercise.calories,
-        avgHeartRate: avgHr,
-        maxHeartRate: maxHr,
-        ascent: fitSession?.totalAscent ?? null,
-        descent: fitSession?.totalDescent ?? null,
-        routeData,
-        routeGeometry: buildRouteGeometry(routeData),
-        heartRateData,
-        speedData,
-        minAltitude: fitSession?.minAltitude ?? null,
-        maxAltitude: fitSession?.maxAltitude ?? null,
-        avgCadence: fitSession?.avgCadence ?? null,
-        maxCadence: fitSession?.maxCadence ?? null,
-        totalSteps: fitSession?.totalSteps ?? null,
-        avgSpeed: fitSession?.avgSpeed ?? null,
-        maxSpeed: fitSession?.maxSpeed ?? null,
-        fatPercentage: exercise.fat_percentage ?? null,
-        carbPercentage: exercise.carbohydrate_percentage ?? null,
-        proteinPercentage: exercise.protein_percentage ?? null,
-        cardioLoad: exercise.training_load_pro?.["cardio-load"] ?? null,
-        cardioLoadInterpretation: exercise.training_load_pro?.["cardio-load-interpretation"] ?? null,
-        trimp,
-        device: exercise.device ?? null,
-        fitFilePath,
-        locality,
-        country,
-        geocodedAt,
-      })
-      .returning({ id: activities.id });
-
+    await insertActivity(user, row);
     synced++;
-
-    if (inserted) {
-      try {
-        await sendActivityPushes(
-          { id: user.id, name: user.name, partnerId: user.partnerId },
-          {
-            activityId: inserted.id,
-            polarId: exercise.id,
-            name: aiName,
-            distance: exercise.distance ?? null,
-            durationSec: durationSeconds,
-          }
-        );
-      } catch (e) {
-        console.error("[push] activity notification failed:", e);
-      }
-    }
   }
 
   let unlockedTrophies: string[] = [];
   if (synced > 0) {
-    try {
-      unlockedTrophies = await evaluateTrophies(user.id);
-      if (unlockedTrophies.length > 0) {
-        console.log(
-          `Unlocked trophies for user ${user.name}: ${unlockedTrophies.join(", ")}`
-        );
-        for (const code of unlockedTrophies) {
-          const def = TROPHIES.find((t) => t.code === code);
-          if (!def) continue;
-          try {
-            await sendPushToUser(user.id, {
-              title: "Trophy freigeschaltet",
-              body: `${def.title} — ${def.description}`,
-              url: "/trophies",
-              tag: `trophy-${code}`,
-              kind: "trophy",
-            });
-          } catch (e) {
-            console.error("[push] trophy notification failed:", e);
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Trophy evaluation error:", e);
-    }
-
-    revalidateTag(homeCacheTag(user.id), "default");
+    unlockedTrophies = await finishIngest(user.id, user.name);
   }
 
   console.log(`[polar-sync] EXERCISE: ${synced} new activities for user ${user.name}`);
