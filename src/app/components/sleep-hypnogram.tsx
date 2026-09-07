@@ -83,16 +83,21 @@ function extractPoints(
     for (const e of hypnogram) {
       if (!e || typeof e !== "object") continue;
       const obj = e as Record<string, unknown>;
+      // Polar schreibt {time, stage}, Google Health {startTime, type}. Beide
+      // Formate hier lesen, statt die Daten beim Schreiben zu vereinheitlichen —
+      // dann bleibt in der Datenbank stehen, was die Quelle geliefert hat.
       const timeStr =
         (obj.time as string) ??
         (obj.timestamp as string) ??
         (obj.start as string) ??
+        (obj.startTime as string) ??
         null;
       const stageRaw =
         obj.stage ??
         obj["sleep-stage"] ??
         obj.sleep_stage ??
         obj.state ??
+        obj.type ??
         null;
       const stage = normalizeStage(stageRaw);
       if (!timeStr || !stage) continue;

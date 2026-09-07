@@ -8,6 +8,7 @@ import { GoogleAuthError } from "@/lib/google-health-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
 import { syncGoogleActivities } from "@/lib/google-sync";
 import { syncGoogleDaily } from "@/lib/google-daily-sync";
+import { syncGoogleSleep } from "@/lib/google-sleep-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
@@ -33,6 +34,7 @@ export async function POST() {
   // Pixel-Watch-Aktivitäten nicht mit blockieren, und umgekehrt.
   let googleSynced = 0;
   let googleDaysSynced = 0;
+  let googleNightsSynced = 0;
   let googleUnlocked: string[] = [];
   let googleNeedsReauth = false;
   if (user.googleRefreshToken) {
@@ -45,6 +47,12 @@ export async function POST() {
         googleDaysSynced = d.synced;
       } catch (e) {
         console.error("Google-Tagesdaten fehlgeschlagen:", e);
+      }
+      try {
+        const s = await syncGoogleSleep(user);
+        googleNightsSynced = s.nights;
+      } catch (e) {
+        console.error("Google-Schlaf fehlgeschlagen:", e);
       }
     } catch (e) {
       if (e instanceof GoogleAuthError) {
@@ -61,6 +69,7 @@ export async function POST() {
       synced: googleSynced,
       googleSynced,
       googleDaysSynced,
+      googleNightsSynced,
       unlockedTrophies: googleUnlocked,
       ...(googleNeedsReauth
         ? { error: "Google-Verbindung abgelaufen — bitte neu verbinden", needsReauth: true }
@@ -103,6 +112,7 @@ export async function POST() {
       polarSynced: synced,
       googleSynced,
       googleDaysSynced,
+      googleNightsSynced,
       dailySynced,
       sleepSynced,
       nightsSynced,

@@ -187,6 +187,8 @@ export default async function ActivityBentoPage({
             notes: activity.notes,
             ascent: activity.ascent,
             descent: activity.descent,
+              source: activity.source,
+              device: activity.device,
           }}
           photoIds={photos.map((p) => ({ id: p.id }))}
           duration={duration}

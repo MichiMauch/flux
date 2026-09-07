@@ -1,0 +1,1 @@
+ALTER TABLE "daily_google_extras" ADD COLUMN "resting_heart_rate" integer;

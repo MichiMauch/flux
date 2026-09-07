@@ -20,6 +20,33 @@ export function activityTypeLabel(type: string): string {
   return type;
 }
 
+/**
+ * Woher eine Aktivität stammt, für die Anzeige.
+ *
+ * Der Gerätename ist die bessere Auskunft, wo es einen gibt: "Pixel Watch 5"
+ * sagt mehr als "Google". Nur wenn keiner da ist — Handimporte, Strava — tritt
+ * der Quellenname an seine Stelle.
+ */
+export function activitySourceLabel(
+  source: string | null | undefined,
+  device?: string | null
+): string | null {
+  const d = device?.trim();
+  if (d) return d;
+  switch (source) {
+    case "google":
+      return "Pixel Watch";
+    case "polar":
+      return "Polar";
+    case "strava":
+      return "Strava";
+    case "manual":
+      return "Manueller Import";
+    default:
+      return source || null;
+  }
+}
+
 export const ACTIVITY_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "RUNNING", label: "Laufen" },
   { value: "TRAIL_RUNNING", label: "Trail-Lauf" },

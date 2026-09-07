@@ -190,6 +190,8 @@ export default async function SharedActivityPage({
               notes: activity.notes,
               ascent: activity.ascent,
               descent: activity.descent,
+              source: activity.source,
+              device: activity.device,
             }}
             photoIds={photos.map((p) => ({ id: p.id }))}
             duration={duration}

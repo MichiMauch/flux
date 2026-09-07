@@ -208,9 +208,9 @@ export default async function SleepPage({
             )}
             {(sleep || night) && (
               <div className="text-xs text-[#9ca3af]">
-                Quellen: {sleep ? "Sleep-API" : ""}
-                {sleep && night ? " + " : ""}
-                {night ? "Nightly-Recharge" : ""}
+                Quelle: {sleep ? (sleep.source === "google" ? "Pixel Watch" : "Polar") : ""}
+                {sleep && night ? " + Nightly Recharge" : ""}
+                {!sleep && night ? "Nightly Recharge" : ""}
               </div>
             )}
           </BentoTile>
@@ -366,8 +366,10 @@ export default async function SleepPage({
                   })}
                 </div>
                 <div className="mt-3 text-[11px] text-[#9ca3af]">
-                  Device: {sleep.deviceId ?? "–"} · Polar-User:{" "}
-                  {sleep.polarUserId ?? "–"}
+                  Gerät: {sleep.deviceId ?? "–"}
+                  {/* Die Polar-Nutzernummer nur zeigen, wenn es eine gibt —
+                      bei Google-Nächten stand hier sonst ein sinnloses "–". */}
+                  {sleep.polarUserId ? ` · Polar-User: ${sleep.polarUserId}` : ""}
                 </div>
               </BentoTile>
             </div>

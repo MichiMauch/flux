@@ -412,6 +412,9 @@ export const dailyGoogleExtras = pgTable(
     activeMinutesLight: integer("active_minutes_light"),
     activeMinutesModerate: integer("active_minutes_moderate"),
     activeMinutesVigorous: integer("active_minutes_vigorous"),
+    // Ruhepuls des Tages. Gehoert zum Tag und nicht zur Nacht, deshalb hier und
+    // nicht in sleep_sessions.
+    restingHeartRate: integer("resting_heart_rate"),
     // Die vollständigen Rollup-Antworten, damit neue Felder ohne Migration
     // sichtbar bleiben — dasselbe Vorgehen wie bei daily_polar_extras.
     raw: json("raw"),

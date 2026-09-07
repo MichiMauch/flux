@@ -6,6 +6,7 @@ import { PersonalBestLine } from "@/app/components/personal-best-line";
 import { showsTerrain } from "@/lib/activity-types";
 import { formatDurationHMS } from "@/lib/activity-format";
 import type { PrBadge } from "@/lib/personal-bests";
+import { activitySourceLabel } from "@/lib/activity-types";
 import { fmt } from "./helpers";
 import { SevenSegTile } from "./tiles";
 
@@ -28,6 +29,8 @@ interface Props {
     notes: string | null;
     ascent: number | null;
     descent: number | null;
+    source: string;
+    device: string | null;
   };
   photoIds: { id: string }[];
   duration: number;
@@ -62,6 +65,10 @@ export function ActivityDetailHero({
   const showBoost = boostable || boosters.length > 0;
   // Yoga hat keinen Auf-/Abstieg — die Kachel fällt weg, das Raster rückt auf 3.
   const terrain = showsTerrain(activity.type);
+  // Woher die Daten kommen. Bei zwei Uhren nebeneinander ist das keine
+  // Nebensaechlichkeit — man will sehen, welche eine Aktivitaet aufgezeichnet hat.
+  const sourceLabel = activitySourceLabel(activity.source, activity.device);
+
   return (
     <>
       <div
@@ -75,6 +82,7 @@ export function ActivityDetailHero({
           className={`${spaceMono.className} [font-family:var(--bento-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3] mb-2`}
         >
           Aktivität · {dateLabel}
+          {sourceLabel ? ` · ${sourceLabel}` : ""}
         </div>
         <h1
           lang="de"

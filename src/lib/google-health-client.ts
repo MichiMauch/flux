@@ -262,13 +262,41 @@ export interface GoogleExercise {
   };
 }
 
+export interface GoogleSleepStage {
+  startTime: string;
+  endTime: string;
+  startUtcOffset?: string;
+  endUtcOffset?: string;
+  type: string;
+}
+
 export interface GoogleSleep {
   name: string;
   dataSource?: GoogleDataSource;
   sleep?: {
     interval?: GoogleInterval;
     type?: string;
-    stages?: { startTime: string; endTime: string; type: string }[];
+    stages?: GoogleSleepStage[];
+    shortAwakenings?: GoogleSleepStage[];
+    metadata?: { stagesStatus?: string; processed?: boolean; mainSleep?: boolean };
+    /** Fertige Aufsummierung von Google — spart das Zusammenzählen der Phasen. */
+    summary?: {
+      minutesInSleepPeriod?: string | number;
+      minutesAsleep?: string | number;
+      minutesAwake?: string | number;
+      minutesToFallAsleep?: string | number;
+      minutesAfterWakeUp?: string | number;
+      stagesSummary?: { type: string; minutes: string | number; count?: string | number }[];
+    };
+  };
+}
+
+export interface GoogleDailyRestingHeartRate {
+  dataSource?: GoogleDataSource;
+  dailyRestingHeartRate?: {
+    date?: { year: number; month: number; day: number };
+    beatsPerMinute?: string | number;
+    dailyRestingHeartRateMetadata?: { calculationMethod?: string };
   };
 }
 
@@ -424,6 +452,24 @@ export async function listSleep(
     pageToken = body.nextPageToken;
   }
   return out;
+}
+
+/**
+ * Ruhepuls pro Tag.
+ *
+ * Anders als sleep ist dieser Typ filterbar, allerdings über den Member
+ * `daily_resting_heart_rate.date` und mit einem zivilen Zeitpunkt.
+ */
+export async function listDailyRestingHeartRate(
+  token: string,
+  since: Date
+): Promise<GoogleDailyRestingHeartRate[]> {
+  const filter = `daily_resting_heart_rate.date >= "${civilFilterTime(since)}"`;
+  const body = await apiGet<ListResponse<GoogleDailyRestingHeartRate>>(
+    token,
+    `/users/me/dataTypes/daily-resting-heart-rate/dataPoints?pageSize=90&filter=${encodeURIComponent(filter)}`
+  );
+  return body.dataPoints ?? [];
 }
 
 // ── Tagesdaten ─────────────────────────────────────────────────────────────

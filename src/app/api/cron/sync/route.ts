@@ -40,6 +40,7 @@ import { GoogleAuthError } from "@/lib/google-health-client";
 import { syncPolarExercises } from "@/lib/polar-sync";
 import { syncGoogleActivities } from "@/lib/google-sync";
 import { syncGoogleDaily } from "@/lib/google-daily-sync";
+import { syncGoogleSleep } from "@/lib/google-sleep-sync";
 import { syncDailyActivity } from "@/app/api/sync/daily/route";
 import { syncSleep } from "@/app/api/sync/sleep/route";
 import { syncPhysicalInfo } from "@/app/api/sync/physical-info/route";
@@ -93,6 +94,7 @@ async function runGoogleSweep(): Promise<void> {
 
   let synced = 0;
   let days = 0;
+  let nights = 0;
   let reauth = 0;
   for (const user of toSync) {
     try {
@@ -107,6 +109,12 @@ async function runGoogleSweep(): Promise<void> {
       } catch (e) {
         console.error(`[cron/sync] Google-Tagesdaten fehlgeschlagen user=${user.id}:`, e);
       }
+      try {
+        const s = await syncGoogleSleep(user);
+        nights += s.nights;
+      } catch (e) {
+        console.error(`[cron/sync] Google-Schlaf fehlgeschlagen user=${user.id}:`, e);
+      }
     } catch (e) {
       if (e instanceof GoogleAuthError) {
         reauth++;
@@ -117,7 +125,7 @@ async function runGoogleSweep(): Promise<void> {
     }
   }
   console.log(
-    `[cron/sync] Google: kandidaten=${toSync.length} aktivitaeten=${synced} tage=${days} reauth=${reauth}`
+    `[cron/sync] Google: kandidaten=${toSync.length} aktivitaeten=${synced} tage=${days} naechte=${nights} reauth=${reauth}`
   );
 }
 

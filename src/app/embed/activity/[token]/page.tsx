@@ -330,6 +330,8 @@ function FullEmbed({
           notes: activity.notes,
           ascent: activity.ascent,
           descent: activity.descent,
+              source: activity.source,
+              device: activity.device,
         }}
         photoIds={[]}
         duration={duration}
