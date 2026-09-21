@@ -156,7 +156,7 @@ export function TourDetailsForm({ tourId, initial, partnerName }: Props) {
               <span
                 className={`${spaceMono.className} mt-0.5 block text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
               >
-                Lesezugriff auf Karte, Stats und Aktivitäten — kein Editieren
+                Kann die Tour mitbearbeiten und eigene Aktivitäten hinzufügen
               </span>
             </span>
           </label>

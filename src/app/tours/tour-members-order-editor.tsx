@@ -25,6 +25,10 @@ import { TourMemberRemoveButton } from "./tour-member-remove-button";
 import { setTourMemberOrder } from "./actions";
 import type { TourActivity } from "./data";
 import {
+  TourParticipantAvatars,
+  hasMultipleParticipants,
+} from "../components/bento/tours/tour-participant-avatars";
+import {
   formatDistanceAuto,
   formatDateLabel,
 } from "@/lib/activity-format";
@@ -53,6 +57,8 @@ export function TourMembersOrderEditor({ tourId, members }: Props) {
       </p>
     );
   }
+
+  const showOwner = hasMultipleParticipants(members);
 
   const dirty =
     items.length !== savedOrder.length ||
@@ -111,6 +117,7 @@ export function TourMembersOrderEditor({ tourId, members }: Props) {
                 tourId={tourId}
                 member={m}
                 position={idx + 1}
+                showOwner={showOwner}
               />
             ))}
           </ul>
@@ -145,10 +152,12 @@ function SortableRow({
   tourId,
   member,
   position,
+  showOwner,
 }: {
   tourId: string;
   member: TourActivity;
   position: number;
+  showOwner: boolean;
 }) {
   const {
     attributes,
@@ -198,6 +207,9 @@ function SortableRow({
           ) : null}
         </div>
       </div>
+      {showOwner ? (
+        <TourParticipantAvatars participants={member.participants} />
+      ) : null}
       <TourMemberRemoveButton
         tourId={tourId}
         activityId={member.id}

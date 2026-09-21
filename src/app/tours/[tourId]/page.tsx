@@ -17,8 +17,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
   getTour,
-  getTourTotals,
-  getTourActivities,
+  getTourStages,
   getTourPhotos,
   tourHasManualOrder,
 } from "../data";
@@ -73,15 +72,15 @@ export default async function TourDetailPage({
   const requestedMode = sp.sort === "date" ? "date" : sp.sort === "manual" ? "manual" : null;
   const sortMode: "date" | "manual" = requestedMode ?? "manual";
 
-  const [tour, totals, members, photos, hasManualOrder] = await Promise.all([
+  const [tour, stageData, photos, hasManualOrder] = await Promise.all([
     getTour(userId, tourId),
-    getTourTotals(userId, tourId),
-    getTourActivities(userId, tourId, sortMode),
+    getTourStages(userId, tourId, sortMode),
     getTourPhotos(userId, tourId),
     tourHasManualOrder(userId, tourId),
   ]);
 
-  if (!tour) notFound();
+  if (!tour || !stageData) notFound();
+  const { stages: members, totals } = stageData;
 
   const isOwner = tour.userId === userId;
   let ownerName: string | null = null;
@@ -122,21 +121,19 @@ export default async function TourDetailPage({
         title={tour.name}
         right={
           <div className="flex items-center gap-3">
-            {isOwner ? (
-              <>
-                <ShareButton
-                  kind="tour"
-                  id={tour.id}
-                  initialToken={tour.shareToken}
-                />
-                <Link
-                  href={`/tours/${tour.id}/edit`}
-                  className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
-                >
-                  Bearbeiten
-                </Link>
-              </>
-            ) : null}
+            {/* Wer die Tour sehen darf, darf sie auch bearbeiten — die
+                Partner:in einer geteilten Tour genauso wie die Besitzer:in. */}
+            <ShareButton
+              kind="tour"
+              id={tour.id}
+              initialToken={tour.shareToken}
+            />
+            <Link
+              href={`/tours/${tour.id}/edit`}
+              className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}
+            >
+              Bearbeiten
+            </Link>
             <Link
               href="/tours"
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}

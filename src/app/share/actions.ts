@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { activities, activityTours } from "@/lib/db/schema";
+import { getTourAccess } from "@/lib/tour-access";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { randomBytes } from "crypto";
@@ -106,12 +107,14 @@ export async function setTourShare(
 ): Promise<string | null> {
   const userId = await requireUserId();
 
+  // Besitzer:in oder Partner:in einer geteilten Tour.
+  if (!(await getTourAccess(userId, tourId))) {
+    throw new Error("Tour nicht gefunden");
+  }
   const rows = await db
     .select({ id: activityTours.id, shareToken: activityTours.shareToken })
     .from(activityTours)
-    .where(
-      and(eq(activityTours.id, tourId), eq(activityTours.userId, userId))
-    )
+    .where(eq(activityTours.id, tourId))
     .limit(1);
   if (rows.length === 0) throw new Error("Tour nicht gefunden");
 
@@ -140,12 +143,14 @@ export async function setTourShare(
 export async function rotateTourShare(tourId: string): Promise<string> {
   const userId = await requireUserId();
 
+  // Besitzer:in oder Partner:in einer geteilten Tour.
+  if (!(await getTourAccess(userId, tourId))) {
+    throw new Error("Tour nicht gefunden");
+  }
   const rows = await db
     .select({ id: activityTours.id, shareToken: activityTours.shareToken })
     .from(activityTours)
-    .where(
-      and(eq(activityTours.id, tourId), eq(activityTours.userId, userId))
-    )
+    .where(eq(activityTours.id, tourId))
     .limit(1);
   if (rows.length === 0) throw new Error("Tour nicht gefunden");
 

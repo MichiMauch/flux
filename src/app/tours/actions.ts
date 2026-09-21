@@ -11,6 +11,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { unlink } from "fs/promises";
 import { getTourCoverPath } from "@/lib/tour-covers";
+import { getTourAccess, type TourAccess } from "@/lib/tour-access";
 
 const NAME_MAX = 120;
 const DESC_MAX = 2000;
@@ -22,15 +23,15 @@ async function requireUserId() {
   return id;
 }
 
-async function requireOwnedTour(userId: string, tourId: string) {
-  const rows = await db
-    .select({ id: activityTours.id })
-    .from(activityTours)
-    .where(
-      and(eq(activityTours.id, tourId), eq(activityTours.userId, userId))
-    )
-    .limit(1);
-  if (rows.length === 0) throw new Error("Tour not found");
+// Besitzer:in und — bei geteilter Tour — Partner:in dürfen gleichermassen
+// bearbeiten. Siehe getTourAccess.
+async function requireTourAccess(
+  userId: string,
+  tourId: string
+): Promise<TourAccess> {
+  const access = await getTourAccess(userId, tourId);
+  if (!access) throw new Error("Tour not found");
+  return access;
 }
 
 function parseDate(v: FormDataEntryValue | null): Date | null {
@@ -77,14 +78,18 @@ export async function updateTour(
   formData: FormData
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedTour(userId, tourId);
+  const access = await requireTourAccess(userId, tourId);
 
   const name = parseName(formData.get("name"));
   const description = parseDescription(formData.get("description"));
   const startDate = parseDate(formData.get("startDate"));
   const endDate = parseDate(formData.get("endDate"));
-  const sharedWithPartner = formData.get("sharedWithPartner") === "on";
   const completed = formData.get("completed") === "on";
+  // Teilen schaltet nur die Besitzer:in — die Partner:in bekommt den Schalter
+  // gar nicht zu sehen und würde sich sonst beim Speichern selbst aussperren.
+  const sharedWithPartner = access.isOwner
+    ? formData.get("sharedWithPartner") === "on"
+    : undefined;
 
   await db
     .update(activityTours)
@@ -93,7 +98,7 @@ export async function updateTour(
       description,
       startDate,
       endDate,
-      sharedWithPartner,
+      ...(sharedWithPartner === undefined ? {} : { sharedWithPartner }),
       completed,
       updatedAt: new Date(),
     })
@@ -106,7 +111,7 @@ export async function updateTour(
 
 export async function deleteTour(tourId: string): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedTour(userId, tourId);
+  await requireTourAccess(userId, tourId);
 
   await db.delete(activityTours).where(eq(activityTours.id, tourId));
   await unlink(getTourCoverPath(tourId)).catch(() => {});
@@ -119,7 +124,7 @@ export async function addActivitiesToTour(
   activityIds: string[]
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedTour(userId, tourId);
+  await requireTourAccess(userId, tourId);
 
   if (activityIds.length === 0) return;
 
@@ -164,7 +169,7 @@ export async function removeActivityFromTour(
   activityId: string
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedTour(userId, tourId);
+  await requireTourAccess(userId, tourId);
 
   await db
     .delete(activityTourMembers)
@@ -184,7 +189,7 @@ export async function setTourMemberOrder(
   activityIds: string[]
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedTour(userId, tourId);
+  const access = await requireTourAccess(userId, tourId);
 
   if (activityIds.length === 0) return;
 
@@ -194,10 +199,19 @@ export async function setTourMemberOrder(
     seen.add(id);
   }
 
+  // Nur die sichtbaren Mitglieder vergleichen: nach dem Ausschalten des
+  // Teilens bleiben die Aktivitäten der Partner:in gespeichert, tauchen im
+  // Editor aber nicht auf.
   const current = await db
     .select({ activityId: activityTourMembers.activityId })
     .from(activityTourMembers)
-    .where(eq(activityTourMembers.tourId, tourId));
+    .innerJoin(activities, eq(activities.id, activityTourMembers.activityId))
+    .where(
+      and(
+        eq(activityTourMembers.tourId, tourId),
+        inArray(activities.userId, access.participantIds)
+      )
+    );
 
   if (current.length !== activityIds.length) {
     throw new Error(
@@ -247,7 +261,7 @@ export async function updateTourCoverPosition(
   y: number
 ): Promise<void> {
   const userId = await requireUserId();
-  await requireOwnedTour(userId, tourId);
+  await requireTourAccess(userId, tourId);
 
   await db
     .update(activityTours)
