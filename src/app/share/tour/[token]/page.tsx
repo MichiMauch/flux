@@ -14,8 +14,7 @@ import { db } from "@/lib/db";
 import { activityTours, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
-  getTourTotals,
-  getTourActivities,
+  getTourStages,
   getTourPhotos,
 } from "@/app/tours/data";
 import { ShareTokenProvider, appendShareToken } from "@/lib/share-context";
@@ -87,11 +86,12 @@ export default async function SharedTourPage({
   if (tourRows.length === 0) notFound();
   const tour = tourRows[0];
 
-  const [totals, members, photos] = await Promise.all([
-    getTourTotals(tour.userId, tour.id),
-    getTourActivities(tour.userId, tour.id, "manual"),
+  const [stageData, photos] = await Promise.all([
+    getTourStages(tour.userId, tour.id, "manual"),
     getTourPhotos(tour.userId, tour.id),
   ]);
+  const members = stageData?.stages ?? [];
+  const totals = stageData?.totals ?? null;
 
   const routes: MultiRouteEntry[] = members
     .filter(

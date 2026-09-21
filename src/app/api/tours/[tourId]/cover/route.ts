@@ -3,7 +3,8 @@ import { writeFile, mkdir, unlink, readFile } from "fs/promises";
 import sharp from "sharp";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { activityTours, users } from "@/lib/db/schema";
+import { activityTours } from "@/lib/db/schema";
+import { getTourAccess } from "@/lib/tour-access";
 import { and, eq } from "drizzle-orm";
 import {
   TOUR_COVERS_PATH,
@@ -14,38 +15,19 @@ import { assertValidImageBuffer, InvalidImageError } from "@/lib/image-validatio
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
-async function loadOwnedTour(userId: string, tourId: string) {
+// Besitzer:in und — bei geteilter Tour — Partner:in dürfen das Cover sehen
+// und ändern (siehe getTourAccess).
+async function loadAccessibleTour(userId: string, tourId: string) {
+  if (!(await getTourAccess(userId, tourId))) return null;
   const rows = await db
     .select({
       id: activityTours.id,
       coverPhotoPath: activityTours.coverPhotoPath,
     })
     .from(activityTours)
-    .where(
-      and(eq(activityTours.id, tourId), eq(activityTours.userId, userId))
-    )
-    .limit(1);
-  return rows[0] ?? null;
-}
-
-async function loadReadableTour(userId: string, tourId: string) {
-  const rows = await db
-    .select({
-      id: activityTours.id,
-      coverPhotoPath: activityTours.coverPhotoPath,
-      ownerId: activityTours.userId,
-      sharedWithPartner: activityTours.sharedWithPartner,
-      ownerPartnerId: users.partnerId,
-    })
-    .from(activityTours)
-    .innerJoin(users, eq(users.id, activityTours.userId))
     .where(eq(activityTours.id, tourId))
     .limit(1);
-  if (rows.length === 0) return null;
-  const r = rows[0];
-  if (r.ownerId === userId) return r;
-  if (r.sharedWithPartner && r.ownerPartnerId === userId) return r;
-  return null;
+  return rows[0] ?? null;
 }
 
 export async function GET(
@@ -76,7 +58,7 @@ export async function GET(
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const tour = await loadReadableTour(session.user.id, tourId);
+    const tour = await loadAccessibleTour(session.user.id, tourId);
     if (!tour) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -110,7 +92,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { tourId } = await params;
-  const tour = await loadOwnedTour(session.user.id, tourId);
+  const tour = await loadAccessibleTour(session.user.id, tourId);
   if (!tour) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -172,7 +154,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { tourId } = await params;
-  const tour = await loadOwnedTour(session.user.id, tourId);
+  const tour = await loadAccessibleTour(session.user.id, tourId);
   if (!tour) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

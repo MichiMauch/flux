@@ -12,6 +12,10 @@ import {
 } from "@/lib/activity-format";
 import { sportColor, NEON } from "@/lib/sport-colors";
 import type { TourActivity } from "@/app/tours/data";
+import {
+  TourParticipantAvatars,
+  hasMultipleParticipants,
+} from "./tour-participant-avatars";
 
 interface BentoTourActivitiesProps {
   members: TourActivity[];
@@ -25,6 +29,9 @@ export function BentoTourActivities({
   tourId,
   interactive = true,
 }: BentoTourActivitiesProps) {
+  // Avatare nur, wenn wirklich zwei Leute in der Tour stecken — bei einer
+  // Solo-Tour wären sie an jeder Etappe dieselben.
+  const showParticipants = hasMultipleParticipants(members);
   return (
     <BentoTile
       label="Aktivitäten"
@@ -64,8 +71,13 @@ export function BentoTourActivities({
                   style={{ backgroundColor: color }}
                 />
                 <div key="body" className="min-w-0 flex-1 space-y-1 md:space-y-2">
-                  <div className="line-clamp-2 text-sm leading-tight text-white md:text-base md:font-medium">
-                    {m.name}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="line-clamp-2 text-sm leading-tight text-white md:text-base md:font-medium">
+                      {m.name}
+                    </div>
+                    {showParticipants ? (
+                      <TourParticipantAvatars participants={m.participants} />
+                    ) : null}
                   </div>
 
                   <div

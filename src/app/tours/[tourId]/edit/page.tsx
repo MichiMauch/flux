@@ -9,7 +9,7 @@ import { BentoPageHeader } from "../../../components/bento/bento-page-header";
 import { spaceMono } from "../../../components/bento/bento-fonts";
 import {
   getTour,
-  getTourActivities,
+  getTourMembers,
 } from "../../data";
 import { TourCoverUploader } from "../../tour-cover-uploader";
 import {
@@ -39,17 +39,17 @@ export default async function EditTourPage({
 
   const { tourId } = await params;
 
-  // Kick off all userId/tourId-scoped queries in parallel. getTourActivities
-  // and the per-user lookups don't depend on the tour ownership check, and
-  // even if the user turns out not to own the tour we'd waste at most a few
-  // cheap user-scoped reads (no data leak — getTourActivities gates on
-  // getReadableOwnerId internally).
+  // Kick off all userId/tourId-scoped queries in parallel. getTourMembers
+  // and the per-user lookups don't depend on the tour access check, and
+  // even if the user turns out to have no access we'd waste at most a few
+  // cheap user-scoped reads (no data leak — getTourMembers gates on
+  // getTourAccess internally).
   // Edit page always shows members in date order so DnD has a stable starting
   // baseline; the viewer-side toggle on /tours/[id] decides whether to honour
   // the saved manual order.
   const [tour, members, meRow, sportRows] = await Promise.all([
     getTour(userId, tourId),
-    getTourActivities(userId, tourId, "date"),
+    getTourMembers(userId, tourId),
     db
       .select({ partnerId: users.partnerId })
       .from(users)
@@ -61,11 +61,10 @@ export default async function EditTourPage({
       .where(eq(activities.userId, userId)),
   ]);
 
+  // getTour gibt nur Touren zurück, die der User sehen darf — und sehen heisst
+  // bei Touren auch bearbeiten (Partner:in einer geteilten Tour eingeschlossen).
   if (!tour) notFound();
-  if (tour.userId !== userId) {
-    // Read-only sharing — non-owners can't edit
-    redirect(`/tours/${tourId}`);
-  }
+  const isOwner = tour.userId === userId;
 
   const memberIds = members.map((m) => m.id);
   const candidateWhere =
@@ -78,7 +77,9 @@ export default async function EditTourPage({
 
   // Second wave: partner detail (depends on meRow) + candidates (depends on
   // memberIds). Independent of each other, so still parallel.
-  const partnerId = meRow[0]?.partnerId ?? null;
+  // Nur die Besitzer:in sieht den Teilen-Schalter; die Partner:in würde sich
+  // damit selbst aussperren.
+  const partnerId = isOwner ? (meRow[0]?.partnerId ?? null) : null;
   const [candidatesRaw, partnerRows] = await Promise.all([
     db
       .select({
@@ -161,6 +162,14 @@ export default async function EditTourPage({
           eigene Reihenfolge bringen und unten speichern — die Tour-Detailseite
           bekommt dann einen Umschalter „Datum / Manuell&ldquo;.
         </p>
+        {tour.sharedWithPartner ? (
+          <p className="text-[11px] text-[#7a7a7a]">
+            Habt ihr eine Etappe zusammen gemacht und beide aufgezeichnet,
+            erscheint sie auf der Tourseite nur einmal — mit den Werten von{" "}
+            {isOwner ? "dir" : "der Besitzer:in der Tour"} und den Fotos von
+            euch beiden.
+          </p>
+        ) : null}
 
         <TourMembersOrderEditor tourId={tour.id} members={members} />
 
