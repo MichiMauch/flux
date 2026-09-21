@@ -54,14 +54,16 @@ export function DonutScope({
   const NEON = "#FF6A00";
   const r2 = (n: number) => Math.round(n * 100) / 100;
 
-  let acc = 0;
-  const arcs = filtered.map((s) => {
+  // Kumulierte Anteile als reiner Fold statt einer mitlaufenden Variable im
+  // map-Callback.
+  const arcs = filtered.reduce<
+    ((typeof filtered)[number] & { start: number; end: number; frac: number })[]
+  >((out, s) => {
     const frac = s.value / total;
-    const start = acc;
-    acc += frac;
-    const end = acc;
-    return { ...s, start, end, frac };
-  });
+    const start = out.length > 0 ? out[out.length - 1].end : 0;
+    out.push({ ...s, start, end: start + frac, frac });
+    return out;
+  }, []);
 
   // Radial ticks every 30°, major ticks every 90°
   const tickAngles = Array.from({ length: 12 }, (_, i) => i * 30);

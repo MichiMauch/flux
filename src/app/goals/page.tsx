@@ -41,7 +41,7 @@ export default async function GoalsPage() {
           <Target className="h-10 w-10 mx-auto text-[#a3a3a3]" />
           <p className="font-semibold text-white">Noch keine Ziele</p>
           <p className="text-sm text-[#9ca3af]">
-            Erstelle dein erstes Ziel — z. B. „1000 km Laufen im Jahr".
+            Erstelle dein erstes Ziel — z. B. „1000 km Laufen im Jahr“.
           </p>
         </div>
       ) : (

@@ -202,6 +202,10 @@ export function ActivityChart({
     });
   }, [routeData, heartRateData, speedData, totalDistance, isRunning, startTime, duration]);
 
+  // Vor dem frühen Return: Hooks müssen bei jedem Render in derselben
+  // Reihenfolge laufen, auch wenn chartData zwischendurch leer ist.
+  const lastHoverIdxRef = useRef<number | null>(null);
+
   if (chartData.length === 0) return null;
 
   const findDistanceAt = (target: Date | null | undefined): number | null => {
@@ -261,7 +265,6 @@ export function ActivityChart({
     return v.toFixed(1);
   };
 
-  const lastHoverIdxRef = useRef<number | null>(null);
   const handleMouseMove = (state: unknown) => {
     const raw = (state as { activeTooltipIndex?: number | string | null } | null | undefined)
       ?.activeTooltipIndex;

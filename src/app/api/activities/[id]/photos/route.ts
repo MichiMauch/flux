@@ -171,7 +171,6 @@ export async function POST(
       if (typeof raw !== "string") return "";
       // Strip control chars (incl. trailing \0 from EXIF Ascii type) and
       // whitespace, uppercase.
-      // eslint-disable-next-line no-control-regex
       return raw.replace(/[^A-Za-z]/g, "").toUpperCase();
     }
     function rationalDmsToDecimal(

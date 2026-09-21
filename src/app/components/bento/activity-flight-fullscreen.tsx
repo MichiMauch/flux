@@ -10,6 +10,7 @@ import {
   type FlightSample,
 } from "@/lib/route-flight";
 import { FlightPlaybackBar, type FlightSpeed } from "./flight-playback-bar";
+import { useIsClient } from "@/lib/hooks/use-is-client";
 
 const FlightMapClient = dynamic(() => import("./flight-map-client"), {
   ssr: false,
@@ -42,9 +43,7 @@ export function ActivityFlightFullscreen({
   routeData,
   color = DEFAULT_NEON,
 }: Props) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useIsClient();
 
   useEffect(() => {
     if (!open) return;

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Lokales Hilfswerkzeug des Mobile-Audits, nicht eingecheckt.
+    ".mobile-audit/**",
   ]),
   {
     rules: {

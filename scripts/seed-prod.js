@@ -1,3 +1,5 @@
+// Reines CommonJS-Script für node ohne Build-Schritt — require ist hier Absicht.
+/* eslint-disable @typescript-eslint/no-require-imports */
 const postgres = require("postgres");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");

@@ -67,13 +67,6 @@ interface PolarExercise {
   "running-index"?: number;
 }
 
-interface PolarGpxPoint {
-  lat: number;
-  lng: number;
-  time?: string;
-  elevation?: number;
-}
-
 // Polar returns `start_time` as wall-clock local time without timezone info
 // (e.g. "2026-04-14T10:30:00.000") plus `start_time_utc_offset` in minutes.
 // `new Date(start_time)` would parse it as server-local time, producing a

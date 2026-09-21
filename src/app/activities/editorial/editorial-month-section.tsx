@@ -21,7 +21,6 @@ interface Props {
 }
 
 export function EditorialMonthSection({ monthKey, index, items }: Props) {
-  let idxInMonth = 0;
   return (
     <section
       id={`month-${monthKey}`}
@@ -36,12 +35,11 @@ export function EditorialMonthSection({ monthKey, index, items }: Props) {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6">
-        {items.map((a) => {
+        {items.map((a, idxInMonth) => {
           const size = sizeFor(a.distance);
           const span = spanFor(size);
           const mirror = size === "hero" ? false : idxInMonth % 2 === 1;
           const reveal = idxInMonth;
-          idxInMonth += 1;
           return (
             <div key={a.id} className={`${span} col-span-1`}>
               <EditorialCard

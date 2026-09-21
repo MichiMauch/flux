@@ -1,8 +1,14 @@
 import Database from "better-sqlite3";
 import postgres from "postgres";
 
+function requireDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL fehlt (z.B. aus .env.local laden)");
+  return url;
+}
+
 const BP_DB_PATH = process.argv[2] || "/Users/michaelmauch/Documents/Development/blood-pressure-tracker/data/blood-pressure.db";
-const PG_URL = process.env.DATABASE_URL || "postgres://flux:flux-prod-2026@localhost:5432/flux";
+const PG_URL = requireDatabaseUrl();
 
 interface BpSession {
   id: number;

@@ -1,15 +1,21 @@
 import postgres from "postgres";
 import { APP_TIME_ZONE } from "../src/lib/activity-format";
 
+function requireDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL fehlt (z.B. aus .env.local laden)");
+  return url;
+}
+
 async function main() {
-  const dbUrl = process.env.DATABASE_URL || "postgres://flux:flux-prod-2026@localhost:5432/flux";
+  const dbUrl = requireDatabaseUrl();
   const sql = postgres(dbUrl, { connect_timeout: 5 });
 
   console.log("=== Polar Sync Test ===\n");
 
   // 1. DB-Verbindung
   try {
-    const result = await sql`SELECT 1 as ok`;
+    await sql`SELECT 1 as ok`;
     console.log("✓ DB-Verbindung OK");
   } catch (e) {
     console.error("✗ DB-Verbindung fehlgeschlagen:", String(e));
@@ -104,7 +110,7 @@ async function main() {
           console.log(`  Aktiv: ${hook.active ? "✓ Ja" : "✗ Nein"}`);
         }
       }
-    } catch (e) {
+    } catch {
       console.log("  ⚠ Webhook-Status konnte nicht geprüft werden");
     }
   }

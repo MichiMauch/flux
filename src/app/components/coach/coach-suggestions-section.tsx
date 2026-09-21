@@ -8,47 +8,55 @@ import { CoachSuggestionList } from "./coach-suggestion-list";
  * It fetches (or regenerates) its own data and renders the Bento tile.
  */
 export async function CoachSuggestionsSection({ userId }: { userId: string }) {
+  // Nur das Laden steht im try: Render-Fehler der Kinder fängt ein try/catch
+  // ohnehin nicht ab, dafür wären Error Boundaries zuständig.
+  let result: Awaited<ReturnType<typeof getOrGenerateSuggestions>>;
   try {
-    const result = await getOrGenerateSuggestions(userId, false);
-    const hasEnoughData = result.context.recentActivities.length >= 1;
-
-    return (
-      <BentoTile label="Coach" title="Vorschläge für die nächsten Tage">
-        {hasEnoughData ? (
-          <CoachSuggestionList
-            initial={{
-              suggestions: result.suggestions,
-              generatedAt: result.generatedAt.toISOString(),
-              model: result.model,
-              cached: result.cached,
-            }}
-          />
-        ) : (
-          <EmptyState />
-        )}
-      </BentoTile>
-    );
+    result = await getOrGenerateSuggestions(userId, false);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
     console.error("[CoachSuggestionsSection] error:", message);
     if (stack) console.error(stack);
-    const isDev = process.env.NODE_ENV !== "production";
-    return (
-      <BentoTile label="Coach" title="Vorschläge">
-        <div
-          className={`${spaceMono.className} text-xs text-[#a3a3a3] py-6 text-center`}
-        >
-          Der Coach ist gerade nicht erreichbar. Probier es später nochmal.
-          {isDev && (
-            <pre className="mt-3 text-left text-[10px] text-[#EF4444] whitespace-pre-wrap">
-              {message}
-            </pre>
-          )}
-        </div>
-      </BentoTile>
-    );
+    return <ErrorState message={message} />;
   }
+
+  const hasEnoughData = result.context.recentActivities.length >= 1;
+
+  return (
+    <BentoTile label="Coach" title="Vorschläge für die nächsten Tage">
+      {hasEnoughData ? (
+        <CoachSuggestionList
+          initial={{
+            suggestions: result.suggestions,
+            generatedAt: result.generatedAt.toISOString(),
+            model: result.model,
+            cached: result.cached,
+          }}
+        />
+      ) : (
+        <EmptyState />
+      )}
+    </BentoTile>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  const isDev = process.env.NODE_ENV !== "production";
+  return (
+    <BentoTile label="Coach" title="Vorschläge">
+      <div
+        className={`${spaceMono.className} text-xs text-[#a3a3a3] py-6 text-center`}
+      >
+        Der Coach ist gerade nicht erreichbar. Probier es später nochmal.
+        {isDev && (
+          <pre className="mt-3 text-left text-[10px] text-[#EF4444] whitespace-pre-wrap">
+            {message}
+          </pre>
+        )}
+      </div>
+    </BentoTile>
+  );
 }
 
 function EmptyState() {
