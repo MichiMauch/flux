@@ -339,6 +339,12 @@ function civilDateTime(d: Date) {
  *  3. Nichts vor dem Stichtag. GPS ist bewusst KEIN Kriterium: Yoga von der
  *     Uhr hat nie welches und soll trotzdem rein.
  */
+/**
+ * Kürzeste Aktivität, die noch importiert wird. Alles darunter ist ein
+ * versehentlich gestartetes Training.
+ */
+export const MIN_EXERCISE_SECONDS = 60;
+
 export function rejectImportReason(
   p: GoogleExercise,
   since: Date | null
@@ -355,6 +361,19 @@ export function rejectImportReason(
   const start = p.exercise?.interval?.startTime;
   if (!start) return "kein Startzeitpunkt";
   if (since && new Date(start) < since) return `vor dem Stichtag (${start.slice(0, 10)})`;
+
+  // Die Uhr legt gelegentlich ein Training an, das sofort wieder beendet wird
+  // — ein Fehlgriff am Handgelenk. Solche Schnipsel haben keinen Wert, tauchen
+  // aber in Listen, Statistiken und Streaks auf.
+  const end = p.exercise?.interval?.endTime;
+  const elapsed = end
+    ? Math.round((new Date(end).getTime() - new Date(start).getTime()) / 1000)
+    : null;
+  const active = parseGoogleDuration(p.exercise?.activeDuration);
+  const longest = Math.max(elapsed ?? 0, active);
+  if (longest < MIN_EXERCISE_SECONDS) {
+    return `zu kurz (${longest}s, Minimum ${MIN_EXERCISE_SECONDS}s)`;
+  }
   return null;
 }
 
