@@ -78,6 +78,10 @@ function extract(
 const NEON = "#FF6A00";
 
 export function SleepHrChart({ samples, sleepStart }: SleepHrChartProps) {
+  // Vor dem frühen Return für leere Daten — Hooks brauchen eine feste
+  // Reihenfolge über alle Renders.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const data = extract(samples, sleepStart ?? null);
   if (data.length < 2) {
     return (
@@ -138,8 +142,6 @@ export function SleepHrChart({ samples, sleepStart }: SleepHrChartProps) {
   }
 
   const last = data[data.length - 1];
-  const svgRef = useRef<SVGSVGElement>(null);
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   const handleMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;

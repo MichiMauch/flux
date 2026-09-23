@@ -1,7 +1,13 @@
 import postgres from "postgres";
 
+function requireDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL fehlt (z.B. aus .env.local laden)");
+  return url;
+}
+
 const sql = postgres(
-  process.env.DATABASE_URL || "postgres://flux:flux-prod-2026@localhost:5432/flux"
+  requireDatabaseUrl()
 );
 
 async function main() {

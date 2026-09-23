@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { AppTopBar } from "./app-top-bar";
 import { AppSidebar } from "./app-sidebar";
 import { AppBottomNav } from "./app-bottom-nav";
@@ -9,6 +9,38 @@ import { SearchPanel } from "../search/search-panel";
 import type { NotificationItem } from "./notification-bell";
 
 const STORAGE_KEY = "flux.sidebar";
+// Eigenes Event, weil "storage" nur in anderen Tabs feuert.
+const SIDEBAR_EVENT = "flux:sidebar";
+
+// Der eingeklappte Zustand lebt in localStorage; die Komponente liest ihn als
+// externen Store. Beim Server-Render und bei der Hydration gilt "offen".
+// Ist localStorage gesperrt (privates Fenster), bleibt der Zustand im Speicher.
+let memoryCollapsed = false;
+
+function readSidebarCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "collapsed";
+  } catch {
+    return memoryCollapsed;
+  }
+}
+
+function writeSidebarCollapsed(collapsed: boolean) {
+  memoryCollapsed = collapsed;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, collapsed ? "collapsed" : "expanded");
+  } catch {}
+  window.dispatchEvent(new Event(SIDEBAR_EVENT));
+}
+
+function subscribeSidebar(onChange: () => void) {
+  window.addEventListener(SIDEBAR_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(SIDEBAR_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
 
 interface AppShellClientProps {
   userName: string;
@@ -31,25 +63,16 @@ export function AppShellClient({
   initialUnreadNotifications,
   children,
 }: AppShellClientProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSyncExternalStore(
+    subscribeSidebar,
+    readSidebarCollapsed,
+    () => false
+  );
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored === "collapsed") setCollapsed(true);
-    } catch {}
-  }, []);
-
   const toggleSidebar = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? "collapsed" : "expanded");
-      } catch {}
-      return next;
-    });
+    writeSidebarCollapsed(!readSidebarCollapsed());
   }, []);
 
   const mainPadding = collapsed ? "lg:pl-20" : "lg:pl-60";

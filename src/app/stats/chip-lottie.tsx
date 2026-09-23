@@ -13,20 +13,23 @@ interface ChipLottieProps {
 const cache = new Map<string, object>();
 
 export function ChipLottie({ file, tint, size = 18 }: ChipLottieProps) {
-  const [raw, setRaw] = useState<object | null>(() => cache.get(file) ?? null);
+  // Geladene Datei samt Namen merken: wechselt `file`, gilt der alte Stand
+  // automatisch nicht mehr, ohne dass der Effect synchron zurücksetzen muss.
+  const [loaded, setLoaded] = useState<{ file: string; json: object } | null>(
+    null
+  );
+  const raw =
+    cache.get(file) ?? (loaded?.file === file ? loaded.json : null);
 
   useEffect(() => {
-    if (cache.has(file)) {
-      setRaw(cache.get(file)!);
-      return;
-    }
+    if (cache.has(file)) return;
     let cancelled = false;
     fetch(`/lottie/${file}.json`)
       .then((r) => r.json())
       .then((json) => {
         if (cancelled) return;
         cache.set(file, json);
-        setRaw(json);
+        setLoaded({ file, json });
       })
       .catch(() => {});
     return () => {

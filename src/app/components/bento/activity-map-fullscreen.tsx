@@ -14,6 +14,7 @@ import { computeClimbs } from "@/lib/climbs";
 import { HoverProvider, kmFromSelectionKey, useHover } from "./hover-context";
 import { BentoElevationChart } from "./bento-elevation-chart";
 import { KilometerList } from "./kilometer-list";
+import { useIsClient } from "@/lib/hooks/use-is-client";
 
 const BentoMapClient = dynamic(() => import("./bento-map-client"), {
   ssr: false,
@@ -50,9 +51,7 @@ export function ActivityMapFullscreen({
   photos = [],
   color,
 }: Props) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useIsClient();
 
   // ESC closes the overlay.
   useEffect(() => {

@@ -66,13 +66,6 @@ export function RouteAnalysis({
   const hasHr = heartRateData.length > 0;
   const hasSpeed = speedData.length > 0;
 
-  if (routeData.length === 0) return null;
-
-  const highlightRange: [number, number] | null =
-    selectedKm != null && splits[selectedKm - 1]
-      ? [splits[selectedKm - 1].startIdx, splits[selectedKm - 1].endIdx]
-      : null;
-
   // Lap highlights (only for ≥3 splits)
   const highlights = useMemo(() => {
     if (splits.length < 3) return null;
@@ -92,6 +85,14 @@ export function RouteAnalysis({
     }, null as (typeof splits)[number] | null);
     return { fastest, hottest, steepest };
   }, [splits]);
+
+  if (routeData.length === 0) return null;
+
+  const highlightRange: [number, number] | null =
+    selectedKm != null && splits[selectedKm - 1]
+      ? [splits[selectedKm - 1].startIdx, splits[selectedKm - 1].endIdx]
+      : null;
+
 
   const MAP_HEIGHT = 460;
 

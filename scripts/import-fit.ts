@@ -3,7 +3,43 @@ import FitParser from "fit-file-parser";
 import postgres from "postgres";
 import { basename } from "path";
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgres://flux:flux-prod-2026@localhost:5432/flux";
+function requireDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL fehlt (z.B. aus .env.local laden)");
+  return url;
+}
+
+const DATABASE_URL = requireDatabaseUrl();
+
+// Nur die Felder, die dieses Script liest. fit-file-parser liefert untypisierte
+// Objekte; Längen kommen wegen lengthUnit "km" in Kilometern.
+interface FitRecord {
+  timestamp?: string;
+  position_lat?: number;
+  position_long?: number;
+  altitude?: number;
+  heart_rate?: number;
+  speed?: number;
+  enhanced_speed?: number;
+}
+
+interface FitSession {
+  start_time?: string;
+  sport?: string;
+  sub_sport?: string;
+  total_distance?: number;
+  total_elapsed_time?: number;
+  total_ascent?: number;
+  total_descent?: number;
+  total_calories?: number;
+  avg_heart_rate?: number;
+  max_heart_rate?: number;
+}
+
+interface FitData {
+  sessions?: FitSession[];
+  records?: FitRecord[];
+}
 
 async function importFit(filePath: string, userId: string) {
   const sql = postgres(DATABASE_URL);
@@ -11,11 +47,11 @@ async function importFit(filePath: string, userId: string) {
   console.log(`\nParsing ${basename(filePath)}...`);
   const buf = readFileSync(filePath);
 
-  const data = await new Promise<any>((resolve, reject) => {
+  const data = await new Promise<FitData>((resolve, reject) => {
     const parser = new FitParser({ force: true, speedUnit: "km/h", lengthUnit: "km", elapsedRecordField: true });
-    parser.parse(buf, (err: unknown, data: any) => {
-      if (err) reject(err);
-      else resolve(data);
+    parser.parse(buf, (err, data) => {
+      if (err || !data) reject(err ?? new Error("FIT-Datei ohne Inhalt"));
+      else resolve(data as unknown as FitData);
     });
   });
 
@@ -27,14 +63,14 @@ async function importFit(filePath: string, userId: string) {
   }
 
   // Sample records (max ~500 points)
-  const records = data.records || [];
+  const records: FitRecord[] = data.records || [];
   const sampleRate = Math.max(1, Math.floor(records.length / 500));
-  const sampled = records.filter((_: any, i: number) => i % sampleRate === 0);
+  const sampled = records.filter((_: FitRecord, i: number) => i % sampleRate === 0);
 
   // Build route data
   const routeData = sampled
-    .filter((r: any) => r.position_lat != null && r.position_long != null)
-    .map((r: any) => ({
+    .filter((r: FitRecord) => r.position_lat != null && r.position_long != null)
+    .map((r: FitRecord) => ({
       lat: r.position_lat,
       lng: r.position_long,
       elevation: r.altitude ?? null,
@@ -43,13 +79,13 @@ async function importFit(filePath: string, userId: string) {
 
   // Build HR data
   const heartRateData = sampled
-    .filter((r: any) => r.heart_rate != null && r.timestamp)
-    .map((r: any) => ({ time: r.timestamp, bpm: r.heart_rate }));
+    .filter((r: FitRecord) => r.heart_rate != null && r.timestamp)
+    .map((r: FitRecord) => ({ time: r.timestamp, bpm: r.heart_rate }));
 
   // Build speed data
   const speedData = sampled
-    .filter((r: any) => (r.speed != null || r.enhanced_speed != null) && r.timestamp)
-    .map((r: any) => ({ time: r.timestamp, speed: Math.round((r.enhanced_speed ?? r.speed) * 10) / 10 }));
+    .filter((r: FitRecord) => (r.speed != null || r.enhanced_speed != null) && r.timestamp)
+    .map((r: FitRecord) => ({ time: r.timestamp, speed: Math.round((r.enhanced_speed ?? r.speed ?? 0) * 10) / 10 }));
 
   const startTime = session.start_time ? new Date(session.start_time) : new Date();
   const sport = session.sport?.toUpperCase() || "OTHER";

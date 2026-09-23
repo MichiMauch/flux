@@ -56,7 +56,7 @@ export async function BentoDashboardHero({ userId }: { userId: string }) {
         <div
           className={`${spaceMono.className} text-xs text-[#a3a3a3] max-w-[280px]`}
         >
-          Verbinde deinen Polar-Account und klicke oben auf „Sync", um die erste Aktivität zu laden.
+          Verbinde deinen Polar-Account und klicke oben auf „Sync“, um die erste Aktivität zu laden.
         </div>
       </div>
     );

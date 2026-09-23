@@ -20,7 +20,7 @@ async function main() {
     console.log(`Backfilling ${todo.length} activities…`);
 
     let written = 0;
-    let skipped = 0;
+    const skipped = 0;
     let dropped = 0;
     const t0 = Date.now();
     for (const { id } of todo) {

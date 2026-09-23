@@ -155,7 +155,7 @@ export default function BentoMapClient({
       map.remove();
       mapRef.current = null;
     };
-  }, [routeData]);
+  }, [routeData, NEON]);
 
   // Photo markers
   useEffect(() => {
@@ -178,7 +178,7 @@ export default function BentoMapClient({
         });
       photoMarkersRef.current.push(m);
     }
-  }, [photos, showPhotos, shareToken]);
+  }, [photos, showPhotos, shareToken, NEON]);
 
   // Highlight range polyline
   useEffect(() => {
@@ -230,7 +230,7 @@ export default function BentoMapClient({
     } else {
       hoverMarkerRef.current.setLatLng(pos);
     }
-  }, [hoverIdx, routeData]);
+  }, [hoverIdx, routeData, NEON]);
 
   return (
     <div className="relative h-full w-full isolate">
