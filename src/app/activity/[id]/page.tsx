@@ -195,6 +195,8 @@ export default async function ActivityBentoPage({
           totalDuration={totalDuration}
           distanceKm={distanceKm}
           ascent={ascent}
+          avgHr={avgHr}
+          maxHr={maxHr}
           calories={calories}
           boostable={!isOwner}
           boostedByMe={boostedByMe}

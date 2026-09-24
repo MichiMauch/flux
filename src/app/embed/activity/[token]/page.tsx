@@ -338,6 +338,8 @@ function FullEmbed({
         totalDuration={totalDuration}
         distanceKm={distanceKm}
         ascent={ascent}
+        avgHr={activity.avgHeartRate}
+        maxHr={activity.maxHeartRate}
         calories={activity.calories}
         boostable={false}
         boostedByMe={false}
