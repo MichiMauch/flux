@@ -83,7 +83,12 @@ export function ActivityDetailBody({
 
   return (
     <HoverProvider>
-      <div className="grid gap-3 lg:grid-cols-2 items-start">
+      {/* Mit Karte tragen zwei Spalten: links die Route, rechts die Zahlen.
+          Ohne Karte hat die linke Spalte nichts zu zeigen und hinterliesse
+          eine leere Haelfte — dann stapelt alles in einer Spalte. */}
+      <div
+        className={`grid gap-3 items-start ${terrain ? "lg:grid-cols-2" : ""}`}
+      >
         <div className="flex flex-col gap-3">
           {!terrain ? null : route.length > 0 ? (
             <BentoRouteInteractive
@@ -166,20 +171,26 @@ export function ActivityDetailBody({
           {terrain && <BentoClimbsTile climbs={climbs} isRunning={isRunning} />}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <StatTile
-              icon={<Heart />}
-              label="Ø Puls"
-              value={fmt(avgHr)}
-              unit="bpm"
-              className="order-1 sm:order-1"
-            />
-            <StatTile
-              icon={<Heart />}
-              label="Max Puls"
-              value={fmt(maxHr)}
-              unit="bpm"
-              className="order-2 sm:order-2"
-            />
+            {/* Ohne Gelände stehen die beiden Pulswerte oben im Hero, wo
+                sonst Distanz und Aufstieg sitzen — hier wären sie doppelt. */}
+            {terrain && (
+              <>
+                <StatTile
+                  icon={<Heart />}
+                  label="Ø Puls"
+                  value={fmt(avgHr)}
+                  unit="bpm"
+                  className="order-1 sm:order-1"
+                />
+                <StatTile
+                  icon={<Heart />}
+                  label="Max Puls"
+                  value={fmt(maxHr)}
+                  unit="bpm"
+                  className="order-2 sm:order-2"
+                />
+              </>
+            )}
             {terrain && (
               <StatTile
                 icon={<TrendingDown />}
@@ -205,13 +216,17 @@ export function ActivityDetailBody({
               }
               className="order-6 sm:order-5"
             />
-            <StatTile
-              icon={<ActivityIcon />}
-              label="Ø Tempo"
-              value={fmt(avgSpeed, 1)}
-              unit="km/h"
-              className="order-4 sm:order-6"
-            />
+            {/* Ø Tempo kommt aus der Distanz — im Kraftraum und auf der
+                Yogamatte gibt es nichts zu mitteln. */}
+            {terrain && (
+              <StatTile
+                icon={<ActivityIcon />}
+                label="Ø Tempo"
+                value={fmt(avgSpeed, 1)}
+                unit="km/h"
+                className="order-4 sm:order-6"
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -1,4 +1,4 @@
-import { Clock, Flame, Mountain, Ruler } from "lucide-react";
+import { Clock, Flame, Heart, Mountain, Ruler } from "lucide-react";
 import { ActivityActionsMenu } from "@/app/components/activity-actions-menu";
 import { BoostButton, type Booster } from "@/app/components/boost-button";
 import { rajdhani, spaceMono } from "@/app/components/bento/bento-fonts";
@@ -37,6 +37,8 @@ interface Props {
   totalDuration: number | null;
   distanceKm: string;
   ascent: number | null;
+  avgHr: number | null;
+  maxHr: number | null;
   calories: number | null;
   boostable: boolean;
   boostedByMe: boolean;
@@ -55,6 +57,8 @@ export function ActivityDetailHero({
   totalDuration,
   distanceKm,
   ascent,
+  avgHr,
+  maxHr,
   calories,
   boostable,
   boostedByMe,
@@ -63,7 +67,10 @@ export function ActivityDetailHero({
   personalBests,
 }: Props) {
   const showBoost = boostable || boosters.length > 0;
-  // Yoga hat keinen Auf-/Abstieg — die Kachel fällt weg, das Raster rückt auf 3.
+  // Yoga und Krafttraining kennen weder Distanz noch Aufstieg. Statt zwei
+  // Kacheln mit "0.00 km" und "– m" stehen dort die beiden Pulswerte, die
+  // sonst weiter unten im Raster sitzen — sie sind bei diesen Sportarten das
+  // Einzige, woran man die Belastung ablesen kann.
   const terrain = showsTerrain(activity.type);
   // Woher die Daten kommen. Bei zwei Uhren nebeneinander ist das keine
   // Nebensaechlichkeit — man will sehen, welche eine Aktivitaet aufgezeichnet hat.
@@ -126,11 +133,7 @@ export function ActivityDetailHero({
           borderColor: HERO_BORDER,
         }}
       >
-        <div
-          className={`grid grid-cols-2 gap-4 items-start ${
-            terrain ? "md:grid-cols-4" : "md:grid-cols-3"
-          }`}
-        >
+        <div className="grid grid-cols-2 gap-4 items-start md:grid-cols-4">
           <SevenSegTile
             icon={<Clock />}
             value={duration > 0 ? formatDurationHMS(duration) : "–"}
@@ -141,19 +144,36 @@ export function ActivityDetailHero({
                 : undefined
             }
           />
-          <SevenSegTile
-            icon={<Ruler />}
-            value={distanceKm}
-            suffix="km"
-            label="Distanz"
-          />
-          {terrain && (
-            <SevenSegTile
-              icon={<Mountain />}
-              value={fmt(ascent)}
-              suffix="m"
-              label="Aufstieg"
-            />
+          {terrain ? (
+            <>
+              <SevenSegTile
+                icon={<Ruler />}
+                value={distanceKm}
+                suffix="km"
+                label="Distanz"
+              />
+              <SevenSegTile
+                icon={<Mountain />}
+                value={fmt(ascent)}
+                suffix="m"
+                label="Aufstieg"
+              />
+            </>
+          ) : (
+            <>
+              <SevenSegTile
+                icon={<Heart />}
+                value={fmt(avgHr)}
+                suffix="bpm"
+                label="Ø Puls"
+              />
+              <SevenSegTile
+                icon={<Heart />}
+                value={fmt(maxHr)}
+                suffix="bpm"
+                label="Max Puls"
+              />
+            </>
           )}
           <SevenSegTile
             icon={<Flame />}
