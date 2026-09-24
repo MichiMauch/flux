@@ -96,6 +96,11 @@ export function sportLabel(type: string): string {
   if (t === "SWIMMING") return "Schwimmen";
   if (t === "YOGA") return "Yoga";
   if (t === "PILATES") return "Pilates";
+  if (t === "STRENGTH_TRAINING") return "Kraft";
+  if (t === "CORE") return "Core";
+  if (t === "TRAIL_RUNNING") return "Trail";
+  if (t === "SNOWSHOE_TREKKING") return "Schneeschuh";
+  if (t === "BALANCE_BOARD") return "Balance Board";
   if (t === "OTHER_INDOOR") return "Indoor";
   if (t === "OTHER_OUTDOOR") return "Outdoor";
   return type;

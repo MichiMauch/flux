@@ -90,7 +90,8 @@ export function activityTypeColor(type: string): string {
   if (t.includes("HIK") || t.includes("TREK")) return "#39FF14";
   if (t.includes("WALK")) return "#FFD700";
   if (t.includes("SWIM") || t.includes("BALANCE")) return "#00A8FF"; // blue
-  if (t.includes("INDOOR") || t.includes("STRENGTH") || t.includes("CORE")) return "#FF4DD2"; // magenta
+  if (t.includes("STRENGTH") || t.includes("WEIGHT")) return "#FF3B30"; // neon red — Eisen
+  if (t.includes("INDOOR") || t.includes("CORE")) return "#FF4DD2"; // magenta
   return "#B026FF";
 }
 
@@ -100,10 +101,11 @@ export function activityTypeColor(type: string): string {
  * Höhenbereich) ausgeblendet — auch wenn das Gerät zufällig Werte geliefert
  * hat, denn 3 Höhenmeter im Yogaraum sind Messrauschen, keine Information.
  *
- * Bewusst nur YOGA. Andere Indoor-Typen (CORE, STRENGTH_TRAINING …) bleiben
- * vorerst aussen vor; die Liste wird nur auf Zuruf erweitert.
+ * YOGA und STRENGTH_TRAINING: beides findet auf der Matte bzw. im Kraftraum
+ * statt, eine Karte gibt es dort nicht zu zeigen. CORE und die OTHER_*-Typen
+ * bleiben vorerst aussen vor; die Liste wird nur auf Zuruf erweitert.
  */
-const TYPES_WITHOUT_TERRAIN = ["YOGA"];
+const TYPES_WITHOUT_TERRAIN = ["YOGA", "STRENGTH_TRAINING"];
 
 export function showsTerrain(type: string | null | undefined): boolean {
   if (!type) return true;

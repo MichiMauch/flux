@@ -249,6 +249,12 @@ const KNOWN_DETAILED_SPORTS = [
   "JOGGING",
   "SWIMMING",
   "TREKKING",
+  // 2026-09-24, Sibylle, Polar Grit X Pro: sport=OTHER,
+  // detailed_sport_info=STRENGTH_TRAINING — ohne den Eintrag landete die
+  // Einheit als "Sonstiges" im Stream.
+  "STRENGTH_TRAINING",
+  "CORE",
+  "YOGA",
 ];
 
 /**
@@ -267,6 +273,8 @@ export function normalizePolarType(
   if (d.includes("HIK") || d.includes("TREK")) return "HIKING";
   if (d.includes("RUN") || d.includes("JOG")) return "RUNNING";
   if (d.includes("CYCL") || d.includes("BIK")) return "CYCLING";
+  if (d.includes("STRENGTH") || d.includes("WEIGHT") || d.includes("GYM"))
+    return "STRENGTH_TRAINING";
   return s || "OTHER";
 }
 

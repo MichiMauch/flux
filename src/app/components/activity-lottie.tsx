@@ -11,6 +11,7 @@ type LottieType =
   | "running"
   | "outdoor"
   | "yoga-pose"
+  | "weightlifting"
   | "indoor"
   | "balance-board";
 
@@ -22,7 +23,8 @@ function pickLottie(type: string, name?: string | null): LottieType {
   if (t.includes("HIK") || t.includes("TREK") || t.includes("MOUNTAIN")) return "hiking";
   if (t.includes("RUN") || t.includes("JOG")) return "running";
   if (t.includes("WALK")) return "walk";
-  if (t.includes("INDOOR") || t.includes("STRENGTH") || t.includes("CORE")) return "indoor";
+  if (t.includes("STRENGTH") || t.includes("WEIGHT")) return "weightlifting";
+  if (t.includes("INDOOR") || t.includes("CORE")) return "indoor";
   // Nur bei generischen Typen den Namen als Fallback heranziehen, damit
   // z. B. "Runde um Muhen" (WALKING) nicht via "RUN"-Substring zum
   // running-Icon mutiert.
@@ -34,7 +36,9 @@ function pickLottie(type: string, name?: string | null): LottieType {
     if (n.includes("HIK") || n.includes("TREK") || n.includes("MOUNTAIN")) return "hiking";
     if (n.includes("RUN") || n.includes("JOG")) return "running";
     if (n.includes("WALK")) return "walk";
-    if (t === "OTHER_INDOOR" || n.includes("INDOOR") || n.includes("STRENGTH") || n.includes("CORE")) return "indoor";
+    if (n.includes("KRAFT") || n.includes("STRENGTH") || n.includes("WEIGHT") || n.includes("GYM"))
+      return "weightlifting";
+    if (t === "OTHER_INDOOR" || n.includes("INDOOR") || n.includes("CORE")) return "indoor";
   }
   return "outdoor";
 }

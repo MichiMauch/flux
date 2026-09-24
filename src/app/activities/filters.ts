@@ -36,5 +36,6 @@ export function sportLottie(type: string): string | null {
   if (t === "WALKING") return "walk";
   if (t === "HIKING" || t === "SNOWSHOE_TREKKING") return "hiking";
   if (t === "YOGA" || t === "PILATES") return "yoga-pose";
+  if (t === "STRENGTH_TRAINING") return "weightlifting";
   return null;
 }
