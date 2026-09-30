@@ -104,6 +104,38 @@ function findSegment(
   return { i, t };
 }
 
+function lngLatAtDistance(
+  track: FlightTrack,
+  distanceM: number,
+): [number, number] {
+  const target = Math.max(0, Math.min(track.totalDistance, distanceM));
+  const { i, t } = findSegment(track.distanceFromStart, target);
+  const a = track.points[i - 1];
+  const b = track.points[i];
+  return [a.lng + (b.lng - a.lng) * t, a.lat + (b.lat - a.lat) * t];
+}
+
+/**
+ * Camera target: average of track positions within ±windowM around
+ * distanceM. Irons out GPS zig-zag without lagging behind the marker.
+ */
+export function smoothedCenterAt(
+  track: FlightTrack,
+  distanceM: number,
+  windowM = 40,
+  steps = 9,
+): [number, number] {
+  let lng = 0;
+  let lat = 0;
+  for (let k = 0; k < steps; k++) {
+    const offset = -windowM + (2 * windowM * k) / (steps - 1);
+    const [pLng, pLat] = lngLatAtDistance(track, distanceM + offset);
+    lng += pLng;
+    lat += pLat;
+  }
+  return [lng / steps, lat / steps];
+}
+
 export function sampleAlongTrack(
   track: FlightTrack,
   progress: number,

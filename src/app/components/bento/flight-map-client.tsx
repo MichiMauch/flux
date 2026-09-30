@@ -5,16 +5,20 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import {
   sampleAlongTrack,
+  smoothedCenterAt,
   type FlightTrack,
   type FlightSample,
 } from "@/lib/route-flight";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const BLEND_MS = 1200;
 
 interface Props {
   track: FlightTrack;
   color: string;
   progress: number;
+  /** Playback position for a given rAF timestamp (shared clock). */
+  getProgress: (now: number) => number;
   playing: boolean;
   followCamera: boolean;
   isMobile: boolean;
@@ -35,6 +39,7 @@ export default function FlightMapClient({
   track,
   color,
   progress,
+  getProgress,
   playing,
   followCamera,
   isMobile,
@@ -44,26 +49,12 @@ export default function FlightMapClient({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const flyMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const smoothBearingRef = useRef<number | null>(null);
-  const followRef = useRef(followCamera);
-  const playingRef = useRef(playing);
-  const lastCameraUpdateMs = useRef(0);
   const onSampleRef = useRef(onSample);
   const styleLoadedRef = useRef(false);
 
   useEffect(() => {
     onSampleRef.current = onSample;
   }, [onSample]);
-
-  useEffect(() => {
-    followRef.current = followCamera;
-    lastCameraUpdateMs.current = 0;
-    smoothBearingRef.current = null;
-  }, [followCamera]);
-
-  useEffect(() => {
-    playingRef.current = playing;
-  }, [playing]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -230,51 +221,92 @@ export default function FlightMapClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track, isMobile]);
 
-  // Update marker + camera on progress change
+  // Paused / scrubbing: position the marker from the progress prop.
   useEffect(() => {
-    const map = mapRef.current;
+    if (playing) return;
     const marker = flyMarkerRef.current;
-    if (!map || !marker) return;
+    if (!mapRef.current || !marker) return;
     const sample = sampleAlongTrack(track, progress, 80, 25);
     marker.setLngLat([sample.lng, sample.lat]);
     onSampleRef.current?.(sample);
+  }, [progress, playing, track]);
 
-    if (followRef.current && playingRef.current) {
-      const now = performance.now();
-      if (now - lastCameraUpdateMs.current < 33) return;
-      lastCameraUpdateMs.current = now;
-      const target = sample.bearingDeg;
-      const current = smoothBearingRef.current;
-      const smoothed =
-        current === null ? target : lerpAngle(current, target, 0.06);
-      smoothBearingRef.current = smoothed;
-      map.jumpTo({
-        center: [sample.lng, sample.lat],
-        bearing: smoothed,
-        pitch: isMobile ? 55 : 65,
-        zoom: 15,
-      });
-    }
-  }, [progress, track, isMobile]);
-
-  // When play starts, fly to the current position smoothly
+  // Playing: own render loop, one camera update per display frame.
   useEffect(() => {
     if (!playing) return;
     const map = mapRef.current;
-    if (!map || !followCamera) return;
-    const sample = sampleAlongTrack(track, progress, 80, 25);
-    smoothBearingRef.current = sample.bearingDeg;
-    lastCameraUpdateMs.current = performance.now() + 1500;
-    map.flyTo({
-      center: [sample.lng, sample.lat],
-      bearing: sample.bearingDeg,
-      pitch: isMobile ? 55 : 65,
-      zoom: 15,
-      duration: 1400,
-      essential: true,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, followCamera]);
+    if (!map) return;
+
+    const pitch = isMobile ? 55 : 65;
+    const zoom = 15;
+    let raf: number | null = null;
+    let lastNow: number | null = null;
+    let lastSampleEmit = 0;
+    let bearing: number | null = null;
+    // Blend from wherever the camera is into the follow view.
+    let blendFrom: {
+      center: mapboxgl.LngLat;
+      zoom: number;
+      pitch: number;
+      bearing: number;
+    } | null = null;
+    let blendStart: number | null = null;
+
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame);
+      const marker = flyMarkerRef.current;
+      if (!marker) return;
+      const dt = lastNow == null ? 0 : Math.min(0.1, (now - lastNow) / 1000);
+      lastNow = now;
+
+      const progressNow = getProgress(now);
+      const sample = sampleAlongTrack(track, progressNow, 150, 50);
+      marker.setLngLat([sample.lng, sample.lat]);
+      if (now - lastSampleEmit >= 100) {
+        lastSampleEmit = now;
+        onSampleRef.current?.(sample);
+      }
+
+      if (!followCamera) return;
+
+      // Frame-rate independent smoothing (time constant ~0.8 s).
+      const alpha = 1 - Math.exp(-dt / 0.8);
+      bearing =
+        bearing === null
+          ? sample.bearingDeg
+          : lerpAngle(bearing, sample.bearingDeg, alpha);
+      const center = smoothedCenterAt(track, sample.distanceM, 40);
+
+      if (blendFrom === null) {
+        blendFrom = {
+          center: map.getCenter(),
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        };
+        blendStart = now;
+      }
+      const t = Math.min(1, (now - (blendStart ?? now)) / BLEND_MS);
+      if (t < 1) {
+        const e = t * t * (3 - 2 * t);
+        map.jumpTo({
+          center: [
+            blendFrom.center.lng + (center[0] - blendFrom.center.lng) * e,
+            blendFrom.center.lat + (center[1] - blendFrom.center.lat) * e,
+          ],
+          zoom: blendFrom.zoom + (zoom - blendFrom.zoom) * e,
+          pitch: blendFrom.pitch + (pitch - blendFrom.pitch) * e,
+          bearing: lerpAngle(blendFrom.bearing, bearing, e),
+        });
+        return;
+      }
+      map.jumpTo({ center, bearing, pitch, zoom });
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      if (raf != null) cancelAnimationFrame(raf);
+    };
+  }, [playing, followCamera, track, isMobile, getProgress]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

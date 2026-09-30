@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { X } from "lucide-react";
@@ -111,58 +111,60 @@ function FlightContent({
     return SPEED_DURATION_SEC[speed];
   }, [speed, track]);
 
-  const rafRef = useRef<number | null>(null);
-  const lastTickRef = useRef<number | null>(null);
+  // Playback clock: progress is derived from wall time, so the map's own
+  // render loop and the UI read the exact same value for a given frame.
+  const clockRef = useRef({ progress: 0, at: 0, durationSec, running: false });
+
+  const getProgress = useCallback((now: number) => {
+    const c = clockRef.current;
+    if (!c.running || c.durationSec <= 0) return c.progress;
+    const elapsed = Math.max(0, now - c.at) / 1000;
+    return Math.min(1, c.progress + elapsed / c.durationSec);
+  }, []);
+
+  const seek = useCallback((next: number) => {
+    clockRef.current.progress = next;
+    clockRef.current.at = performance.now();
+    setProgress(next);
+  }, []);
 
   useEffect(() => {
-    if (!playing) {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTickRef.current = null;
-      return;
-    }
+    if (!playing) return;
+    const c = clockRef.current;
+    c.at = performance.now();
+    c.durationSec = durationSec;
+    c.running = true;
+    let raf: number | null = null;
     const tick = (now: number) => {
-      if (lastTickRef.current == null) {
-        lastTickRef.current = now;
+      const next = getProgress(now);
+      setProgress(next);
+      if (next >= 1) {
+        setPlaying(false);
+        return;
       }
-      const dt = (now - lastTickRef.current) / 1000;
-      lastTickRef.current = now;
-      setProgress((prev) => {
-        if (durationSec <= 0) return prev;
-        const next = prev + dt / durationSec;
-        if (next >= 1) {
-          setPlaying(false);
-          return 1;
-        }
-        return next;
-      });
-      rafRef.current = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick);
     return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTickRef.current = null;
+      if (raf != null) cancelAnimationFrame(raf);
+      // Freeze the clock at the current position (pause / speed change).
+      c.progress = getProgress(performance.now());
+      c.running = false;
     };
-  }, [playing, durationSec]);
+  }, [playing, durationSec, getProgress]);
 
   const handleScrub = (next: number) => {
     if (next >= 1) {
       setPlaying(false);
-      setProgress(1);
+      seek(1);
       return;
     }
-    setProgress(next);
+    seek(next);
   };
 
   const handleTogglePlay = () => {
-    setPlaying((p) => {
-      if (!p && progress >= 0.999) {
-        setProgress(0);
-        return true;
-      }
-      return !p;
-    });
+    if (!playing && progress >= 0.999) seek(0);
+    setPlaying((p) => !p);
   };
 
   return (
@@ -194,6 +196,7 @@ function FlightContent({
             track={track}
             color={color}
             progress={progress}
+            getProgress={getProgress}
             playing={playing}
             followCamera={followCamera}
             isMobile={isMobile}
