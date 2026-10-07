@@ -27,6 +27,7 @@ import {
   type RoutePoint,
   type SpeedSample,
 } from "./activity-stats";
+import { findElevationAnchor, applyElevationAnchor } from "./elevation-anchor";
 
 export interface ParsedTcxData {
   routeData: { lat: number; lng: number; time?: string; elevation?: number }[];
@@ -219,6 +220,37 @@ export function parseTcxFile(xml: string | Buffer): ParsedTcxData {
   };
 
   return { routeData, heartRateData, speedData, session };
+}
+
+/**
+ * Relative Höhen der Uhr auf Meereshöhe verschieben (siehe elevation-anchor.ts).
+ *
+ * Getrennt von parseTcxFile, weil der Abgleich Netzwerkaufrufe braucht und der
+ * Parser synchron und ohne Seiteneffekte bleiben soll. Verschoben werden Track,
+ * Höchst- und Tiefstwert; Aufstieg und Abstieg sind Differenzen und bleiben.
+ */
+export async function anchorTcxElevation(
+  parsed: ParsedTcxData
+): Promise<ParsedTcxData> {
+  const anchor = await findElevationAnchor(parsed.routeData);
+  const routeData = applyElevationAnchor(parsed.routeData, anchor);
+  if (!routeData || !anchor) return parsed;
+
+  const offset = Math.round(anchor.offset * 10) / 10;
+  console.log(
+    `[tcx] Höhe um ${offset} m verschoben (${anchor.source}, ${anchor.samples} Stichproben)`
+  );
+  const shift = (v: number | undefined) =>
+    v == null ? v : Math.round((v + offset) * 10) / 10;
+  return {
+    ...parsed,
+    routeData,
+    session: parsed.session && {
+      ...parsed.session,
+      minAltitude: shift(parsed.session.minAltitude),
+      maxAltitude: shift(parsed.session.maxAltitude),
+    },
+  };
 }
 
 /**

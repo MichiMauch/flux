@@ -31,7 +31,11 @@ import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import { users, activities, deletedPolarActivities } from "../src/lib/db/schema";
-import { parseTcxFile, reconcileGoogleAscent } from "../src/lib/tcx-parser";
+import {
+  parseTcxFile,
+  anchorTcxElevation,
+  reconcileGoogleAscent,
+} from "../src/lib/tcx-parser";
 import { normalizeGoogleType } from "../src/lib/google-sport-map";
 import { computeTrimp, type Sex } from "../src/lib/trimp";
 import { generateActivityTitle } from "../src/lib/ai-title";
@@ -258,7 +262,7 @@ async function main() {
       });
       if (tcxRes.ok) {
         const tcx = await tcxRes.text();
-        parsed = parseTcxFile(tcx);
+        parsed = await anchorTcxElevation(parseTcxFile(tcx));
         console.log(
           `    TCX: ${parsed.routeData.length} Punkte, ${parsed.heartRateData.length} Pulswerte`,
         );

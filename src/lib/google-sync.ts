@@ -23,7 +23,11 @@ import {
   GoogleAuthError,
   type GoogleExercise,
 } from "@/lib/google-health-client";
-import { parseTcxFile, reconcileGoogleAscent } from "@/lib/tcx-parser";
+import {
+  parseTcxFile,
+  anchorTcxElevation,
+  reconcileGoogleAscent,
+} from "@/lib/tcx-parser";
 import { normalizeGoogleType } from "@/lib/google-sport-map";
 import { enrichActivity, type ActivityDraft } from "@/lib/activities/ingest";
 import { insertActivity, finishIngest } from "@/lib/activities/ingest-effects";
@@ -133,7 +137,8 @@ async function buildDraft(
   if (ex.exerciseMetadata?.hasGps) {
     try {
       const tcx = await exportExerciseTcx(token, p.name);
-      parsed = parseTcxFile(tcx);
+      // Die Uhr liefert oft eine relative Höhe ab 0 m statt Meereshöhe.
+      parsed = await anchorTcxElevation(parseTcxFile(tcx));
       try {
         const dir = join(process.env.FIT_FILES_PATH || "/data/fit-files", userId);
         await mkdir(dir, { recursive: true });
