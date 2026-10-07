@@ -41,6 +41,15 @@ type ActivityShareCardData = {
 const CACHE_SECONDS = 60 * 60;
 const FLUX_WORDMARK = "FLUX";
 
+// Bereiche der Story-Karte (1080×1920), die Instagram und WhatsApp mit ihrer
+// Oberfläche überdecken: oben Fortschrittsbalken, Profilbild und Name, unten
+// Antwortfeld, Reaktionen und eine allfällige Bildunterschrift. Meta empfiehlt
+// für Stories 250 px oben und 340 px unten frei zu lassen; für WhatsApp Status
+// gibt es keine offizielle Vorgabe, gängig sind unten bis 400 px. Wir nehmen
+// jeweils den grösseren Wert. In diesen Zonen steht nur Hintergrund.
+const STORY_SAFE_TOP = 250;
+const STORY_SAFE_BOTTOM = 400;
+
 function getFormat(raw: string | null): ShareFormat {
   return raw === "story" ? "story" : "square";
 }
@@ -155,7 +164,10 @@ async function buildMapboxStaticDataUrl(
   routeIn: RoutePoint[] | null,
   width: number,
   height: number,
-  strokeColor: string
+  strokeColor: string,
+  // Mapbox-Padding in Pixeln der angefragten Bildgrösse, CSS-Reihenfolge
+  // oben, rechts, unten, links.
+  padding: [number, number, number, number] = [100, 100, 100, 100]
 ): Promise<string | null> {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   if (!token) return null;
@@ -181,7 +193,7 @@ async function buildMapboxStaticDataUrl(
   // exceed the cap when doubled). padding keeps the route inset from edges.
   const reqW = Math.min(Math.round(width), 1280);
   const reqH = Math.min(Math.round(height), 1280);
-  const url = `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${overlay}/auto/${reqW}x${reqH}?access_token=${token}&padding=100`;
+  const url = `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/${overlay}/auto/${reqW}x${reqH}?access_token=${token}&padding=${padding.map((p) => Math.round(p)).join(",")}`;
   if (url.length > 8000) return null;
 
   try {
@@ -390,11 +402,21 @@ export async function GET(
   const mapReqW = Math.round(width * mapScale);
   const mapReqH = Math.round(height * mapScale);
 
+  // Story: die Route gehört in den sichtbaren Streifen zwischen Kopfzeile und
+  // Titel. Unten bleibt Platz für Sperrzone plus Titel und Werte (~430 px),
+  // sonst verschwindet das Ende einer Tour Richtung Süden unter dem Text.
+  const mapPadding: [number, number, number, number] = (
+    format === "story"
+      ? [STORY_SAFE_TOP + 140, 100, STORY_SAFE_BOTTOM + 480, 100]
+      : [100, 100, 100, 100]
+  ).map((p) => p * mapScale) as [number, number, number, number];
+
   const mapImageUrl = await buildMapboxStaticDataUrl(
     routeForMap,
     mapReqW,
     mapReqH,
-    accent
+    accent,
+    mapPadding
   );
   const routePath = routeToPath(routeForMap, width, height);
   const photoUrl = await fileToDataUrl(data.photoPath);
@@ -409,8 +431,14 @@ export async function GET(
   const dateLabel = formatDate(data.startTime);
   const ownerLabel = (data.ownerName ?? "Flux").toUpperCase();
   const cardTitle = data.name.toUpperCase();
-  const pad = format === "story" ? 72 : 64;
-  const playSize = format === "story" ? 220 : 180;
+  const isStory = format === "story";
+  const pad = isStory ? 72 : 64;
+  const padTop = isStory ? STORY_SAFE_TOP + 24 : pad;
+  const padBottom = isStory ? STORY_SAFE_BOTTOM : pad;
+  const playSize = isStory ? 220 : 180;
+  // ?guides=1 blendet die überdeckten Zonen rot ein, zum Prüfen neuer Layouts.
+  const showGuides =
+    isStory && new URL(request.url).searchParams.get("guides") === "1";
 
   const response = new ImageResponse(
     (
@@ -487,7 +515,9 @@ export async function GET(
               "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)",
           }}
         />
-        {/* Bottom scrim for title + stats legibility */}
+        {/* Bottom scrim for title + stats legibility. In the story format the
+            text sits 400 px higher, so the scrim reaches further up and stays
+            dark all the way down — the app chrome lies on a calm surface. */}
         <div
           style={{
             display: "flex",
@@ -495,9 +525,10 @@ export async function GET(
             left: 0,
             right: 0,
             bottom: 0,
-            height: Math.round(height * 0.56),
-            background:
-              "linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.62) 42%, rgba(0,0,0,0) 100%)",
+            height: Math.round(height * (isStory ? 0.72 : 0.56)),
+            background: isStory
+              ? "linear-gradient(0deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.85) 29%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%)"
+              : "linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.62) 42%, rgba(0,0,0,0) 100%)",
           }}
         />
 
@@ -549,7 +580,10 @@ export async function GET(
             justifyContent: "space-between",
             width: "100%",
             height: "100%",
-            padding: pad,
+            paddingTop: padTop,
+            paddingBottom: padBottom,
+            paddingLeft: pad,
+            paddingRight: pad,
           }}
         >
           {/* Header */}
@@ -686,6 +720,33 @@ export async function GET(
             border: `1px solid ${dimAccent}`,
           }}
         />
+
+        {showGuides ? (
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: STORY_SAFE_TOP,
+              background: "rgba(255,0,0,0.35)",
+            }}
+          />
+        ) : null}
+        {showGuides ? (
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: STORY_SAFE_BOTTOM,
+              background: "rgba(255,0,0,0.35)",
+            }}
+          />
+        ) : null}
       </div>
     ),
     {

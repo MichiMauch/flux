@@ -154,37 +154,46 @@ export function ShareActivityClient({
     });
   }
 
-  function handleCameraStories() {
-    run("Stories", async () => {
-      const blob = await fetchCard();
-      downloadBlob(blob);
-      setInfo(
-        "PNG heruntergeladen. Öffne Camera → Story → Bild aus Galerie auswählen."
-      );
+  /**
+   * Die Karte als Datei an das Teilen-Menü des Systems übergeben. Ohne
+   * Datei-Teilen (Desktop) wird sie gespeichert und `fallbackInfo` erklärt den
+   * Rest. Gibt es keine Web-Schnittstelle direkt in Instagram Stories oder
+   * WhatsApp Status — die von Meta gibt es nur für native Apps —, ist das der
+   * kürzeste Weg: ein Tipp auf Instagram bzw. WhatsApp im Teilen-Menü.
+   *
+   * Bewusst ohne `text`: WhatsApp macht daraus eine Bildunterschrift, die unten
+   * über der Karte liegt — genau dort, wo Name, Distanz und Zeit stehen.
+   */
+  async function shareCardFile(fallbackInfo: string) {
+    const blob = await fetchCard();
+    const date = new Date().toISOString().slice(0, 10);
+    const suffix = mode === "flight" ? "flug" : "karte";
+    const file = new File([blob], `flux-${date}-${suffix}.png`, {
+      type: "image/png",
     });
+    if (
+      typeof navigator.canShare === "function" &&
+      navigator.canShare({ files: [file] })
+    ) {
+      await navigator.share({ files: [file], title: "Flux" });
+      return;
+    }
+    downloadBlob(blob);
+    setInfo(fallbackInfo);
+  }
+
+  function handleCameraStories() {
+    run("Stories", () =>
+      shareCardFile(
+        "Bild gespeichert — in Instagram → Story → Bild aus Galerie auswählen."
+      )
+    );
   }
 
   function handleWhatsappStatus() {
-    run("Status", async () => {
-      const blob = await fetchCard();
-      const date = new Date().toISOString().slice(0, 10);
-      const suffix = mode === "flight" ? "flug" : "karte";
-      const file = new File([blob], `flux-${date}-${suffix}.png`, {
-        type: "image/png",
-      });
-      // The card image goes into the native share sheet; the user then picks
-      // WhatsApp → Status. There is no web API to post to Status directly.
-      if (
-        typeof navigator.canShare === "function" &&
-        navigator.canShare({ files: [file] })
-      ) {
-        await navigator.share({ files: [file], title: "Flux", text: activityName });
-        return;
-      }
-      // Desktop fallback: save the PNG and tell the user what to do with it.
-      downloadBlob(blob);
-      setInfo("Bild gespeichert — in WhatsApp → Status hochladen.");
-    });
+    run("Status", () =>
+      shareCardFile("Bild gespeichert — in WhatsApp → Status hochladen.")
+    );
   }
 
   function handleNativeShare() {
@@ -371,8 +380,8 @@ export function ShareActivityClient({
 
         <p className="text-center text-[10px] text-[#666] [font-family:var(--bento-mono)] uppercase tracking-[0.14em]">
           Auswahl bestimmt, was geteilt wird · WhatsApp/E-Mail/Link senden den
-          öffentlichen Link · Status öffnet die Teilen-Auswahl mit dem Bild
-          (WhatsApp → Status) · Stories & Speichern laden das PNG
+          öffentlichen Link · Stories und Status öffnen die Teilen-Auswahl mit
+          dem Bild (Instagram → Story, WhatsApp → Status) · Speichern lädt das PNG
         </p>
       </main>
     </div>
