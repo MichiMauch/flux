@@ -76,6 +76,11 @@ export function ShareActivityClient({
   const [mode, setMode] = useState<ShareMode>("karte");
   // Welches Foto das Foto-Design als Hintergrund nimmt.
   const [photoId, setPhotoId] = useState<string | null>(photoIds[0] ?? null);
+  // Ausschnitt des Fotos, 0–100 entlang der überstehenden Achse (50 = Mitte).
+  // `photoFocus` folgt dem Regler, `photoFocusApplied` steuert die Vorschau und
+  // zieht erst beim Loslassen nach — sonst rendert der Server bei jedem Pixel.
+  const [photoFocus, setPhotoFocus] = useState(50);
+  const [photoFocusApplied, setPhotoFocusApplied] = useState(50);
   const [videoId, setVideoId] = useState<string | null>(videoIds[0] ?? null);
   const [story, setStory] = useState<StoryVideo>({ status: "idle" });
   // Zählt hoch, sobald ein anderes Video gewählt oder die Seite verlassen
@@ -157,7 +162,9 @@ export function ShareActivityClient({
     return (
       `/api/activities/${activityId}/share-card?format=story` +
       (m === "flight" ? "&variant=flight" : `&design=${m}`) +
-      (m === "foto" && photoId ? `&photo=${photoId}` : "")
+      (m === "foto" && photoId
+        ? `&photo=${photoId}&focus=${photoFocusApplied}`
+        : "")
     );
   }
 
@@ -456,6 +463,40 @@ export function ShareActivityClient({
           </p>
 
           {/* Foto-Design: Hintergrundbild aus den Fotos der Aktivität wählen */}
+          {mode === "foto" && (
+            <div className="mt-4">
+              <label className="block">
+                <span className="[font-family:var(--bento-mono)] mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
+                  Ausschnitt verschieben
+                  {photoFocus !== 50 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhotoFocus(50);
+                        setPhotoFocusApplied(50);
+                      }}
+                      className="text-[#666] hover:text-white cursor-pointer"
+                    >
+                      Mitte
+                    </button>
+                  )}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={photoFocus}
+                  onChange={(e) => setPhotoFocus(Number(e.target.value))}
+                  onPointerUp={() => setPhotoFocusApplied(photoFocus)}
+                  onKeyUp={() => setPhotoFocusApplied(photoFocus)}
+                  onBlur={() => setPhotoFocusApplied(photoFocus)}
+                  className="w-full accent-white cursor-pointer"
+                  aria-label="Ausschnitt des Fotos verschieben"
+                />
+              </label>
+            </div>
+          )}
           {mode === "foto" && photoIds.length > 1 && (
             <div className="mt-4">
               <div className="[font-family:var(--bento-mono)] mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
@@ -466,7 +507,11 @@ export function ShareActivityClient({
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setPhotoId(id)}
+                    onClick={() => {
+                      setPhotoId(id);
+                      setPhotoFocus(50);
+                      setPhotoFocusApplied(50);
+                    }}
                     aria-label={`Foto ${i + 1}`}
                     aria-pressed={photoId === id}
                     className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors cursor-pointer ${

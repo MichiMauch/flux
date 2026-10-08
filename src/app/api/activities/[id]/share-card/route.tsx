@@ -146,20 +146,48 @@ async function fileToDataUrl(path: string | null): Promise<string | null> {
 // Foto der Aktivität auf das Story-Format zuschneiden. Über sharp, weil die
 // Fotos als WebP mit 2048 px vorliegen: Satori liest kein WebP zuverlässig, und
 // das Original wäre als Data-URL unnötig schwer.
-async function storyPhotoDataUrl(path: string | null): Promise<string | null> {
+//
+// `focus` (0–100) verschiebt den Ausschnitt entlang der Achse, an der das Foto
+// übersteht: bei Querformat von links (0) nach rechts (100), bei sehr hohem
+// Hochformat von oben nach unten. 50 ist die Mitte. Bewusst keine automatische
+// Motiverkennung — sharps "attention" schnitt bei Querformat-Fotos an den Rand
+// und halbierte das Hauptmotiv in der Bildmitte.
+async function storyPhotoDataUrl(
+  path: string | null,
+  focus: number
+): Promise<string | null> {
   if (!path) return null;
   const candidates = path.startsWith("/data/") ? [path, "." + path] : [path];
   for (const candidate of candidates) {
     try {
-      const buf = await sharp(candidate)
-        .rotate()
-        .resize(STORY_WIDTH, STORY_HEIGHT, { fit: "cover", position: "attention" })
+      // Erst drehen und als Puffer festhalten: die Masse nach der EXIF-Drehung
+      // kennt sharp erst, wenn die Drehung angewendet ist.
+      const rotated = await sharp(candidate).rotate().toBuffer({ resolveWithObject: true });
+      const { width, height } = rotated.info;
+      const scale = Math.max(STORY_WIDTH / width, STORY_HEIGHT / height);
+      const w = Math.max(STORY_WIDTH, Math.round(width * scale));
+      const h = Math.max(STORY_HEIGHT, Math.round(height * scale));
+      const f = focus / 100;
+      const buf = await sharp(rotated.data)
+        .resize(w, h)
+        .extract({
+          left: Math.round((w - STORY_WIDTH) * f),
+          top: Math.round((h - STORY_HEIGHT) * f),
+          width: STORY_WIDTH,
+          height: STORY_HEIGHT,
+        })
         .jpeg({ quality: 84 })
         .toBuffer();
       return `data:image/jpeg;base64,${buf.toString("base64")}`;
     } catch {}
   }
   return null;
+}
+
+function parseFocus(raw: string | null): number {
+  const n = Number(raw);
+  if (raw == null || raw === "" || !Number.isFinite(n)) return 50;
+  return Math.min(100, Math.max(0, n));
 }
 
 // Pfad eines gewählten Fotos. Die Aktivität steht mit in der Bedingung: eine
@@ -405,7 +433,8 @@ export async function GET(
       design === "foto"
         ? storyPhotoDataUrl(
             (await photoPathForActivity(id, searchParams.get("photo"))) ??
-              data.photoFullPath
+              data.photoFullPath,
+            parseFocus(searchParams.get("focus"))
           )
         : null,
     ]);
