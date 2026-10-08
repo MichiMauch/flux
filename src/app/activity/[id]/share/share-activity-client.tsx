@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  Copy,
   Download,
   Camera,
   Image as ImageIcon,
@@ -15,18 +16,30 @@ import {
 } from "lucide-react";
 import { setActivityShare } from "@/app/share/actions";
 
-type ShareMode = "card" | "flight";
+// Was geteilt wird: eines der Story-Designs oder der 3D-Flug. Die Designs
+// entsprechen dem `design`-Parameter der Share-Card-Route.
+type ShareMode = "karte" | "sticker" | "rahmen" | "foto" | "flight";
+
+const MODE_LABELS: Record<ShareMode, string> = {
+  karte: "Karte",
+  sticker: "Sticker",
+  rahmen: "Rahmen",
+  foto: "Foto",
+  flight: "3D-Flug",
+};
 
 interface Props {
   activityId: string;
   activityName: string;
   initialToken: string | null;
+  hasPhoto: boolean;
 }
 
 export function ShareActivityClient({
   activityId,
   activityName,
   initialToken,
+  hasPhoto,
 }: Props) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(initialToken);
@@ -35,8 +48,15 @@ export function ShareActivityClient({
   const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // Swipe between what gets shared: the static card or the 3D flight.
-  const [mode, setMode] = useState<ShareMode>("card");
+  // Swipe between what gets shared: one of the card designs or the 3D flight.
+  const modes: ShareMode[] = [
+    "karte",
+    "sticker",
+    "rahmen",
+    ...(hasPhoto ? (["foto"] as const) : []),
+    "flight",
+  ];
+  const [mode, setMode] = useState<ShareMode>("karte");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const canNativeShare =
@@ -47,20 +67,20 @@ export function ShareActivityClient({
     const el = scrollRef.current;
     if (!el || el.clientWidth === 0) return;
     const idx = Math.round(el.scrollLeft / el.clientWidth);
-    setMode(idx === 1 ? "flight" : "card");
+    setMode(modes[idx] ?? "karte");
   }
 
   function selectMode(m: ShareMode) {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ left: m === "flight" ? el.clientWidth : 0, behavior: "smooth" });
+    el.scrollTo({ left: modes.indexOf(m) * el.clientWidth, behavior: "smooth" });
     setMode(m);
   }
 
   function previewSrc(m: ShareMode): string {
     return (
       `/api/activities/${activityId}/share-card?format=story` +
-      (m === "flight" ? "&variant=flight" : "")
+      (m === "flight" ? "&variant=flight" : `&design=${m}`)
     );
   }
 
@@ -89,7 +109,7 @@ export function ShareActivityClient({
 
   function downloadBlob(blob: Blob) {
     const date = new Date().toISOString().slice(0, 10);
-    const suffix = mode === "flight" ? "flug" : "karte";
+    const suffix = mode === "flight" ? "flug" : mode;
     const a = document.createElement("a");
     const url = URL.createObjectURL(blob);
     a.href = url;
@@ -147,6 +167,23 @@ export function ShareActivityClient({
     });
   }
 
+  // Bild in die Zwischenablage — der Weg für den Sticker: in Instagram ein
+  // eigenes Foto als Story wählen und den Sticker darüber einfügen.
+  function handleCopyImage() {
+    run("Kopieren", async () => {
+      // Das Promise geht direkt ins ClipboardItem: Safari verlangt, dass
+      // clipboard.write() noch im Klick aufgerufen wird, nicht erst nach fetch.
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": fetchCard() }),
+      ]);
+      setInfo(
+        mode === "sticker"
+          ? "Sticker kopiert — in Instagram eine Story mit eigenem Foto öffnen und einfügen."
+          : "Bild kopiert."
+      );
+    });
+  }
+
   function handleDownload() {
     run("Herunterladen", async () => {
       const blob = await fetchCard();
@@ -167,7 +204,7 @@ export function ShareActivityClient({
   async function shareCardFile(fallbackInfo: string) {
     const blob = await fetchCard();
     const date = new Date().toISOString().slice(0, 10);
-    const suffix = mode === "flight" ? "flug" : "karte";
+    const suffix = mode === "flight" ? "flug" : mode;
     const file = new File([blob], `flux-${date}-${suffix}.png`, {
       type: "image/png",
     });
@@ -200,7 +237,7 @@ export function ShareActivityClient({
     run("Teilen", async () => {
       const blob = await fetchCard();
       const date = new Date().toISOString().slice(0, 10);
-      const suffix = mode === "flight" ? "flug" : "karte";
+      const suffix = mode === "flight" ? "flug" : mode;
       const file = new File([blob], `flux-${date}-${suffix}.png`, {
         type: "image/png",
       });
@@ -246,48 +283,52 @@ export function ShareActivityClient({
             onScroll={handleScroll}
             className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl border border-[#2a2a2a] bg-[#0a0a0a] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <div className="w-full shrink-0 snap-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewSrc("card")}
-                alt="Karte Vorschau"
-                className="block h-auto w-full"
-              />
-            </div>
-            <div className="w-full shrink-0 snap-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewSrc("flight")}
-                alt="3D-Flug Vorschau"
-                className="block h-auto w-full"
-              />
-            </div>
+            {modes.map((m) => (
+              <div
+                key={m}
+                className="w-full shrink-0 snap-center"
+                // Der Sticker ist transparent — das Karomuster zeigt, wo später
+                // das eigene Foto durchscheint.
+                style={
+                  m === "sticker"
+                    ? {
+                        backgroundColor: "#2a2a2a",
+                        backgroundImage:
+                          "repeating-conic-gradient(#3a3a3a 0% 25%, transparent 0% 50%)",
+                        backgroundSize: "32px 32px",
+                      }
+                    : undefined
+                }
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewSrc(m)}
+                  alt={`${MODE_LABELS[m]} Vorschau`}
+                  loading="lazy"
+                  width={1080}
+                  height={1920}
+                  className="block h-auto w-full"
+                />
+              </div>
+            ))}
           </div>
 
           {/* Tap or swipe to choose what gets shared */}
-          <div className="mt-3 flex items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => selectMode("card")}
-              className={`[font-family:var(--bento-mono)] rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors cursor-pointer ${
-                mode === "card"
-                  ? "bg-white text-black"
-                  : "bg-[#1a1a1a] text-[#a3a3a3] hover:text-white"
-              }`}
-            >
-              Karte
-            </button>
-            <button
-              type="button"
-              onClick={() => selectMode("flight")}
-              className={`[font-family:var(--bento-mono)] rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors cursor-pointer ${
-                mode === "flight"
-                  ? "bg-white text-black"
-                  : "bg-[#1a1a1a] text-[#a3a3a3] hover:text-white"
-              }`}
-            >
-              3D-Flug
-            </button>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            {modes.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => selectMode(m)}
+                className={`[font-family:var(--bento-mono)] rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors cursor-pointer ${
+                  mode === m
+                    ? "bg-white text-black"
+                    : "bg-[#1a1a1a] text-[#a3a3a3] hover:text-white"
+                }`}
+              >
+                {MODE_LABELS[m]}
+              </button>
+            ))}
           </div>
           <p className="mt-2 text-center text-[10px] text-[#666] [font-family:var(--bento-mono)] uppercase tracking-[0.14em]">
             ← Wischen zum Wechseln →
@@ -339,6 +380,12 @@ export function ShareActivityClient({
               disabled={pending}
             />
             <ActionButton
+              label="Kopieren"
+              icon={<Copy className="h-5 w-5" />}
+              onClick={handleCopyImage}
+              disabled={pending}
+            />
+            <ActionButton
               label="Speichern"
               icon={<Download className="h-5 w-5" />}
               onClick={handleDownload}
@@ -381,7 +428,8 @@ export function ShareActivityClient({
         <p className="text-center text-[10px] text-[#666] [font-family:var(--bento-mono)] uppercase tracking-[0.14em]">
           Auswahl bestimmt, was geteilt wird · WhatsApp/E-Mail/Link senden den
           öffentlichen Link · Stories und Status öffnen die Teilen-Auswahl mit
-          dem Bild (Instagram → Story, WhatsApp → Status) · Speichern lädt das PNG
+          dem Bild (Instagram → Story, WhatsApp → Status) · Kopieren legt das
+          Bild in die Zwischenablage · Speichern lädt das PNG
         </p>
       </main>
     </div>

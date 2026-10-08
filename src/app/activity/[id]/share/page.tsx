@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { activities } from "@/lib/db/schema";
+import { activities, activityPhotos } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ShareActivityClient } from "./share-activity-client";
 
@@ -26,11 +26,19 @@ export default async function ActivitySharePage({
 
   if (!row) notFound();
 
+  // Das Foto-Design gibt es nur, wenn die Aktivität ein Foto hat.
+  const [photo] = await db
+    .select({ id: activityPhotos.id })
+    .from(activityPhotos)
+    .where(eq(activityPhotos.activityId, row.id))
+    .limit(1);
+
   return (
     <ShareActivityClient
       activityId={row.id}
       activityName={row.name}
       initialToken={row.shareToken}
+      hasPhoto={!!photo}
     />
   );
 }

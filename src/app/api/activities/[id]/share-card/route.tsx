@@ -11,15 +11,20 @@ import {
   showsTerrain,
 } from "@/lib/activity-types";
 import { APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
+import sharp from "sharp";
+import { routeToPath, sampleRoute, type RoutePoint } from "./route-path";
+import {
+  StoryCard,
+  parseStoryDesign,
+  storyMapRequest,
+  STORY_WIDTH,
+  STORY_HEIGHT,
+  type StoryStat,
+} from "./story-designs";
 
 export const runtime = "nodejs";
 
 type ShareFormat = "square" | "story";
-
-type RoutePoint = {
-  lat: number;
-  lng: number;
-};
 
 type ActivityShareCardData = {
   id: string;
@@ -36,19 +41,11 @@ type ActivityShareCardData = {
   ownerName: string | null;
   ownerPartnerId: string | null;
   photoPath: string | null;
+  photoFullPath: string | null;
 };
 
 const CACHE_SECONDS = 60 * 60;
 const FLUX_WORDMARK = "FLUX";
-
-// Bereiche der Story-Karte (1080×1920), die Instagram und WhatsApp mit ihrer
-// Oberfläche überdecken: oben Fortschrittsbalken, Profilbild und Name, unten
-// Antwortfeld, Reaktionen und eine allfällige Bildunterschrift. Meta empfiehlt
-// für Stories 250 px oben und 340 px unten frei zu lassen; für WhatsApp Status
-// gibt es keine offizielle Vorgabe, gängig sind unten bis 400 px. Wir nehmen
-// jeweils den grösseren Wert. In diesen Zonen steht nur Hintergrund.
-const STORY_SAFE_TOP = 250;
-const STORY_SAFE_BOTTOM = 400;
 
 function getFormat(raw: string | null): ShareFormat {
   return raw === "story" ? "story" : "square";
@@ -75,60 +72,6 @@ function formatDate(date: Date): string {
     month: "short",
     year: "numeric",
   });
-}
-
-function sampleRoute(points: RoutePoint[] | null, max = 120): RoutePoint[] {
-  if (!Array.isArray(points) || points.length === 0) return [];
-  if (points.length <= max) return points;
-  const out: RoutePoint[] = [];
-  for (let i = 0; i < max; i += 1) {
-    const idx = Math.round((i * (points.length - 1)) / (max - 1));
-    const p = points[idx];
-    if (p) out.push(p);
-  }
-  return out;
-}
-
-// Project route to an SVG path that fits a width×height box while preserving
-// the geographic aspect ratio (so the route isn't stretched). Used only as a
-// fallback when the Mapbox static image is unavailable.
-function routeToPath(
-  pointsIn: RoutePoint[] | null,
-  width: number,
-  height: number
-) {
-  const points = sampleRoute(pointsIn, 96);
-  if (points.length < 2) return null;
-
-  const lats = points.map((p) => p.lat);
-  const lngs = points.map((p) => p.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latRange = maxLat - minLat || 0.001;
-  // longitude degrees shrink with latitude — correct for it so the shape
-  // matches what a map would show.
-  const midLat = (minLat + maxLat) / 2;
-  const lngScale = Math.cos((midLat * Math.PI) / 180) || 1;
-  const lngRange = (maxLng - minLng) * lngScale || 0.001;
-
-  const pad = 120;
-  const boxW = width - pad * 2;
-  const boxH = height - pad * 2;
-  const scale = Math.min(boxW / lngRange, boxH / latRange);
-  const drawW = lngRange * scale;
-  const drawH = latRange * scale;
-  const offX = pad + (boxW - drawW) / 2;
-  const offY = pad + (boxH - drawH) / 2;
-
-  return points
-    .map((p, idx) => {
-      const x = offX + ((p.lng - minLng) * lngScale) * scale;
-      const y = offY + drawH - (p.lat - minLat) * scale;
-      return `${idx === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
 }
 
 // Google "encoded polyline" (precision 5) — far more compact than GeoJSON,
@@ -223,6 +166,25 @@ async function fileToDataUrl(path: string | null): Promise<string | null> {
   return null;
 }
 
+// Foto der Aktivität auf das Story-Format zuschneiden. Über sharp, weil die
+// Fotos als WebP mit 2048 px vorliegen: Satori liest kein WebP zuverlässig, und
+// das Original wäre als Data-URL unnötig schwer.
+async function storyPhotoDataUrl(path: string | null): Promise<string | null> {
+  if (!path) return null;
+  const candidates = path.startsWith("/data/") ? [path, "." + path] : [path];
+  for (const candidate of candidates) {
+    try {
+      const buf = await sharp(candidate)
+        .rotate()
+        .resize(STORY_WIDTH, STORY_HEIGHT, { fit: "cover", position: "attention" })
+        .jpeg({ quality: 84 })
+        .toBuffer();
+      return `data:image/jpeg;base64,${buf.toString("base64")}`;
+    } catch {}
+  }
+  return null;
+}
+
 const getCachedActivityShareCardData = unstable_cache(
   async (activityId: string): Promise<ActivityShareCardData | null> => {
     const rows = await db
@@ -250,7 +212,10 @@ const getCachedActivityShareCardData = unstable_cache(
     if (!row) return null;
 
     const photoRows = await db
-      .select({ path: activityPhotos.thumbnailPath })
+      .select({
+        path: activityPhotos.thumbnailPath,
+        fullPath: activityPhotos.filePath,
+      })
       .from(activityPhotos)
       .where(eq(activityPhotos.activityId, activityId))
       .orderBy(asc(activityPhotos.takenAt), asc(activityPhotos.id))
@@ -261,6 +226,7 @@ const getCachedActivityShareCardData = unstable_cache(
       routeGeometry: row.routeGeometry as RoutePoint[] | null,
       routeData: row.routeData as RoutePoint[] | null,
       photoPath: photoRows[0]?.path ?? null,
+      photoFullPath: photoRows[0]?.fullPath ?? null,
     };
   },
   ["activity-share-card"],
@@ -382,7 +348,7 @@ export async function GET(
 
   const format = getFormat(new URL(request.url).searchParams.get("format"));
   const width = 1080;
-  const height = format === "story" ? 1920 : 1080;
+  const height = 1080;
   const accent = activityTypeColor(data.type);
   const dimAccent = `${accent}66`;
 
@@ -395,50 +361,94 @@ export async function GET(
       ? data.routeGeometry
       : data.routeData;
 
-  // Request the map at the card's aspect ratio, capped to Mapbox's 1280px
-  // limit, so it fills the full canvas with no distortion.
-  const cap = 1280;
-  const mapScale = Math.min(1, cap / Math.max(width, height));
-  const mapReqW = Math.round(width * mapScale);
-  const mapReqH = Math.round(height * mapScale);
+  const searchParams = new URL(request.url).searchParams;
+  const isFlight = searchParams.get("variant") === "flight";
+  const duration = data.movingTime ?? data.duration ?? 0;
+  const typeLabel = activityTypeLabel(data.type).toUpperCase();
+  const dateLabel = formatDate(data.startTime);
+  const ownerLabel = (data.ownerName ?? "Flux").toUpperCase();
 
-  // Story: die Route gehört in den sichtbaren Streifen zwischen Kopfzeile und
-  // Titel. Unten bleibt Platz für Sperrzone plus Titel und Werte (~430 px),
-  // sonst verschwindet das Ende einer Tour Richtung Süden unter dem Text.
-  const mapPadding: [number, number, number, number] = (
-    format === "story"
-      ? [STORY_SAFE_TOP + 140, 100, STORY_SAFE_BOTTOM + 480, 100]
-      : [100, 100, 100, 100]
-  ).map((p) => p * mapScale) as [number, number, number, number];
+  // Mapbox liefert höchstens 1280 px pro Seite. Grössere Karten werden
+  // verkleinert angefragt und von Satori auf die Kartengrösse gezogen.
+  const fetchMap = (
+    w: number,
+    h: number,
+    padding: [number, number, number, number]
+  ) => {
+    const scale = Math.min(1, 1280 / Math.max(w, h));
+    return buildMapboxStaticDataUrl(
+      routeForMap,
+      Math.round(w * scale),
+      Math.round(h * scale),
+      accent,
+      padding.map((p) => p * scale) as [number, number, number, number]
+    );
+  };
 
-  const mapImageUrl = await buildMapboxStaticDataUrl(
-    routeForMap,
-    mapReqW,
-    mapReqH,
-    accent,
-    mapPadding
-  );
+  const finish = (response: ImageResponse) => {
+    response.headers.set(
+      "Cache-Control",
+      viaShareToken
+        ? `public, max-age=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}`
+        : `private, max-age=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}`
+    );
+    response.headers.set(
+      "Content-Disposition",
+      `inline; filename="${data.startTime.toISOString().slice(0, 10)}-${data.id}-share-card.png"`
+    );
+    return response;
+  };
+
+  if (format === "story") {
+    // Der 3D-Flug braucht die Karte hinter dem Play-Knopf.
+    const design = isFlight ? "karte" : parseStoryDesign(searchParams.get("design"));
+    const mapRequest = storyMapRequest(design);
+    const stats: StoryStat[] = [
+      { label: "Distanz", value: formatDistance(data.distance), unit: "km" },
+      { label: "Zeit", value: formatDurationHMS(duration) },
+    ];
+    if (terrain) {
+      stats.push({ label: "Aufstieg", value: metricValue(data.ascent), unit: "m" });
+    }
+    const [mapUrl, photoUrl] = await Promise.all([
+      mapRequest
+        ? fetchMap(mapRequest.width, mapRequest.height, mapRequest.padding)
+        : null,
+      design === "foto" ? storyPhotoDataUrl(data.photoFullPath) : null,
+    ]);
+    return finish(
+      new ImageResponse(
+        (
+          <StoryCard
+            design={design}
+            showGuides={searchParams.get("guides") === "1"}
+            accent={accent}
+            typeLabel={typeLabel}
+            dateLabel={dateLabel}
+            ownerLabel={ownerLabel}
+            title={data.name}
+            stats={stats}
+            mapUrl={mapUrl}
+            photoUrl={photoUrl}
+            route={routeForMap}
+            isFlight={isFlight}
+          />
+        ),
+        { width: STORY_WIDTH, height: STORY_HEIGHT }
+      )
+    );
+  }
+
+  const mapImageUrl = await fetchMap(width, height, [100, 100, 100, 100]);
   const routePath = routeToPath(routeForMap, width, height);
   const photoUrl = await fileToDataUrl(data.photoPath);
 
   // Background priority: map-with-route > photo > dark gradient.
   const bgUrl = mapImageUrl ?? photoUrl;
 
-  const isFlight =
-    new URL(request.url).searchParams.get("variant") === "flight";
-  const duration = data.movingTime ?? data.duration ?? 0;
-  const typeLabel = activityTypeLabel(data.type).toUpperCase();
-  const dateLabel = formatDate(data.startTime);
-  const ownerLabel = (data.ownerName ?? "Flux").toUpperCase();
   const cardTitle = data.name.toUpperCase();
-  const isStory = format === "story";
-  const pad = isStory ? 72 : 64;
-  const padTop = isStory ? STORY_SAFE_TOP + 24 : pad;
-  const padBottom = isStory ? STORY_SAFE_BOTTOM : pad;
-  const playSize = isStory ? 220 : 180;
-  // ?guides=1 blendet die überdeckten Zonen rot ein, zum Prüfen neuer Layouts.
-  const showGuides =
-    isStory && new URL(request.url).searchParams.get("guides") === "1";
+  const pad = 64;
+  const playSize = 180;
 
   const response = new ImageResponse(
     (
@@ -515,9 +525,7 @@ export async function GET(
               "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)",
           }}
         />
-        {/* Bottom scrim for title + stats legibility. In the story format the
-            text sits 400 px higher, so the scrim reaches further up and stays
-            dark all the way down — the app chrome lies on a calm surface. */}
+        {/* Bottom scrim for title + stats legibility */}
         <div
           style={{
             display: "flex",
@@ -525,10 +533,9 @@ export async function GET(
             left: 0,
             right: 0,
             bottom: 0,
-            height: Math.round(height * (isStory ? 0.72 : 0.56)),
-            background: isStory
-              ? "linear-gradient(0deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.85) 29%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%)"
-              : "linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.62) 42%, rgba(0,0,0,0) 100%)",
+            height: Math.round(height * 0.56),
+            background:
+              "linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.62) 42%, rgba(0,0,0,0) 100%)",
           }}
         />
 
@@ -580,10 +587,7 @@ export async function GET(
             justifyContent: "space-between",
             width: "100%",
             height: "100%",
-            paddingTop: padTop,
-            paddingBottom: padBottom,
-            paddingLeft: pad,
-            paddingRight: pad,
+            padding: pad,
           }}
         >
           {/* Header */}
@@ -673,7 +677,7 @@ export async function GET(
             <div
               style={{
                 display: "flex",
-                fontSize: format === "story" ? 78 : 72,
+                fontSize: 72,
                 lineHeight: 0.94,
                 fontWeight: 700,
                 letterSpacing: "-0.03em",
@@ -720,33 +724,6 @@ export async function GET(
             border: `1px solid ${dimAccent}`,
           }}
         />
-
-        {showGuides ? (
-          <div
-            style={{
-              display: "flex",
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: STORY_SAFE_TOP,
-              background: "rgba(255,0,0,0.35)",
-            }}
-          />
-        ) : null}
-        {showGuides ? (
-          <div
-            style={{
-              display: "flex",
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: STORY_SAFE_BOTTOM,
-              background: "rgba(255,0,0,0.35)",
-            }}
-          />
-        ) : null}
       </div>
     ),
     {
@@ -755,16 +732,5 @@ export async function GET(
     }
   );
 
-  response.headers.set(
-    "Cache-Control",
-    viaShareToken
-      ? `public, max-age=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}`
-      : `private, max-age=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}`
-  );
-  response.headers.set(
-    "Content-Disposition",
-    `inline; filename="${data.startTime.toISOString().slice(0, 10)}-${data.id}-share-card.png"`
-  );
-
-  return response;
+  return finish(response);
 }
