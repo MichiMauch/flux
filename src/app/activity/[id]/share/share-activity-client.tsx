@@ -11,6 +11,7 @@ import {
   Link2,
   Loader2,
   Mail,
+  Plus,
   MessageCircle,
   Share2,
   X,
@@ -27,6 +28,19 @@ type ShareMode = "karte" | "sticker" | "rahmen" | "foto" | "video" | "flight";
 type StoryVideo =
   | { status: "idle" | "processing" | "failed" }
   | { status: "ready"; blob: Blob };
+
+// Ein Eintrag der Mehrfachauswahl. Die Datei wird schon beim Hinzufügen
+// geladen: navigator.share() muss direkt im Tipp aufgerufen werden, und fünf
+// Karten erst dann zu rendern würde zu lange dauern.
+interface PickedItem {
+  key: string;
+  label: string;
+  file: File;
+  thumbUrl: string;
+}
+
+// So viele Fotos und Videos nimmt Instagram auf einmal in eine Story.
+const MAX_PICKED = 10;
 
 const STORY_POLL_MS = 3000;
 const STORY_TIMEOUT_MS = 12 * 60 * 1000;
@@ -87,6 +101,18 @@ export function ShareActivityClient({
   // wird — ein noch laufendes Abfragen erkennt daran, dass es veraltet ist.
   const storyRun = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Mehrfachauswahl: mehrere Designs, Fotos und Videos gesammelt teilen.
+  const [picked, setPicked] = useState<PickedItem[]>([]);
+  const pickedRef = useRef<PickedItem[]>([]);
+  pickedRef.current = picked;
+  useEffect(() => {
+    return () => {
+      for (const p of pickedRef.current) {
+        if (p.thumbUrl.startsWith("blob:")) URL.revokeObjectURL(p.thumbUrl);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -356,6 +382,105 @@ export function ShareActivityClient({
     });
   }
 
+  // Was gerade in der Vorschau steht, eindeutig benannt — ein anderes Foto
+  // oder ein anderer Ausschnitt ist ein eigener Eintrag.
+  function currentPick(): { key: string; label: string } {
+    if (mode === "foto") {
+      const n = photoId ? photoIds.indexOf(photoId) + 1 : 1;
+      return {
+        key: `foto:${photoId}:${photoFocusApplied}`,
+        label: photoIds.length > 1 ? `Foto ${n}` : "Foto",
+      };
+    }
+    if (mode === "video") {
+      const n = videoId ? videoIds.indexOf(videoId) + 1 : 1;
+      return {
+        key: `video:${videoId}`,
+        label: videoIds.length > 1 ? `Video ${n}` : "Video",
+      };
+    }
+    return { key: mode, label: MODE_LABELS[mode] };
+  }
+
+  function removePicked(key: string) {
+    setPicked((prev) => {
+      const gone = prev.find((p) => p.key === key);
+      if (gone?.thumbUrl.startsWith("blob:")) URL.revokeObjectURL(gone.thumbUrl);
+      return prev.filter((p) => p.key !== key);
+    });
+  }
+
+  function handleTogglePick() {
+    const { key, label } = currentPick();
+    if (picked.some((p) => p.key === key)) {
+      removePicked(key);
+      return;
+    }
+    run("Auswahl", async () => {
+      if (picked.length >= MAX_PICKED) {
+        throw new Error(`Höchstens ${MAX_PICKED} auf einmal — so viele nimmt Instagram.`);
+      }
+      const blob = await fetchCard();
+      const isVideo = mode === "video";
+      const date = new Date().toISOString().slice(0, 10);
+      // Der Schlüssel im Namen hält die Dateien auseinander; zwei gleich
+      // benannte Dateien würden sich beim Speichern überschreiben.
+      const slug = key.replace(/[^a-z0-9]+/gi, "-").slice(0, 40);
+      const file = new File([blob], `flux-${date}-${slug}.${isVideo ? "mp4" : "png"}`, {
+        type: isVideo ? "video/mp4" : "image/png",
+      });
+      const thumbUrl =
+        isVideo && videoId
+          ? `/api/videos/${videoId}?poster=1`
+          : URL.createObjectURL(blob);
+      setPicked((prev) =>
+        prev.some((p) => p.key === key) ? prev : [...prev, { key, label, file, thumbUrl }]
+      );
+    });
+  }
+
+  function saveAllPicked() {
+    // Nacheinander mit kurzem Abstand: mehrere Downloads im selben Moment
+    // verwirft der Browser bis auf den ersten.
+    picked.forEach((p, i) => {
+      window.setTimeout(() => {
+        const a = document.createElement("a");
+        const url = URL.createObjectURL(p.file);
+        a.href = url;
+        a.download = p.file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, i * 400);
+    });
+  }
+
+  function handleShareAll() {
+    run("Teilen", async () => {
+      const files = picked.map((p) => p.file);
+      if (
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files })
+      ) {
+        await navigator.share({ files, title: "Flux" });
+        return;
+      }
+      saveAllPicked();
+      setInfo(
+        "Gespeichert — in Instagram die Story-Galerie öffnen, «Auswählen» antippen und alle markieren."
+      );
+    });
+  }
+
+  function handleSaveAll() {
+    setError(null);
+    saveAllPicked();
+    setInfo(
+      "Gespeichert — in Instagram die Story-Galerie öffnen, «Auswählen» antippen und alle markieren."
+    );
+  }
+
   function handleStopSharing() {
     run("Beenden", async () => {
       await setActivityShare(activityId, false);
@@ -588,7 +713,91 @@ export function ShareActivityClient({
               </p>
             </div>
           )}
+
+          {/* Mehrfachauswahl: aktuelle Vorschau sammeln, später alles zusammen teilen */}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleTogglePick}
+              disabled={pending}
+              className={`[font-family:var(--bento-mono)] flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors disabled:opacity-50 cursor-pointer ${
+                picked.some((p) => p.key === currentPick().key)
+                  ? "border-white bg-white text-black"
+                  : "border-[#2a2a2a] text-[#a3a3a3] hover:border-white hover:text-white"
+              }`}
+            >
+              {picked.some((p) => p.key === currentPick().key) ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  In der Auswahl — antippen zum Entfernen
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  Zur Auswahl hinzufügen
+                </>
+              )}
+            </button>
+          </div>
         </div>
+
+        {picked.length > 0 && (
+          <div className="rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] p-3">
+            <div className="[font-family:var(--bento-mono)] mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
+              Auswahl ({picked.length})
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {picked.map((p) => (
+                <div key={p.key} className="relative shrink-0">
+                  <div
+                    className="h-28 w-16 overflow-hidden rounded-md border border-[#2a2a2a]"
+                    style={{
+                      backgroundColor: "#2a2a2a",
+                      backgroundImage:
+                        "repeating-conic-gradient(#3a3a3a 0% 25%, transparent 0% 50%)",
+                      backgroundSize: "12px 12px",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.thumbUrl}
+                      alt={p.label}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removePicked(p.key)}
+                    aria-label={`${p.label} entfernen`}
+                    className="absolute -right-1.5 -top-1.5 rounded-full bg-black p-1 text-white ring-1 ring-[#2a2a2a] hover:bg-[#1a1a1a] cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  <p className="[font-family:var(--bento-mono)] mt-1 w-16 truncate text-center text-[9px] uppercase tracking-[0.1em] text-[#a3a3a3]">
+                    {p.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleShareAll}
+                disabled={pending}
+                className="[font-family:var(--bento-mono)] rounded-lg bg-white px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:bg-white/90 disabled:opacity-50 cursor-pointer"
+              >
+                Alle teilen
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                className="[font-family:var(--bento-mono)] rounded-lg border border-[#2a2a2a] px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:border-white cursor-pointer"
+              >
+                Alle speichern
+              </button>
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="[font-family:var(--bento-mono)] mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
