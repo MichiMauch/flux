@@ -13,6 +13,10 @@ const publicRoutes = [
   // Subscribers scheitert: sie verlangt 401 ohne Zugangsdaten.
   "/api/google/webhook",
   "/api/bloodpressure/webhook",
+  // flux-trail auf der Uhr liefert Wanderungen an und weist sich mit einem
+  // Bearer-Token aus, das die Route selbst prüft. Ohne den Eintrag bekäme die
+  // Uhr statt einer Antwort die Anmeldeseite.
+  "/api/device",
   "/api/cron",
   "/share",
   "/embed",
