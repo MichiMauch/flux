@@ -119,7 +119,7 @@ async function swisstopoHeight(p: ElevationPoint): Promise<number | null> {
 }
 
 /** Höhen in der Reihenfolge der Punkte, `null` wo swisstopo nichts liefert. */
-async function swisstopoHeights(points: ElevationPoint[]): Promise<(number | null)[]> {
+export async function swisstopoHeights(points: ElevationPoint[]): Promise<(number | null)[]> {
   const out: (number | null)[] = new Array(points.length).fill(null);
   let next = 0;
   async function worker() {
