@@ -439,6 +439,41 @@ export function ShareActivityClient({
     });
   }
 
+  // Ein Foto der Aktivität pur in die Auswahl: ohne Titel, Werte und Route,
+  // im eigenen Seitenverhältnis — Instagram passt es selbst in die Story ein.
+  function plainPhotoKey(id: string): string {
+    return `nurfoto:${id}`;
+  }
+
+  function handleTogglePlainPhoto(id: string) {
+    const key = plainPhotoKey(id);
+    if (picked.some((p) => p.key === key)) {
+      removePicked(key);
+      return;
+    }
+    run("Auswahl", async () => {
+      if (picked.length >= MAX_PICKED) {
+        throw new Error(`Höchstens ${MAX_PICKED} auf einmal — so viele nimmt Instagram.`);
+      }
+      const res = await fetch(`/api/photos/${id}?format=jpeg`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Foto konnte nicht geladen werden");
+      const blob = await res.blob();
+      const n = photoIds.indexOf(id) + 1;
+      const date = new Date().toISOString().slice(0, 10);
+      const file = new File([blob], `flux-${date}-nur-foto-${n}.jpg`, {
+        type: "image/jpeg",
+      });
+      const label = photoIds.length > 1 ? `Nur Foto ${n}` : "Nur Foto";
+      setPicked((prev) =>
+        prev.some((p) => p.key === key)
+          ? prev
+          : [...prev, { key, label, file, thumbUrl: `/api/photos/${id}?thumb=1` }]
+      );
+    });
+  }
+
   function saveAllPicked() {
     // Nacheinander mit kurzem Abstand: mehrere Downloads im selben Moment
     // verwirft der Browser bis auf den ersten.
@@ -739,6 +774,54 @@ export function ShareActivityClient({
               )}
             </button>
           </div>
+
+          {/* Fotos pur: ohne Beschriftung direkt in die Auswahl */}
+          {photoIds.length > 0 && (
+            <div className="mt-4">
+              <div className="[font-family:var(--bento-mono)] mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
+                Fotos ohne Beschriftung hinzufügen
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {photoIds.map((id, i) => {
+                  const isPicked = picked.some((p) => p.key === plainPhotoKey(id));
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => handleTogglePlainPhoto(id)}
+                      disabled={pending}
+                      aria-label={`Foto ${i + 1} ohne Beschriftung`}
+                      aria-pressed={isPicked}
+                      className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors disabled:opacity-50 cursor-pointer ${
+                        isPicked
+                          ? "border-white"
+                          : "border-transparent opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/photos/${id}?thumb=1`}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                      <span
+                        className={`absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full ${
+                          isPicked ? "bg-white text-black" : "bg-black/60 text-white"
+                        }`}
+                      >
+                        {isPicked ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Plus className="h-3 w-3" />
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {picked.length > 0 && (

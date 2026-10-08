@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { readFile } from "fs/promises";
+import sharp from "sharp";
 
 export async function GET(
   request: NextRequest,
@@ -17,6 +18,9 @@ export async function GET(
 ) {
   const { id } = await params;
   const isThumb = request.nextUrl.searchParams.get("thumb") === "1";
+  // Zum Teilen: die Fotos liegen als WebP vor, das nehmen Instagram und
+  // WhatsApp aus dem Teilen-Menü nicht zuverlässig an.
+  const asJpeg = request.nextUrl.searchParams.get("format") === "jpeg";
   const shareToken = request.nextUrl.searchParams.get("share");
 
   const photo = await db
@@ -99,6 +103,15 @@ export async function GET(
 
   try {
     const buffer = await readWithFallback(path);
+    if (asJpeg) {
+      const jpeg = await sharp(buffer).rotate().jpeg({ quality: 90 }).toBuffer();
+      return new Response(new Uint8Array(jpeg), {
+        headers: {
+          "Content-Type": "image/jpeg",
+          "Cache-Control": "private, max-age=3600",
+        },
+      });
+    }
     const lower = path.toLowerCase();
     const contentType = lower.endsWith(".webp")
       ? "image/webp"
