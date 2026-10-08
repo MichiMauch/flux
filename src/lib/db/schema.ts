@@ -225,6 +225,41 @@ export const activityPhotos = pgTable(
   (t) => [index("activity_photos_activity_idx").on(t.activityId)],
 );
 
+// ── Activity Videos ────────────────────────────────────────────────────────
+// Eigene Tabelle statt einer Spalte auf activity_photos: Fotos hängen in Karte,
+// Lightbox, Touren-Cover und Share-Karten, die alle ein Bild erwarten.
+
+export const activityVideos = pgTable(
+  "activity_videos",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    // "processing" | "ready" | "failed" — das Umwandeln läuft nach dem Upload
+    // im Hintergrund, der Client fragt den Stand ab.
+    status: text("status").notNull().default("processing"),
+    // Web-taugliches MP4 und Vorschaubild; leer bis status = "ready".
+    filePath: text("file_path"),
+    posterPath: text("poster_path"),
+    originalName: text("original_name"),
+    durationSec: real("duration_sec"),
+    width: integer("width"),
+    height: integer("height"),
+    sizeBytes: integer("size_bytes"),
+    // Fertiges Story-Video (1080×1920 mit eingebrannter Route und Werten).
+    // storyKey hält fest, aus welchen Werten es gebaut wurde — ändert sich
+    // Titel oder Distanz, wird neu gerendert.
+    storyPath: text("story_path"),
+    storyStatus: text("story_status"), // null | "processing" | "ready" | "failed"
+    storyKey: text("story_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("activity_videos_activity_idx").on(t.activityId)],
+);
+
 // ── Activity Boosts (Likes / Kudos) ────────────────────────────────────────
 
 export const activityBoosts = pgTable(

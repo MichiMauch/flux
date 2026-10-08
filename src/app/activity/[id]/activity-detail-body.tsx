@@ -12,6 +12,7 @@ import { BentoElevationRangeTile } from "@/app/components/bento/bento-elevation-
 import { BentoGpxTile } from "@/app/components/bento/bento-gpx-tile";
 import { BentoNotesTile } from "@/app/components/bento/bento-notes-tile";
 import { BentoPhotosTile } from "@/app/components/bento/bento-photos-tile";
+import { BentoVideosTile, type VideoItem } from "@/app/components/bento/bento-videos-tile";
 import { BentoRouteInteractive } from "@/app/components/bento/bento-route-interactive";
 import { BentoWeatherTile } from "@/app/components/bento/bento-weather-tile";
 import { HoverProvider } from "@/app/components/bento/hover-context";
@@ -50,6 +51,8 @@ export interface ActivityDetailBodyProps {
     lng: number | null;
     takenAt: Date | null;
   }[];
+  /** Fehlt in Ansichten ohne Videos (Embed). */
+  videos?: VideoItem[];
 }
 
 export function ActivityDetailBody({
@@ -73,6 +76,7 @@ export function ActivityDetailBody({
   notes,
   isOwner,
   photos,
+  videos = [],
 }: ActivityDetailBodyProps) {
   // Yoga & Co. haben keinen Gelände-Bezug: Karte, Höhenprofil, Anstiege,
   // Höhenbereich, Auf-/Abstieg und GPX fallen komplett weg.
@@ -122,6 +126,13 @@ export function ActivityDetailBody({
             <BentoPhotosTile
               activityId={activityId}
               photos={photos}
+              isOwner={isOwner}
+            />
+          )}
+          {(isOwner || videos.length > 0) && (
+            <BentoVideosTile
+              activityId={activityId}
+              videos={videos}
               isOwner={isOwner}
             />
           )}

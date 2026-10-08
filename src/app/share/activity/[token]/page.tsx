@@ -5,6 +5,7 @@ import {
   activities,
   users,
   activityPhotos,
+  activityVideos,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { computeHrZones } from "@/lib/hr-zones";
@@ -106,6 +107,17 @@ export default async function SharedActivityPage({
     .from(activityPhotos)
     .where(eq(activityPhotos.activityId, activity.id))
     .orderBy(activityPhotos.takenAt);
+
+  const videos = await db
+    .select({
+      id: activityVideos.id,
+      status: activityVideos.status,
+      width: activityVideos.width,
+      height: activityVideos.height,
+    })
+    .from(activityVideos)
+    .where(eq(activityVideos.activityId, activity.id))
+    .orderBy(activityVideos.createdAt);
 
   const route = (activity.routeData as RoutePoint[] | null) ?? [];
   const isRunning = activity.type?.toUpperCase() === "RUNNING";
@@ -233,6 +245,7 @@ export default async function SharedActivityPage({
             notes={activity.notes}
             isOwner={false}
             photos={photos}
+            videos={videos.filter((v) => v.status === "ready")}
           />
 
           {showsTerrain(activity.type) && route.length > 0 && (

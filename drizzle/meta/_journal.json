@@ -288,6 +288,13 @@
       "when": 1788811888011,
       "tag": "0040_light_the_spike",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791468090192,
+      "tag": "0041_add_activity_videos",
+      "breakpoints": true
     }
   ]
 }

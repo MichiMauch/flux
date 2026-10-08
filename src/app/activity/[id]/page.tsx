@@ -5,6 +5,7 @@ import {
   activities,
   users,
   activityPhotos,
+  activityVideos,
   activityBoosts,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -54,6 +55,17 @@ export default async function ActivityBentoPage({
     .from(activityPhotos)
     .where(eq(activityPhotos.activityId, activity.id))
     .orderBy(activityPhotos.takenAt);
+
+  const videos = await db
+    .select({
+      id: activityVideos.id,
+      status: activityVideos.status,
+      width: activityVideos.width,
+      height: activityVideos.height,
+    })
+    .from(activityVideos)
+    .where(eq(activityVideos.activityId, activity.id))
+    .orderBy(activityVideos.createdAt);
 
   const boosters = await db
     .select({
@@ -226,6 +238,7 @@ export default async function ActivityBentoPage({
           notes={activity.notes}
           isOwner={isOwner}
           photos={photos}
+          videos={videos}
         />
 
         {showsTerrain(activity.type) && route.length > 0 && (

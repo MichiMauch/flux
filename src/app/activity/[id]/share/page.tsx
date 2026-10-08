@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { activities, activityPhotos } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { activities, activityPhotos, activityVideos } from "@/lib/db/schema";
+import { and, asc, eq } from "drizzle-orm";
 import { ShareActivityClient } from "./share-activity-client";
 
 export default async function ActivitySharePage({
@@ -26,19 +26,30 @@ export default async function ActivitySharePage({
 
   if (!row) notFound();
 
-  // Das Foto-Design gibt es nur, wenn die Aktivität ein Foto hat.
-  const [photo] = await db
+  // Fotos der Aktivität für das Foto-Design, in Aufnahmereihenfolge — dieselbe
+  // Reihenfolge wie in der Share-Card-Route, damit "das erste" dasselbe meint.
+  const photos = await db
     .select({ id: activityPhotos.id })
     .from(activityPhotos)
     .where(eq(activityPhotos.activityId, row.id))
-    .limit(1);
+    .orderBy(asc(activityPhotos.takenAt), asc(activityPhotos.id));
+
+  // Nur fertig umgewandelte Videos taugen für ein Story-Video.
+  const videos = await db
+    .select({ id: activityVideos.id })
+    .from(activityVideos)
+    .where(
+      and(eq(activityVideos.activityId, row.id), eq(activityVideos.status, "ready"))
+    )
+    .orderBy(asc(activityVideos.createdAt));
 
   return (
     <ShareActivityClient
       activityId={row.id}
       activityName={row.name}
       initialToken={row.shareToken}
-      hasPhoto={!!photo}
+      photoIds={photos.map((p) => p.id)}
+      videoIds={videos.map((v) => v.id)}
     />
   );
 }

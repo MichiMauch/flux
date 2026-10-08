@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { activities, activityPhotos, users } from "@/lib/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { readFile } from "fs/promises";
 import {
@@ -10,7 +10,6 @@ import {
   activityTypeLabel,
   showsTerrain,
 } from "@/lib/activity-types";
-import { APP_TIME_ZONE, formatDurationHMS } from "@/lib/activity-format";
 import sharp from "sharp";
 import { routeToPath, sampleRoute, type RoutePoint } from "./route-path";
 import {
@@ -19,8 +18,9 @@ import {
   storyMapRequest,
   STORY_WIDTH,
   STORY_HEIGHT,
-  type StoryStat,
 } from "./story-designs";
+import { buildStoryStats, formatDate, formatDistance, metricValue } from "./format";
+import { formatDurationHMS } from "@/lib/activity-format";
 
 export const runtime = "nodejs";
 
@@ -49,29 +49,6 @@ const FLUX_WORDMARK = "FLUX";
 
 function getFormat(raw: string | null): ShareFormat {
   return raw === "story" ? "story" : "square";
-}
-
-function metricValue(value: number | null | undefined, digits = 0): string {
-  if (value == null || !Number.isFinite(value)) return "–";
-  return value.toLocaleString("de-CH", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-}
-
-function formatDistance(distance: number | null): string {
-  if (distance == null || !Number.isFinite(distance)) return "–";
-  return (distance / 1000).toFixed(distance >= 10000 ? 1 : 2);
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("de-CH", {
-    timeZone: APP_TIME_ZONE,
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 // Google "encoded polyline" (precision 5) — far more compact than GeoJSON,
@@ -183,6 +160,23 @@ async function storyPhotoDataUrl(path: string | null): Promise<string | null> {
     } catch {}
   }
   return null;
+}
+
+// Pfad eines gewählten Fotos. Die Aktivität steht mit in der Bedingung: eine
+// fremde Foto-ID darf nicht zu einem Bild einer anderen Aktivität führen.
+async function photoPathForActivity(
+  activityId: string,
+  photoId: string | null
+): Promise<string | null> {
+  if (!photoId) return null;
+  const [row] = await db
+    .select({ path: activityPhotos.filePath })
+    .from(activityPhotos)
+    .where(
+      and(eq(activityPhotos.id, photoId), eq(activityPhotos.activityId, activityId))
+    )
+    .limit(1);
+  return row?.path ?? null;
 }
 
 const getCachedActivityShareCardData = unstable_cache(
@@ -403,18 +397,17 @@ export async function GET(
     // Der 3D-Flug braucht die Karte hinter dem Play-Knopf.
     const design = isFlight ? "karte" : parseStoryDesign(searchParams.get("design"));
     const mapRequest = storyMapRequest(design);
-    const stats: StoryStat[] = [
-      { label: "Distanz", value: formatDistance(data.distance), unit: "km" },
-      { label: "Zeit", value: formatDurationHMS(duration) },
-    ];
-    if (terrain) {
-      stats.push({ label: "Aufstieg", value: metricValue(data.ascent), unit: "m" });
-    }
+    const stats = buildStoryStats(data, terrain);
     const [mapUrl, photoUrl] = await Promise.all([
       mapRequest
         ? fetchMap(mapRequest.width, mapRequest.height, mapRequest.padding)
         : null,
-      design === "foto" ? storyPhotoDataUrl(data.photoFullPath) : null,
+      design === "foto"
+        ? storyPhotoDataUrl(
+            (await photoPathForActivity(id, searchParams.get("photo"))) ??
+              data.photoFullPath
+          )
+        : null,
     ]);
     return finish(
       new ImageResponse(

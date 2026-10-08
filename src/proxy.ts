@@ -31,6 +31,7 @@ export async function proxy(request: NextRequest) {
   if (request.nextUrl.searchParams.has("share")) {
     if (
       pathname.startsWith("/api/photos/") ||
+      pathname.startsWith("/api/videos/") ||
       pathname.match(/^\/api\/activities\/[^/]+\/gpx$/) ||
       pathname.match(/^\/api\/activities\/[^/]+\/share-card$/) ||
       pathname.match(/^\/api\/tours\/[^/]+\/cover$/)

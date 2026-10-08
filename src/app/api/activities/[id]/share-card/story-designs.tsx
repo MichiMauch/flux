@@ -18,7 +18,7 @@ export const STORY_HEIGHT = 1920;
 export const STORY_SAFE_TOP = 250;
 export const STORY_SAFE_BOTTOM = 400;
 
-export const STORY_DESIGNS = ["karte", "sticker", "rahmen", "foto"] as const;
+export const STORY_DESIGNS = ["karte", "sticker", "rahmen", "foto", "video"] as const;
 export type StoryDesign = (typeof STORY_DESIGNS)[number];
 
 export function parseStoryDesign(raw: string | null): StoryDesign {
@@ -596,11 +596,21 @@ function RahmenDesign(p: StoryCardProps) {
 }
 
 // ── Foto: eigenes Foto der Aktivität, Route und Werte darüber ───────────────
+//
+// Dasselbe Layout dient als Overlay für das Story-Video: dort ohne Foto und
+// ohne Hintergrund, also transparent. ffmpeg legt es über das Video, und die
+// Verläufe dunkeln das Video an denselben Stellen ab wie hier das Foto.
 
-function FotoDesign(p: StoryCardProps) {
+function FotoDesign(p: StoryCardProps & { transparent?: boolean }) {
   return (
-    <Root background="linear-gradient(160deg, #0a0a0a 0%, #1a1a1a 55%, #0a0a0a 100%)">
-      {p.photoUrl ? <FullImage src={p.photoUrl} /> : null}
+    <Root
+      background={
+        p.transparent
+          ? undefined
+          : "linear-gradient(160deg, #0a0a0a 0%, #1a1a1a 55%, #0a0a0a 100%)"
+      }
+    >
+      {p.photoUrl && !p.transparent ? <FullImage src={p.photoUrl} /> : null}
       {/* Leichte Abdunklung, damit weisse Schrift auf hellem Himmel steht. */}
       <div
         style={{
@@ -738,12 +748,12 @@ export function StoryCard({
       ? StickerDesign
       : design === "rahmen"
         ? RahmenDesign
-        : design === "foto"
+        : design === "foto" || design === "video"
           ? FotoDesign
           : KarteDesign;
   return (
     <div style={{ display: "flex", position: "relative", width: "100%", height: "100%" }}>
-      <Design {...props} />
+      {design === "video" ? <FotoDesign {...props} transparent /> : <Design {...props} />}
       {/* ?guides=1 blendet die überdeckten Zonen rot ein, zum Prüfen. */}
       {showGuides ? <Guides /> : null}
     </div>

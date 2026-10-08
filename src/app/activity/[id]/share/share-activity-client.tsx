@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -9,6 +9,7 @@ import {
   Camera,
   Image as ImageIcon,
   Link2,
+  Loader2,
   Mail,
   MessageCircle,
   Share2,
@@ -18,13 +19,24 @@ import { setActivityShare } from "@/app/share/actions";
 
 // Was geteilt wird: eines der Story-Designs oder der 3D-Flug. Die Designs
 // entsprechen dem `design`-Parameter der Share-Card-Route.
-type ShareMode = "karte" | "sticker" | "rahmen" | "foto" | "flight";
+type ShareMode = "karte" | "sticker" | "rahmen" | "foto" | "video" | "flight";
+
+// Stand des Story-Videos zum gewählten Video. Das fertige MP4 wird gleich
+// geladen und hier gehalten: navigator.share() muss direkt im Tipp aufgerufen
+// werden, für einen Download von mehreren MB wäre es dann zu spät.
+type StoryVideo =
+  | { status: "idle" | "processing" | "failed" }
+  | { status: "ready"; blob: Blob };
+
+const STORY_POLL_MS = 3000;
+const STORY_TIMEOUT_MS = 12 * 60 * 1000;
 
 const MODE_LABELS: Record<ShareMode, string> = {
   karte: "Karte",
   sticker: "Sticker",
   rahmen: "Rahmen",
   foto: "Foto",
+  video: "Video",
   flight: "3D-Flug",
 };
 
@@ -32,14 +44,18 @@ interface Props {
   activityId: string;
   activityName: string;
   initialToken: string | null;
-  hasPhoto: boolean;
+  /** Fotos der Aktivität in Aufnahmereihenfolge; leer = kein Foto-Design. */
+  photoIds: string[];
+  /** Fertig umgewandelte Videos der Aktivität; leer = kein Video-Modus. */
+  videoIds: string[];
 }
 
 export function ShareActivityClient({
   activityId,
   activityName,
   initialToken,
-  hasPhoto,
+  photoIds,
+  videoIds,
 }: Props) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(initialToken);
@@ -53,11 +69,69 @@ export function ShareActivityClient({
     "karte",
     "sticker",
     "rahmen",
-    ...(hasPhoto ? (["foto"] as const) : []),
+    ...(photoIds.length > 0 ? (["foto"] as const) : []),
+    ...(videoIds.length > 0 ? (["video"] as const) : []),
     "flight",
   ];
   const [mode, setMode] = useState<ShareMode>("karte");
+  // Welches Foto das Foto-Design als Hintergrund nimmt.
+  const [photoId, setPhotoId] = useState<string | null>(photoIds[0] ?? null);
+  const [videoId, setVideoId] = useState<string | null>(videoIds[0] ?? null);
+  const [story, setStory] = useState<StoryVideo>({ status: "idle" });
+  // Zählt hoch, sobald ein anderes Video gewählt oder die Seite verlassen
+  // wird — ein noch laufendes Abfragen erkennt daran, dass es veraltet ist.
+  const storyRun = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return () => {
+      // Ein Zähler, kein DOM-Knoten: genau der Wert beim Aufräumen ist gemeint.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      storyRun.current++;
+    };
+  }, []);
+
+  function selectVideo(id: string) {
+    storyRun.current++;
+    setVideoId(id);
+    setStory({ status: "idle" });
+  }
+
+  // Story-Video anfordern, auf das Rendern warten und das MP4 laden.
+  async function createStory() {
+    if (!videoId) return;
+    const runId = ++storyRun.current;
+    const current = () => storyRun.current === runId;
+    setError(null);
+    setInfo(null);
+    setStory({ status: "processing" });
+    try {
+      const res = await fetch(`/api/videos/${videoId}/story`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      let status = ((await res.json()) as { status: string }).status;
+      const deadline = Date.now() + STORY_TIMEOUT_MS;
+      while (status === "processing") {
+        if (!current()) return;
+        if (Date.now() > deadline) throw new Error();
+        await new Promise((r) => setTimeout(r, STORY_POLL_MS));
+        const meta = await fetch(`/api/videos/${videoId}?meta=1`);
+        if (!meta.ok) throw new Error();
+        status = ((await meta.json()) as { storyStatus: string }).storyStatus;
+      }
+      if (status !== "ready") throw new Error();
+      // Zeitstempel gegen den Browser-Cache: nach einer Titeländerung liegt
+      // unter derselben Adresse ein neu gerendertes Video.
+      const file = await fetch(`/api/videos/${videoId}?story=1&t=${Date.now()}`);
+      if (!file.ok) throw new Error();
+      const blob = await file.blob();
+      if (current()) setStory({ status: "ready", blob });
+    } catch {
+      if (current()) {
+        setStory({ status: "failed" });
+        setError("Story-Video konnte nicht erstellt werden.");
+      }
+    }
+  }
 
   const canNativeShare =
     typeof navigator !== "undefined" &&
@@ -77,10 +151,13 @@ export function ShareActivityClient({
     setMode(m);
   }
 
+  // Im Video-Modus ist das die transparente Ebene mit Route und Werten, die in
+  // der Vorschau über dem laufenden Video liegt.
   function previewSrc(m: ShareMode): string {
     return (
       `/api/activities/${activityId}/share-card?format=story` +
-      (m === "flight" ? "&variant=flight" : `&design=${m}`)
+      (m === "flight" ? "&variant=flight" : `&design=${m}`) +
+      (m === "foto" && photoId ? `&photo=${photoId}` : "")
     );
   }
 
@@ -102,18 +179,35 @@ export function ShareActivityClient({
   }
 
   async function fetchCard(): Promise<Blob> {
+    // Im Video-Modus wird das fertige Story-Video geteilt, nicht die Ebene.
+    if (mode === "video") {
+      if (story.status !== "ready") {
+        throw new Error("Zuerst das Story-Video erstellen.");
+      }
+      return story.blob;
+    }
     const res = await fetch(previewSrc(mode), { credentials: "include" });
     if (!res.ok) throw new Error("Karte konnte nicht erstellt werden");
     return await res.blob();
   }
 
-  function downloadBlob(blob: Blob) {
+  function shareFileName(): string {
     const date = new Date().toISOString().slice(0, 10);
     const suffix = mode === "flight" ? "flug" : mode;
+    return `flux-${date}-${suffix}.${mode === "video" ? "mp4" : "png"}`;
+  }
+
+  function shareFile(blob: Blob): File {
+    return new File([blob], shareFileName(), {
+      type: mode === "video" ? "video/mp4" : "image/png",
+    });
+  }
+
+  function downloadBlob(blob: Blob) {
     const a = document.createElement("a");
     const url = URL.createObjectURL(blob);
     a.href = url;
-    a.download = `flux-${date}-${suffix}.png`;
+    a.download = shareFileName();
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -171,6 +265,11 @@ export function ShareActivityClient({
   // eigenes Foto als Story wählen und den Sticker darüber einfügen.
   function handleCopyImage() {
     run("Kopieren", async () => {
+      if (mode === "video") {
+        throw new Error(
+          "Videos lassen sich nicht kopieren — Stories, Status oder Speichern nutzen."
+        );
+      }
       // Das Promise geht direkt ins ClipboardItem: Safari verlangt, dass
       // clipboard.write() noch im Klick aufgerufen wird, nicht erst nach fetch.
       await navigator.clipboard.write([
@@ -203,11 +302,7 @@ export function ShareActivityClient({
    */
   async function shareCardFile(fallbackInfo: string) {
     const blob = await fetchCard();
-    const date = new Date().toISOString().slice(0, 10);
-    const suffix = mode === "flight" ? "flug" : mode;
-    const file = new File([blob], `flux-${date}-${suffix}.png`, {
-      type: "image/png",
-    });
+    const file = shareFile(blob);
     if (
       typeof navigator.canShare === "function" &&
       navigator.canShare({ files: [file] })
@@ -222,25 +317,27 @@ export function ShareActivityClient({
   function handleCameraStories() {
     run("Stories", () =>
       shareCardFile(
-        "Bild gespeichert — in Instagram → Story → Bild aus Galerie auswählen."
+        mode === "video"
+          ? "Video gespeichert — in Instagram → Story → Video aus Galerie auswählen."
+          : "Bild gespeichert — in Instagram → Story → Bild aus Galerie auswählen."
       )
     );
   }
 
   function handleWhatsappStatus() {
     run("Status", () =>
-      shareCardFile("Bild gespeichert — in WhatsApp → Status hochladen.")
+      shareCardFile(
+        mode === "video"
+          ? "Video gespeichert — in WhatsApp → Status hochladen."
+          : "Bild gespeichert — in WhatsApp → Status hochladen."
+      )
     );
   }
 
   function handleNativeShare() {
     run("Teilen", async () => {
       const blob = await fetchCard();
-      const date = new Date().toISOString().slice(0, 10);
-      const suffix = mode === "flight" ? "flug" : mode;
-      const file = new File([blob], `flux-${date}-${suffix}.png`, {
-        type: "image/png",
-      });
+      const file = shareFile(blob);
       if (
         typeof navigator.canShare === "function" &&
         navigator.canShare({ files: [file] })
@@ -300,15 +397,39 @@ export function ShareActivityClient({
                     : undefined
                 }
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={previewSrc(m)}
-                  alt={`${MODE_LABELS[m]} Vorschau`}
-                  loading="lazy"
-                  width={1080}
-                  height={1920}
-                  className="block h-auto w-full"
-                />
+                {m === "video" && videoId ? (
+                  // Vorschau ohne Rendern: das Video läuft stumm und füllend
+                  // zugeschnitten, die transparente Ebene liegt darüber — so
+                  // sieht das Story-Video am Ende aus.
+                  <div className="relative aspect-[9/16] w-full overflow-hidden bg-black">
+                    <video
+                      key={videoId}
+                      src={`/api/videos/${videoId}`}
+                      poster={`/api/videos/${videoId}?poster=1`}
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewSrc(m)}
+                      alt="Video Vorschau"
+                      className="absolute inset-0 h-full w-full"
+                    />
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewSrc(m)}
+                    alt={`${MODE_LABELS[m]} Vorschau`}
+                    loading="lazy"
+                    width={1080}
+                    height={1920}
+                    className="block h-auto w-full"
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -333,11 +454,104 @@ export function ShareActivityClient({
           <p className="mt-2 text-center text-[10px] text-[#666] [font-family:var(--bento-mono)] uppercase tracking-[0.14em]">
             ← Wischen zum Wechseln →
           </p>
+
+          {/* Foto-Design: Hintergrundbild aus den Fotos der Aktivität wählen */}
+          {mode === "foto" && photoIds.length > 1 && (
+            <div className="mt-4">
+              <div className="[font-family:var(--bento-mono)] mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
+                Foto wählen
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {photoIds.map((id, i) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPhotoId(id)}
+                    aria-label={`Foto ${i + 1}`}
+                    aria-pressed={photoId === id}
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors cursor-pointer ${
+                      photoId === id
+                        ? "border-white"
+                        : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/api/photos/${id}?thumb=1`}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Video-Modus: Video wählen und das Story-Video erstellen */}
+          {mode === "video" && (
+            <div className="mt-4 space-y-3">
+              {videoIds.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {videoIds.map((id, i) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => selectVideo(id)}
+                      aria-label={`Video ${i + 1}`}
+                      aria-pressed={videoId === id}
+                      className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors cursor-pointer ${
+                        videoId === id
+                          ? "border-white"
+                          : "border-transparent opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/videos/${id}?poster=1`}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {story.status === "ready" ? (
+                <p className="flex items-center justify-center gap-2 rounded-lg border border-emerald-900/60 bg-emerald-950/30 px-3 py-2.5 text-xs text-emerald-300">
+                  <Check className="h-4 w-4" />
+                  Story-Video bereit — unten teilen oder speichern
+                </p>
+              ) : story.status === "processing" ? (
+                <p className="flex items-center justify-center gap-2 rounded-lg border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2.5 text-xs text-[#a3a3a3]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Story-Video wird erstellt, das dauert bis zu einer Minute…
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={createStory}
+                  className="[font-family:var(--bento-mono)] w-full rounded-lg bg-white px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:bg-white/90 cursor-pointer"
+                >
+                  {story.status === "failed"
+                    ? "Nochmals versuchen"
+                    : "Story-Video erstellen"}
+                </button>
+              )}
+              <p className="text-center text-[10px] text-[#666]">
+                Hochformat 1080 × 1920, höchstens 60 Sekunden, mit Ton
+              </p>
+            </div>
+          )}
         </div>
 
         <div>
           <div className="[font-family:var(--bento-mono)] mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a3a3a3]">
-            {mode === "flight" ? "3D-Flug teilen" : "Karte teilen"}
+            {mode === "flight"
+              ? "3D-Flug teilen"
+              : mode === "video"
+                ? "Video teilen"
+                : "Karte teilen"}
           </div>
           <div className="grid grid-cols-4 gap-3">
             <ActionButton
