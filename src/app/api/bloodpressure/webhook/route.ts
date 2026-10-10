@@ -3,7 +3,7 @@ import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 import { users, bloodPressureSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { pickBpReading } from "@/lib/blood-pressure";
+import { bpDefaultUserEmail, pickBpReading } from "@/lib/blood-pressure";
 
 // Webhook receives new BP measurement from blood-pressure-tracker
 export async function POST(request: NextRequest) {
@@ -42,10 +42,7 @@ export async function POST(request: NextRequest) {
   // belongs to. Payloads without it (first tracker user, older tracker
   // versions) go to BLOOD_PRESSURE_USER_EMAIL, with the legacy hardcoded
   // address as fallback so existing deployments keep working.
-  const targetEmail =
-    parsed.userEmail ??
-    process.env.BLOOD_PRESSURE_USER_EMAIL ??
-    "michi.mauch@gmail.com";
+  const targetEmail = parsed.userEmail ?? bpDefaultUserEmail();
   const user = await db.query.users.findFirst({
     where: eq(users.email, targetEmail),
   });

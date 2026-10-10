@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { bloodPressureSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { pickBpReading } from "@/lib/blood-pressure";
+import { bpDefaultUserEmail, pickBpReading } from "@/lib/blood-pressure";
 
 // Plus the measurement fields (systolic1/2, …Avg) that pickBpReading reads.
 interface BpSession extends Record<string, unknown> {
@@ -34,10 +34,22 @@ export async function POST() {
     // The tracker is multi-user: fluxEmail selects whose measurements we get.
     const url = new URL(`${trackerUrl}/api/measurements`);
     url.searchParams.set("fluxEmail", session.user.email);
-    const res = await fetch(url, {
+    const init = {
       headers: { Authorization: `Bearer ${apiKey}` },
       cache: "no-store",
-    });
+    } as const;
+    let res = await fetch(url, init);
+
+    // The tracker's first user may have no fluxEmail mapping; without the
+    // parameter the tracker returns that user's measurements. Only the
+    // default account may fall back to them.
+    if (
+      res.status === 404 &&
+      session.user.email.toLowerCase() === bpDefaultUserEmail().toLowerCase()
+    ) {
+      url.searchParams.delete("fluxEmail");
+      res = await fetch(url, init);
+    }
 
     // No tracker account mapped to this Flux user
     if (res.status === 404) {

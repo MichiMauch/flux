@@ -7,6 +7,15 @@ const DIA_MAX = 200;
 const PULSE_MIN = 20;
 const PULSE_MAX = 250;
 
+/**
+ * Flux account of the tracker's first user. That user may have no fluxEmail
+ * mapping in the tracker (older setups), so webhook payloads without
+ * userEmail and syncs the tracker can't map by email belong to this account.
+ */
+export function bpDefaultUserEmail(): string {
+  return process.env.BLOOD_PRESSURE_USER_EMAIL ?? "michi.mauch@gmail.com";
+}
+
 export interface BpReading {
   systolic: number;
   diastolic: number;
