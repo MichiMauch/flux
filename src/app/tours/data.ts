@@ -10,7 +10,7 @@ import {
 import { and, eq, or, sql, asc, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getTourAccess, type TourAccess } from "@/lib/tour-access";
-import { mergeSameOutings } from "@/lib/tour-merge";
+import { mergeSameOutings, type MergeCandidate } from "@/lib/tour-merge";
 
 export interface TourTotals {
   count: number;
@@ -257,9 +257,17 @@ export async function tourHasManualOrder(
   return rows.length > 0;
 }
 
-export async function listToursForUser(
-  userId: string
-): Promise<TourSummary[]> {
+type VisibleTourMember = MergeCandidate & {
+  distance: number | null;
+  ascent: number | null;
+};
+
+/**
+ * Alle sichtbaren Touren (eigene + von der Partner:in geteilte) samt ihrer
+ * Mitglieder-Aktivitäten. Ohne `fullGeometry` trägt `routeData` nur den
+ * Startpunkt — der reicht fürs Zusammenführen und spart den Track.
+ */
+async function loadVisibleTours(userId: string, fullGeometry: boolean) {
   // Step 1: collect all visible tours — own + shared by partner
   const me = await db
     .select({ partnerId: users.partnerId })
@@ -316,7 +324,9 @@ export async function listToursForUser(
             movingTime: activities.movingTime,
             distance: activities.distance,
             ascent: activities.ascent,
-            startPoint: sql<{ lat: number; lng: number } | null>`${activities.routeGeometry}->0`,
+            geometry: fullGeometry
+              ? sql<unknown>`${activities.routeGeometry}`
+              : sql<unknown>`${activities.routeGeometry}->0`,
           })
           .from(activityTourMembers)
           .innerJoin(
@@ -342,19 +352,29 @@ export async function listToursForUser(
           )
           .orderBy(asc(activities.startTime));
 
-  const membersByTour = new Map<string, typeof memberRows>();
-  for (const m of memberRows) {
-    const list = membersByTour.get(m.tourId) ?? [];
-    list.push(m);
-    membersByTour.set(m.tourId, list);
+  const membersByTour = new Map<string, VisibleTourMember[]>();
+  for (const { tourId, geometry, ...m } of memberRows) {
+    const routeData = (
+      fullGeometry ? geometry : geometry ? [geometry] : null
+    ) as MergeCandidate["routeData"];
+    const list = membersByTour.get(tourId) ?? [];
+    list.push({ ...m, routeData: Array.isArray(routeData) ? routeData : null });
+    membersByTour.set(tourId, list);
   }
 
+  return { tours, membersByTour };
+}
+
+export async function listToursForUser(
+  userId: string
+): Promise<TourSummary[]> {
+  const { tours, membersByTour } = await loadVisibleTours(userId, false);
+
   const summaries = tours.map((t) => {
-    const rows = (membersByTour.get(t.id) ?? []).map((m) => ({
-      ...m,
-      routeData: m.startPoint ? [m.startPoint] : null,
-    }));
-    const stages = mergeSameOutings(rows, t.ownerId).map((g) => g.primary);
+    const stages = mergeSameOutings(
+      membersByTour.get(t.id) ?? [],
+      t.ownerId
+    ).map((g) => g.primary);
     let totalDistance = 0;
     let totalAscent = 0;
     let first: Date | null = null;
@@ -402,6 +422,58 @@ export async function listToursForUser(
     }
     return b.createdAt.getTime() - a.createdAt.getTime();
   });
+}
+
+export interface TourRoute {
+  id: string;
+  name: string;
+  /** Eine vereinfachte Linie pro Etappe. */
+  segments: { lat: number; lng: number }[][];
+  distance: number;
+  ascent: number;
+  movingTime: number;
+  startTime: Date | null;
+}
+
+/**
+ * Jede sichtbare Tour als ein Bündel von Linien — für die Karte mit allen
+ * Touren. Touren ohne Etappe mit Route fallen weg.
+ */
+export async function listTourRoutesForUser(
+  userId: string
+): Promise<TourRoute[]> {
+  const { tours, membersByTour } = await loadVisibleTours(userId, true);
+
+  const routes: TourRoute[] = [];
+  for (const t of tours) {
+    const stages = mergeSameOutings(
+      membersByTour.get(t.id) ?? [],
+      t.ownerId
+    ).map((g) => g.primary);
+    const route: TourRoute = {
+      id: t.id,
+      name: t.name,
+      segments: [],
+      distance: 0,
+      ascent: 0,
+      movingTime: 0,
+      startTime: null,
+    };
+    for (const s of stages) {
+      if (s.routeData && s.routeData.length >= 2) {
+        route.segments.push(s.routeData);
+      }
+      route.distance += s.distance ?? 0;
+      route.ascent += s.ascent ?? 0;
+      route.movingTime += s.movingTime ?? s.duration ?? 0;
+      const d = new Date(s.startTime);
+      if (!route.startTime || d < route.startTime) route.startTime = d;
+    }
+    if (route.segments.length > 0) routes.push(route);
+  }
+  return routes.sort(
+    (a, b) => (a.startTime?.getTime() ?? 0) - (b.startTime?.getTime() ?? 0)
+  );
 }
 
 export interface TourPhoto {

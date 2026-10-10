@@ -7,6 +7,7 @@ import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { spaceMono } from "../components/bento/bento-fonts";
 import { DoneRibbon } from "../components/done-ribbon";
 import { listToursForUser } from "./data";
+import { ToursMapButton } from "./tours-map-button";
 import { APP_TIME_ZONE, formatDistanceAuto } from "@/lib/activity-format";
 
 function toDate(v: Date | string | null | undefined): Date | null {
@@ -49,7 +50,8 @@ export default async function ToursPage() {
         section="Touren"
         title="Aktivitäts-Touren"
         right={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {tours.length > 0 ? <ToursMapButton /> : null}
             <Link
               href="/tours/new"
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#ff6a00] bg-[#ff6a00] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-black hover:bg-[#ff8030]`}

@@ -16,6 +16,11 @@ export interface MultiRouteEntry {
   activityId: string;
   name: string;
   routeData: { lat: number; lng: number }[];
+  /** Mehrere Linien als ein Eintrag (z.B. alle Etappen einer Tour). */
+  segments?: { lat: number; lng: number }[][];
+  /** Ziel des Detail-Links; Standard ist die Aktivität. */
+  href?: string;
+  linkLabel?: string;
   color?: string;
   type?: string;
   distance?: number | null;
@@ -181,16 +186,15 @@ export default function MultiRouteMapClient({
     const built: {
       id: string;
       name: string;
-      positions: L.LatLngExpression[];
+      positions: L.LatLngExpression[][];
       color: string;
     }[] = [];
     routes.forEach((route, idx) => {
-      if (route.routeData.length < 2) return;
-      const positions: L.LatLngExpression[] = route.routeData.map((p) => [
-        p.lat,
-        p.lng,
-      ]);
-      allPositions.push(...positions);
+      const positions = (route.segments ?? [route.routeData])
+        .filter((seg) => seg.length >= 2)
+        .map((seg) => seg.map((p): L.LatLngExpression => [p.lat, p.lng]));
+      if (positions.length === 0) return;
+      for (const seg of positions) allPositions.push(...seg);
       built.push({
         id: route.activityId,
         name: route.name,
@@ -412,10 +416,12 @@ export default function MultiRouteMapClient({
           </dl>
           <div className="border-t p-2">
             <Link
-              href={`/activity/${selectedRoute.activityId}`}
+              href={
+                selectedRoute.href ?? `/activity/${selectedRoute.activityId}`
+              }
               className="flex w-full items-center justify-center rounded-md bg-foreground px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-background hover:opacity-90"
             >
-              Details ansehen →
+              {selectedRoute.linkLabel ?? "Details ansehen →"}
             </Link>
           </div>
         </div>
