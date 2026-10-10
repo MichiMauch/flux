@@ -17,7 +17,7 @@ interface BpSession {
 
 export async function POST() {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -32,10 +32,18 @@ export async function POST() {
   }
 
   try {
-    const res = await fetch(`${trackerUrl}/api/measurements`, {
+    // The tracker is multi-user: fluxEmail selects whose measurements we get.
+    const url = new URL(`${trackerUrl}/api/measurements`);
+    url.searchParams.set("fluxEmail", session.user.email);
+    const res = await fetch(url, {
       headers: { Authorization: `Bearer ${apiKey}` },
       cache: "no-store",
     });
+
+    // No tracker account mapped to this Flux user
+    if (res.status === 404) {
+      return NextResponse.json({ synced: 0, total: 0 });
+    }
 
     if (!res.ok) {
       const text = await res.text();

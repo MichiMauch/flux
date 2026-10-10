@@ -37,11 +37,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  // Target user: configurable via BLOOD_PRESSURE_USER_EMAIL, with the legacy
-  // hardcoded address as fallback so existing deployments keep working until
-  // the env var is set. (BP-tracker is single-tenant for now.)
+  // Target user: the tracker sends userEmail for the account the measurement
+  // belongs to. Payloads without it (first tracker user, older tracker
+  // versions) go to BLOOD_PRESSURE_USER_EMAIL, with the legacy hardcoded
+  // address as fallback so existing deployments keep working.
   const targetEmail =
-    process.env.BLOOD_PRESSURE_USER_EMAIL ?? "michi.mauch@gmail.com";
+    parsed.userEmail ??
+    process.env.BLOOD_PRESSURE_USER_EMAIL ??
+    "michi.mauch@gmail.com";
   const user = await db.query.users.findFirst({
     where: eq(users.email, targetEmail),
   });
@@ -93,6 +96,7 @@ function inRange(v: unknown, min: number, max: number): v is number {
 
 interface BpPayload {
   id: number;
+  userEmail: string | null;
   measuredAt: Date | null;
   date: string;
   time: string | null;
@@ -121,8 +125,13 @@ function parseBpPayload(body: unknown): BpPayload | null {
   }
   const time = typeof body.time === "string" ? body.time : null;
   const note = typeof body.note === "string" ? body.note : null;
+  const userEmail =
+    typeof body.userEmail === "string" && body.userEmail.length > 0
+      ? body.userEmail
+      : null;
   return {
     id: body.id,
+    userEmail,
     measuredAt,
     date: body.date,
     time,
