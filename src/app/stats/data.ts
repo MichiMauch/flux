@@ -258,9 +258,9 @@ export async function getBloodPressureData(
     .select({
       date: bloodPressureSessions.date,
       measuredAt: bloodPressureSessions.measuredAt,
-      systolic: bloodPressureSessions.systolicAvg,
-      diastolic: bloodPressureSessions.diastolicAvg,
-      pulse: bloodPressureSessions.pulseAvg,
+      systolic: bloodPressureSessions.systolic,
+      diastolic: bloodPressureSessions.diastolic,
+      pulse: bloodPressureSessions.pulse,
     })
     .from(bloodPressureSessions)
     .where(and(...parts))

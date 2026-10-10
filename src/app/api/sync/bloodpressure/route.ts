@@ -3,15 +3,14 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { bloodPressureSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { pickBpReading } from "@/lib/blood-pressure";
 
-interface BpSession {
+// Plus the measurement fields (systolic1/2, …Avg) that pickBpReading reads.
+interface BpSession extends Record<string, unknown> {
   id: number;
   date: string;
   time: string;
   timestamp: number;
-  systolicAvg: number;
-  diastolicAvg: number;
-  pulseAvg: number;
   note: string | null;
 }
 
@@ -52,12 +51,32 @@ export async function POST() {
 
     const sessions: BpSession[] = await res.json();
     let synced = 0;
+    let updated = 0;
 
     for (const s of sessions) {
+      const reading = pickBpReading(s);
+      if (!reading) continue;
+
       const existing = await db.query.bloodPressureSessions.findFirst({
         where: eq(bloodPressureSessions.sourceId, s.id),
       });
-      if (existing) continue;
+      if (existing) {
+        // Rows synced before Flux kept the better measurement still hold the
+        // session average — bring them in line with the tracker.
+        if (
+          existing.userId === session.user.id &&
+          (existing.systolic !== reading.systolic ||
+            existing.diastolic !== reading.diastolic ||
+            existing.pulse !== reading.pulse)
+        ) {
+          await db
+            .update(bloodPressureSessions)
+            .set(reading)
+            .where(eq(bloodPressureSessions.id, existing.id));
+          updated++;
+        }
+        continue;
+      }
 
       await db.insert(bloodPressureSessions).values({
         userId: session.user.id,
@@ -65,15 +84,13 @@ export async function POST() {
         measuredAt: s.timestamp ? new Date(s.timestamp) : null,
         date: s.date,
         time: s.time,
-        systolicAvg: s.systolicAvg,
-        diastolicAvg: s.diastolicAvg,
-        pulseAvg: s.pulseAvg,
+        ...reading,
         note: s.note,
       });
       synced++;
     }
 
-    return NextResponse.json({ synced, total: sessions.length });
+    return NextResponse.json({ synced, updated, total: sessions.length });
   } catch (error) {
     console.error("BP sync error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

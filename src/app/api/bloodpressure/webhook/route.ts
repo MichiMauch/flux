@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 import { users, bloodPressureSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { pickBpReading } from "@/lib/blood-pressure";
 
 // Webhook receives new BP measurement from blood-pressure-tracker
 export async function POST(request: NextRequest) {
@@ -67,9 +68,9 @@ export async function POST(request: NextRequest) {
     measuredAt: parsed.measuredAt,
     date: parsed.date,
     time: parsed.time,
-    systolicAvg: parsed.systolicAvg,
-    diastolicAvg: parsed.diastolicAvg,
-    pulseAvg: parsed.pulseAvg,
+    systolic: parsed.systolic,
+    diastolic: parsed.diastolic,
+    pulse: parsed.pulse,
     note: parsed.note,
   });
 
@@ -77,21 +78,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ synced: true });
 }
 
-// Plausible physiological ranges (mmHg / bpm). Outside-of-range values are
-// almost certainly junk and shouldn't enter the dataset.
-const SYS_MIN = 50;
-const SYS_MAX = 260;
-const DIA_MIN = 30;
-const DIA_MAX = 200;
-const PULSE_MIN = 20;
-const PULSE_MAX = 250;
-
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-function inRange(v: unknown, min: number, max: number): v is number {
-  return typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 }
 
 interface BpPayload {
@@ -100,9 +88,9 @@ interface BpPayload {
   measuredAt: Date | null;
   date: string;
   time: string | null;
-  systolicAvg: number;
-  diastolicAvg: number;
-  pulseAvg: number | null;
+  systolic: number;
+  diastolic: number;
+  pulse: number | null;
   note: string | null;
 }
 
@@ -110,14 +98,8 @@ function parseBpPayload(body: unknown): BpPayload | null {
   if (!isRecord(body)) return null;
   if (typeof body.id !== "number" || !Number.isFinite(body.id)) return null;
   if (typeof body.date !== "string" || body.date.length === 0) return null;
-  if (!inRange(body.systolicAvg, SYS_MIN, SYS_MAX)) return null;
-  if (!inRange(body.diastolicAvg, DIA_MIN, DIA_MAX)) return null;
-  const pulse =
-    body.pulseAvg == null
-      ? null
-      : inRange(body.pulseAvg, PULSE_MIN, PULSE_MAX)
-        ? body.pulseAvg
-        : null;
+  const reading = pickBpReading(body);
+  if (!reading) return null;
   let measuredAt: Date | null = null;
   if (typeof body.timestamp === "string" || typeof body.timestamp === "number") {
     const d = new Date(body.timestamp);
@@ -135,9 +117,7 @@ function parseBpPayload(body: unknown): BpPayload | null {
     measuredAt,
     date: body.date,
     time,
-    systolicAvg: body.systolicAvg,
-    diastolicAvg: body.diastolicAvg,
-    pulseAvg: pulse,
+    ...reading,
     note,
   };
 }

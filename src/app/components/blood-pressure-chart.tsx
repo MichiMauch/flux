@@ -20,6 +20,16 @@ interface BloodPressureChartProps {
   }[];
 }
 
+const SERIES: Record<string, { label: string; unit: string; order: number }> = {
+  systolic: { label: "Systolisch", unit: "mmHg", order: 0 },
+  diastolic: { label: "Diastolisch", unit: "mmHg", order: 1 },
+  pulse: { label: "Puls", unit: "bpm", order: 2 },
+};
+
+// Recharts sorts tooltip and legend entries alphabetically by default.
+const seriesOrder = (item: { dataKey?: unknown }) =>
+  SERIES[String(item.dataKey)]?.order ?? 99;
+
 export function BloodPressureChart({ data }: BloodPressureChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -53,25 +63,24 @@ export function BloodPressureChart({ data }: BloodPressureChartProps) {
           width={35}
         />
         <Tooltip
-          contentStyle={{ fontSize: 12, borderRadius: 8 }}
+          contentStyle={{
+            fontSize: 12,
+            borderRadius: 8,
+            backgroundColor: "#18181b",
+            border: "1px solid #3f3f46",
+          }}
+          labelStyle={{ color: "#d4d4d8" }}
+          itemSorter={seriesOrder}
           formatter={(value, name) => {
-            const labels: Record<string, string> = {
-              systolic: "Systolisch",
-              diastolic: "Diastolisch",
-              pulse: "Puls",
-            };
-            return [`${value}`, labels[name as string] ?? name];
+            const series = SERIES[name as string];
+            return series
+              ? [`${value} ${series.unit}`, series.label]
+              : [`${value}`, name];
           }}
         />
         <Legend
-          formatter={(value) => {
-            const labels: Record<string, string> = {
-              systolic: "Systolisch",
-              diastolic: "Diastolisch",
-              pulse: "Puls",
-            };
-            return labels[value] ?? value;
-          }}
+          itemSorter={seriesOrder}
+          formatter={(value) => SERIES[value]?.label ?? value}
         />
         <Line
           type="monotone"

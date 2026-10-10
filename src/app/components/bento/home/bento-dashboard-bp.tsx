@@ -40,9 +40,9 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
     .select({
       date: bloodPressureSessions.date,
       measuredAt: bloodPressureSessions.measuredAt,
-      systolicAvg: bloodPressureSessions.systolicAvg,
-      diastolicAvg: bloodPressureSessions.diastolicAvg,
-      pulseAvg: bloodPressureSessions.pulseAvg,
+      systolic: bloodPressureSessions.systolic,
+      diastolic: bloodPressureSessions.diastolic,
+      pulse: bloodPressureSessions.pulse,
     })
     .from(bloodPressureSessions)
     .where(eq(bloodPressureSessions.userId, userId))
@@ -69,7 +69,7 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
     );
   }
 
-  const cls = classify(latest.systolicAvg, latest.diastolicAvg);
+  const cls = classify(latest.systolic, latest.diastolic);
   const dateLabel = (latest.measuredAt ?? new Date(latest.date)).toLocaleDateString("de-CH", {
     timeZone: APP_TIME_ZONE,
     day: "2-digit",
@@ -93,14 +93,14 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
       </div>
       <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="flex items-baseline gap-2" style={{ fontSize: "28px" }}>
-          <SevenSegDisplay value={String(Math.round(latest.systolicAvg))} />
+          <SevenSegDisplay value={String(Math.round(latest.systolic))} />
           <span
             className={`${spaceMono.className} text-[0.4em] font-bold`}
             style={{ color: "#3a3a3a" }}
           >
             /
           </span>
-          <SevenSegDisplay value={String(Math.round(latest.diastolicAvg))} />
+          <SevenSegDisplay value={String(Math.round(latest.diastolic))} />
           <span
             className={`${spaceMono.className} text-[0.32em] font-bold lowercase`}
             style={{ color: NEON }}
@@ -121,11 +121,11 @@ export async function BentoDashboardBp({ userId }: { userId: string }) {
         >
           {cls.short}
         </span>
-        {latest.pulseAvg != null && (
+        {latest.pulse != null && (
           <span
             className={`${spaceMono.className} text-[10px] font-bold text-[#9ca3af] tabular-nums uppercase tracking-[0.1em]`}
           >
-            ♥ {Math.round(latest.pulseAvg)}
+            ♥ {Math.round(latest.pulse)}
           </span>
         )}
       </div>

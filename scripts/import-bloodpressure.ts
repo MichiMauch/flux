@@ -59,6 +59,14 @@ async function main() {
       continue;
     }
 
+    // Flux keeps the measurement with the lower systolic value, not the average
+    const m1Wins =
+      s.systolic1 < s.systolic2 ||
+      (s.systolic1 === s.systolic2 && s.diastolic1 <= s.diastolic2);
+    const better = m1Wins
+      ? { systolic: s.systolic1, diastolic: s.diastolic1, pulse: s.pulse1 }
+      : { systolic: s.systolic2, diastolic: s.diastolic2, pulse: s.pulse2 };
+
     await sql`
       INSERT INTO blood_pressure_sessions (id, user_id, source_id, date, time, systolic_avg, diastolic_avg, pulse_avg, note, created_at)
       VALUES (
@@ -67,9 +75,9 @@ async function main() {
         ${s.id},
         ${s.date},
         ${s.time},
-        ${s.systolicAvg},
-        ${s.diastolicAvg},
-        ${s.pulseAvg},
+        ${better.systolic},
+        ${better.diastolic},
+        ${better.pulse},
         ${s.note},
         NOW()
       )

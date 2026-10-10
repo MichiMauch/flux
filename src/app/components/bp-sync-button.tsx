@@ -15,12 +15,15 @@ export function BpSyncButton() {
       const res = await fetch("/api/sync/bloodpressure", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
+        const updated = data.updated ?? 0;
         setResult(
           data.synced > 0
             ? `${data.synced} neue Messung(en)`
-            : "Alles aktuell"
+            : updated > 0
+              ? `${updated} Messung(en) aktualisiert`
+              : "Alles aktuell"
         );
-        if (data.synced > 0) window.location.reload();
+        if (data.synced > 0 || updated > 0) window.location.reload();
       } else {
         setResult(data.error || "Fehler");
       }

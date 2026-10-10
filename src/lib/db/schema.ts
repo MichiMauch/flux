@@ -599,9 +599,11 @@ export const bloodPressureSessions = pgTable(
     measuredAt: timestamp("measured_at", { withTimezone: true }), // real timestamp for sorting
     date: text("date").notNull(),
     time: text("time"),
-    systolicAvg: real("systolic_avg").notNull(),
-    diastolicAvg: real("diastolic_avg").notNull(),
-    pulseAvg: real("pulse_avg"),
+    // The better of the session's two measurements (see pickBpReading), not
+    // an average — the *_avg column names are historical.
+    systolic: real("systolic_avg").notNull(),
+    diastolic: real("diastolic_avg").notNull(),
+    pulse: real("pulse_avg"),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },

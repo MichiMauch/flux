@@ -13,6 +13,9 @@ import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoTile } from "../components/bento/bento-tile";
 import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
 
+const BP_TRACKER_URL =
+  process.env.BLOOD_PRESSURE_TRACKER_URL ?? "https://blood.mauch.rocks";
+
 export default async function HealthPage() {
   const session = await auth();
   if (!session) redirect("/login");
@@ -78,9 +81,9 @@ export default async function HealthPage() {
 
   const bpStats: Stat[] = latestBp
     ? [
-        { value: `${latestBp.systolicAvg}`, label: "Systolisch" },
-        { value: `${latestBp.diastolicAvg}`, label: "Diastolisch" },
-        { value: latestBp.pulseAvg != null ? `${latestBp.pulseAvg.toFixed(0)}` : "–", label: "Puls" },
+        { value: `${latestBp.systolic}`, label: "Systolisch" },
+        { value: `${latestBp.diastolic}`, label: "Diastolisch" },
+        { value: latestBp.pulse != null ? `${latestBp.pulse.toFixed(0)}` : "–", label: "Puls" },
       ]
     : [];
 
@@ -161,12 +164,24 @@ export default async function HealthPage() {
                       .reverse()
                       .map((d) => ({
                         date: d.date,
-                        systolic: d.systolicAvg,
-                        diastolic: d.diastolicAvg,
-                        pulse: d.pulseAvg ?? 0,
+                        systolic: d.systolic,
+                        diastolic: d.diastolic,
+                        pulse: d.pulse ?? 0,
                       }))}
                   />
                 </div>
+                <p className="mt-3 text-xs text-[#9ca3af]">
+                  Angezeigt wird pro Messung der Durchgang mit dem tieferen
+                  oberen Wert. Weitere Daten:{" "}
+                  <a
+                    href={BP_TRACKER_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#FF6A00] hover:underline"
+                  >
+                    {new URL(BP_TRACKER_URL).host}
+                  </a>
+                </p>
               </div>
             )}
           </BentoTile>
