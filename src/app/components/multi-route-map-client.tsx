@@ -26,6 +26,11 @@ export interface MultiRouteEntry {
 
 interface MultiRouteMapClientProps {
   routes: MultiRouteEntry[];
+  /**
+   * Eingebettete Karte: auf Mobile scrollt ein Finger die Seite, erst zwei
+   * Finger bewegen die Karte. Im Vollbild weglassen.
+   */
+  pageScroll?: boolean;
 }
 
 type LayerType = "outdoors" | "cycle" | "satellite";
@@ -81,6 +86,7 @@ function formatStartLabel(start: MultiRouteEntry["startTime"]): string | null {
 
 export default function MultiRouteMapClient({
   routes,
+  pageScroll = false,
 }: MultiRouteMapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
@@ -107,6 +113,36 @@ export default function MultiRouteMapClient({
     });
     mapRef.current = map;
 
+    // Mobile: 1-finger swipe scrolls the page, only 2 fingers pan/zoom the map
+    let cleanupTouch: (() => void) | null = null;
+    if (pageScroll && L.Browser.mobile) {
+      const container = containerRef.current;
+      container.style.touchAction = "pan-y";
+      map.dragging.disable();
+      (map as L.Map & { tap?: { disable: () => void } }).tap?.disable();
+
+      const onTouchStart = (e: TouchEvent) => {
+        if (e.touches.length >= 2) {
+          map.dragging.enable();
+          container.style.touchAction = "none";
+        }
+      };
+      const onTouchEnd = (e: TouchEvent) => {
+        if (e.touches.length < 2) {
+          map.dragging.disable();
+          container.style.touchAction = "pan-y";
+        }
+      };
+      container.addEventListener("touchstart", onTouchStart, { passive: true });
+      container.addEventListener("touchend", onTouchEnd, { passive: true });
+      container.addEventListener("touchcancel", onTouchEnd, { passive: true });
+      cleanupTouch = () => {
+        container.removeEventListener("touchstart", onTouchStart);
+        container.removeEventListener("touchend", onTouchEnd);
+        container.removeEventListener("touchcancel", onTouchEnd);
+      };
+    }
+
     tileLayerRef.current = L.tileLayer(LAYERS.outdoors.url, {
       maxZoom: LAYERS.outdoors.maxZoom,
       attribution: LAYERS.outdoors.attribution,
@@ -120,11 +156,14 @@ export default function MultiRouteMapClient({
 
     const polylinesMap = polylinesRef.current;
     return () => {
+      cleanupTouch?.();
       map.remove();
       mapRef.current = null;
       tileLayerRef.current = null;
       polylinesMap.clear();
     };
+    // pageScroll ist pro Instanz fix (eingebettet vs. Vollbild).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
