@@ -34,6 +34,8 @@ export interface TrailTrack {
   /** Name der Fluxtour-Tour, falls nach einer gewandert wurde. */
   tourName: string | null;
   device: string | null;
+  /** Was auf der Uhr vor dem Start gewählt wurde. */
+  sport: TrailSport;
   startMs: number;
   endMs: number;
   /** Aktive Dauer ohne Pausen, wie Health Services sie zählt. */
@@ -44,6 +46,18 @@ export interface TrailTrack {
   steps: number | null;
   points: TrailPoint[];
 }
+
+/** Die Sportarten, die die Uhr zur Wahl stellt — in den Namen, die flux für `type` führt. */
+const SPORTS = ["HIKING", "CYCLING", "RUNNING", "WALKING"] as const;
+export type TrailSport = (typeof SPORTS)[number];
+
+/** Der Titel, falls weder eine Tour ihren Namen mitbringt noch die KI einen findet. */
+const FALLBACK_TITLE: Record<TrailSport, string> = {
+  HIKING: "Wanderung",
+  CYCLING: "Radtour",
+  RUNNING: "Lauf",
+  WALKING: "Spaziergang",
+};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -108,6 +122,8 @@ export function parseTrailTrack(body: unknown): TrailTrack | null {
     id: b.id,
     tourName: text(b.tourName, 120),
     device: text(b.device, 60),
+    // Eine Uhr mit der App von früher schickt das Feld nicht; damals gab es nur Wandern.
+    sport: SPORTS.find((s) => s === b.sport) ?? "HIKING",
     startMs,
     endMs,
     activeMs: nonNegative(b.activeMs) ?? 0,
@@ -205,14 +221,14 @@ export async function buildTrailDraft(track: TrailTrack): Promise<ActivityDraft>
   // Die Uhr zählt die Distanz mit Schrittsensor und GPS zusammen und ist damit
   // dem nackten Track überlegen. Fehlt ihr Wert, bleibt der Track.
   const distance = track.distanceM ?? (trackDistance > 0 ? trackDistance : null);
-  const type = "HIKING";
+  const type = track.sport;
 
   return {
     source: "flux-trail",
     externalId: trailExternalId(track.id),
     type,
     subType: track.tourName,
-    fallbackTitle: track.tourName ?? "Wanderung",
+    fallbackTitle: track.tourName ?? FALLBACK_TITLE[type],
     startTime: new Date(track.startMs),
     duration: Math.round((track.endMs - track.startMs) / 1000),
     movingTime: track.activeMs > 0 ? Math.round(track.activeMs / 1000) : null,
