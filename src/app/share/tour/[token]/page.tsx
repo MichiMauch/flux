@@ -13,10 +13,7 @@ import type { MultiRouteEntry } from "@/app/components/multi-route-map-client";
 import { db } from "@/lib/db";
 import { activityTours, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import {
-  getTourStages,
-  getTourPhotos,
-} from "@/app/tours/data";
+import { getTourStages, getTourPhotos } from "@/app/tours/data";
 import { ShareTokenProvider, appendShareToken } from "@/lib/share-context";
 import { APP_TIME_ZONE } from "@/lib/activity-format";
 
@@ -122,36 +119,46 @@ export default async function SharedTourPage({
         <div
           className={`${spaceMono.className} inline-flex items-center gap-2 rounded-md border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[#a3a3a3]`}
         >
-          Von <span className="text-white">{tour.ownerName ?? "User"}</span> geteilt · Flux
+          Von <span className="text-white">{tour.ownerName ?? "User"}</span>{" "}
+          geteilt · Flux
         </div>
 
         {tour.coverPhotoPath ? (
-          <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-[#2a2a2a]">
-            <Image
-              src={appendShareToken(tour.coverPhotoPath, token)}
-              alt={tour.name}
-              fill
-              sizes="(min-width: 1280px) 1280px, 100vw"
-              priority
-              unoptimized
-              className="object-cover"
-              style={{
-                objectPosition: `${tour.coverOffsetX}% ${tour.coverOffsetY}%`,
-              }}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-[#2a2a2a] lg:aspect-auto lg:h-full lg:min-h-[260px]">
+              <Image
+                src={appendShareToken(tour.coverPhotoPath, token)}
+                alt={tour.name}
+                fill
+                sizes="(min-width: 1024px) 640px, 100vw"
+                priority
+                unoptimized
+                className="object-cover"
+                style={{
+                  objectPosition: `${tour.coverOffsetX}% ${tour.coverOffsetY}%`,
+                }}
+              />
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
+              {tour.description ? (
+                <div className="absolute inset-x-0 bottom-0 p-5 text-sm text-white">
+                  {tour.description}
+                </div>
+              ) : null}
+            </div>
+            <BentoTourStats
+              totals={totals}
+              dateRangeLabel={dateRangeLabel}
+              compact
             />
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
-            {tour.description ? (
-              <div className="absolute inset-x-0 bottom-0 p-5 text-sm text-white">
-                {tour.description}
-              </div>
-            ) : null}
           </div>
         ) : tour.description ? (
           <p className="text-sm text-[#a3a3a3]">{tour.description}</p>
         ) : null}
 
         <div className="grid grid-cols-1 gap-4">
-          <BentoTourStats totals={totals} dateRangeLabel={dateRangeLabel} />
+          {tour.coverPhotoPath ? null : (
+            <BentoTourStats totals={totals} dateRangeLabel={dateRangeLabel} />
+          )}
           <BentoTourMap routes={routes} />
           <BentoTourActivities
             members={members}

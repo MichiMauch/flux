@@ -9,12 +9,24 @@ import type { TourTotals } from "@/app/tours/data";
 interface BentoTourStatsProps {
   totals: TourTotals | null;
   dateRangeLabel: string;
+  /** Neben dem Titelbild: halbe Breite, Kennzahlen bleiben im 2×2-Raster. */
+  compact?: boolean;
 }
 
-export function BentoTourStats({ totals, dateRangeLabel }: BentoTourStatsProps) {
+export function BentoTourStats({
+  totals,
+  dateRangeLabel,
+  compact = false,
+}: BentoTourStatsProps) {
   return (
-    <BentoTile label="Übersicht" title="Kennzahlen">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <BentoTile
+      label="Übersicht"
+      title="Kennzahlen"
+      className={compact ? "h-full" : ""}
+    >
+      <div
+        className={`grid grid-cols-2 gap-3 ${compact ? "" : "sm:grid-cols-4"}`}
+      >
         <Kpi label="Aktivitäten" value={String(totals?.count ?? 0)} />
         <Kpi
           label="Distanz"

@@ -155,26 +155,33 @@ export default async function TourDetailPage({
       ) : null}
 
       {tour.coverPhotoPath ? (
-        <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-[#2a2a2a]">
-          <Image
-            src={tour.coverPhotoPath}
-            alt={tour.name}
-            fill
-            sizes="(min-width: 1280px) 1280px, 100vw"
-            priority
-            unoptimized
-            className="object-cover"
-            style={{
-              objectPosition: `${tour.coverOffsetX}% ${tour.coverOffsetY}%`,
-            }}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-[#2a2a2a] lg:aspect-auto lg:h-full lg:min-h-[260px]">
+            <Image
+              src={tour.coverPhotoPath}
+              alt={tour.name}
+              fill
+              sizes="(min-width: 1024px) 640px, 100vw"
+              priority
+              unoptimized
+              className="object-cover"
+              style={{
+                objectPosition: `${tour.coverOffsetX}% ${tour.coverOffsetY}%`,
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
+            {tour.description ? (
+              <div className="absolute inset-x-0 bottom-0 p-5 text-sm text-white">
+                {tour.description}
+              </div>
+            ) : null}
+            {tour.completed ? <DoneRibbon /> : null}
+          </div>
+          <BentoTourStats
+            totals={totals}
+            dateRangeLabel={dateRangeLabel}
+            compact
           />
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
-          {tour.description ? (
-            <div className="absolute inset-x-0 bottom-0 p-5 text-sm text-white">
-              {tour.description}
-            </div>
-          ) : null}
-          {tour.completed ? <DoneRibbon /> : null}
         </div>
       ) : (
         <>
@@ -192,7 +199,9 @@ export default async function TourDetailPage({
       )}
 
       <div className="grid grid-cols-1 gap-4">
-        <BentoTourStats totals={totals} dateRangeLabel={dateRangeLabel} />
+        {tour.coverPhotoPath ? null : (
+          <BentoTourStats totals={totals} dateRangeLabel={dateRangeLabel} />
+        )}
         <BentoTourMap routes={routes} />
         {hasManualOrder ? (
           <TourSortToggle tourId={tour.id} current={sortMode} />
