@@ -13,6 +13,9 @@ const publicRoutes = [
   // Subscribers scheitert: sie verlangt 401 ohne Zugangsdaten.
   "/api/google/webhook",
   "/api/bloodpressure/webhook",
+  // Die Health-App holt das Gewicht ab und weist sich mit demselben Schlüssel
+  // aus wie beim Blutdruck; die Route prüft ihn selbst.
+  "/api/export/weight",
   // flux-trail auf der Uhr liefert Wanderungen an und weist sich mit einem
   // Bearer-Token aus, das die Route selbst prüft. Ohne den Eintrag bekäme die
   // Uhr statt einer Antwort die Anmeldeseite.
