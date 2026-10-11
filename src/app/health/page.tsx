@@ -13,8 +13,10 @@ import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoTile } from "../components/bento/bento-tile";
 import { rajdhani, spaceMono } from "../components/bento/bento-fonts";
 
+// Address people open in the browser. BLOOD_PRESSURE_TRACKER_URL is the
+// address Flux itself fetches from, which may be an internal one.
 const BP_TRACKER_URL =
-  process.env.BLOOD_PRESSURE_TRACKER_URL ?? "https://blood.mauch.rocks";
+  process.env.BLOOD_PRESSURE_PUBLIC_URL ?? "https://health.mauch.rocks";
 
 export default async function HealthPage() {
   const session = await auth();
