@@ -10,6 +10,7 @@ import { BentoPageShell } from "../components/bento/bento-page-shell";
 import { BentoPageHeader } from "../components/bento/bento-page-header";
 import { BentoSyncButton } from "../components/bento/home/bento-sync-button";
 import { spaceMono } from "../components/bento/bento-fonts";
+import { NewActivityButton } from "./new-activity-button";
 import { ActivitiesSportFilter } from "./activities-sport-filter";
 import { ActivitiesDateFilter } from "./activities-date-filter";
 import { parseMonthKey, parseSport } from "./filters";
@@ -50,7 +51,8 @@ export default async function ActivitiesPage({
         section="Aktivitäten"
         title="Aktivitäten"
         right={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <NewActivityButton />
             <Link
               href="/activities/list"
               className={`${spaceMono.className} inline-flex items-center gap-1 rounded-md border border-[#2a2a2a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#a3a3a3] hover:text-white hover:border-[#4a4a4a]`}

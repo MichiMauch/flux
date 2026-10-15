@@ -41,7 +41,7 @@ export function activitySourceLabel(
     case "strava":
       return "Strava";
     case "manual":
-      return "Manueller Import";
+      return "Manuell";
     default:
       return source || null;
   }

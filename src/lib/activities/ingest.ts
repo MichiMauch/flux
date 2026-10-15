@@ -43,6 +43,8 @@ export interface ActivityDraft {
   subType: string | null;
   /** Titel, falls die Generierung scheitert. Ohne Angabe subType, sonst type. */
   fallbackTitle?: string | null;
+  /** Fester Titel, etwa von Hand eingegeben. Die Generierung entfällt dann. */
+  title?: string | null;
   startTime: Date;
   /** Sekunden, inklusive Pausen. */
   duration: number;
@@ -121,20 +123,22 @@ export async function enrichActivity(
 
   const fallbackTitle =
     draft.fallbackTitle?.trim() || draft.subType?.trim() || draft.type;
-  let name = fallbackTitle;
-  try {
-    name = await generateActivityTitle({
-      type: draft.type,
-      subType: draft.subType,
-      startTime: draft.startTime,
-      distanceMeters: draft.distance,
-      durationSeconds: draft.movingTime ?? draft.duration,
-      ascentMeters: draft.ascent,
-      routeData: draft.routeData,
-      fallbackTitle,
-    });
-  } catch (e) {
-    console.warn(`[ingest] Titelgenerierung fehlgeschlagen (${draft.externalId}):`, e);
+  let name = draft.title?.trim() || fallbackTitle;
+  if (!draft.title?.trim()) {
+    try {
+      name = await generateActivityTitle({
+        type: draft.type,
+        subType: draft.subType,
+        startTime: draft.startTime,
+        distanceMeters: draft.distance,
+        durationSeconds: draft.movingTime ?? draft.duration,
+        ascentMeters: draft.ascent,
+        routeData: draft.routeData,
+        fallbackTitle,
+      });
+    } catch (e) {
+      console.warn(`[ingest] Titelgenerierung fehlgeschlagen (${draft.externalId}):`, e);
+    }
   }
 
   return {
