@@ -336,7 +336,10 @@ export function ShareActivityClient({
   async function shareCardFile(fallbackInfo: string) {
     const blob = await fetchCard();
     const file = shareFile(blob);
+    // Auch der Mac kann Dateien teilen, sein Teilen-Menü kennt aber weder
+    // Instagram Stories noch WhatsApp Status. Dorthin führt nur das Handy.
     if (
+      isPhone() &&
       typeof navigator.canShare === "function" &&
       navigator.canShare({ files: [file] })
     ) {
@@ -351,8 +354,8 @@ export function ShareActivityClient({
     run("Stories", () =>
       shareCardFile(
         mode === "video"
-          ? "Video gespeichert — in Instagram → Story → Video aus Galerie auswählen."
-          : "Bild gespeichert — in Instagram → Story → Bild aus Galerie auswählen."
+          ? "Video gespeichert — Stories gehen nur in der Instagram-App: diese Seite auf dem Handy öffnen oder das Video aufs Handy schicken."
+          : "Bild gespeichert — Stories gehen nur in der Instagram-App: diese Seite auf dem Handy öffnen oder das Bild aufs Handy schicken."
       )
     );
   }
@@ -361,8 +364,8 @@ export function ShareActivityClient({
     run("Status", () =>
       shareCardFile(
         mode === "video"
-          ? "Video gespeichert — in WhatsApp → Status hochladen."
-          : "Bild gespeichert — in WhatsApp → Status hochladen."
+          ? "Video gespeichert — den Status am einfachsten auf dem Handy setzen: diese Seite dort öffnen oder das Video aufs Handy schicken."
+          : "Bild gespeichert — den Status am einfachsten auf dem Handy setzen: diese Seite dort öffnen oder das Bild aufs Handy schicken."
       )
     );
   }
@@ -978,13 +981,23 @@ export function ShareActivityClient({
 
         <p className="text-center text-[10px] text-[#666] [font-family:var(--bento-mono)] uppercase tracking-[0.14em]">
           Auswahl bestimmt, was geteilt wird · WhatsApp/E-Mail/Link senden den
-          öffentlichen Link · Stories und Status öffnen die Teilen-Auswahl mit
-          dem Bild (Instagram → Story, WhatsApp → Status) · Kopieren legt das
+          öffentlichen Link · Stories und Status öffnen auf dem Handy die
+          Teilen-Auswahl mit dem Bild (Instagram → Story, WhatsApp → Status),
+          am Computer speichern sie es · Kopieren legt das
           Bild in die Zwischenablage · Speichern lädt das PNG
         </p>
       </main>
     </div>
   );
+}
+
+// Handy statt Desktop: nur dort bietet das Teilen-Menü Instagram Stories und
+// WhatsApp Status an. Flux läuft auf Android und Desktop, iOS bleibt aussen vor.
+function isPhone(): boolean {
+  const uaData = (navigator as Navigator & { userAgentData?: { mobile: boolean } })
+    .userAgentData;
+  if (uaData) return uaData.mobile;
+  return /Android/i.test(navigator.userAgent);
 }
 
 function ActionButton({
