@@ -7,12 +7,15 @@ import { ShareActivityClient } from "./share-activity-client";
 
 export default async function ActivitySharePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ design?: string | string[] }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
+  const { design } = await searchParams;
 
   const [row] = await db
     .select({
@@ -50,6 +53,7 @@ export default async function ActivitySharePage({
       initialToken={row.shareToken}
       photoIds={photos.map((p) => p.id)}
       videoIds={videos.map((v) => v.id)}
+      initialDesign={typeof design === "string" ? design : null}
     />
   );
 }

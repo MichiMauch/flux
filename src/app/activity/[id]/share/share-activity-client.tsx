@@ -16,6 +16,7 @@ import {
   Share2,
   X,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { setActivityShare } from "@/app/share/actions";
 
 // Was geteilt wird: eines der Story-Designs oder der 3D-Flug. Die Designs
@@ -62,6 +63,8 @@ interface Props {
   photoIds: string[];
   /** Fertig umgewandelte Videos der Aktivität; leer = kein Video-Modus. */
   videoIds: string[];
+  /** Vorgewähltes Design aus `?design=`, gesetzt vom QR-Code am Desktop. */
+  initialDesign: string | null;
 }
 
 export function ShareActivityClient({
@@ -70,6 +73,7 @@ export function ShareActivityClient({
   initialToken,
   photoIds,
   videoIds,
+  initialDesign,
 }: Props) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(initialToken);
@@ -87,7 +91,12 @@ export function ShareActivityClient({
     ...(videoIds.length > 0 ? (["video"] as const) : []),
     "flight",
   ];
-  const [mode, setMode] = useState<ShareMode>("karte");
+  const [mode, setMode] = useState<ShareMode>(() =>
+    modes.find((m) => m === initialDesign) ?? "karte"
+  );
+  // Am Desktop zeigen Stories und Status statt des Teilen-Menüs einen QR-Code,
+  // der diese Seite auf dem Handy öffnet.
+  const [phoneQr, setPhoneQr] = useState<"stories" | "status" | null>(null);
   // Welches Foto das Foto-Design als Hintergrund nimmt.
   const [photoId, setPhotoId] = useState<string | null>(photoIds[0] ?? null);
   // Ausschnitt des Fotos, 0–100 entlang der überstehenden Achse (50 = Mitte).
@@ -167,6 +176,15 @@ export function ShareActivityClient({
   const canNativeShare =
     typeof navigator !== "undefined" &&
     typeof navigator.share === "function";
+
+  // Das vorgewählte Design gleich anzeigen, ohne sichtbares Scrollen.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ left: modes.indexOf(mode) * el.clientWidth });
+    // Nur beim ersten Anzeigen; danach führt der Nutzer die Auswahl.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleScroll() {
     const el = scrollRef.current;
@@ -324,50 +342,54 @@ export function ShareActivityClient({
   }
 
   /**
-   * Die Karte als Datei an das Teilen-Menü des Systems übergeben. Ohne
-   * Datei-Teilen (Desktop) wird sie gespeichert und `fallbackInfo` erklärt den
-   * Rest. Gibt es keine Web-Schnittstelle direkt in Instagram Stories oder
-   * WhatsApp Status — die von Meta gibt es nur für native Apps —, ist das der
-   * kürzeste Weg: ein Tipp auf Instagram bzw. WhatsApp im Teilen-Menü.
+   * Die Karte als Datei an das Teilen-Menü des Systems übergeben. Gibt es
+   * keine Web-Schnittstelle direkt in Instagram Stories oder WhatsApp Status —
+   * die von Meta gibt es nur für native Apps —, ist das der kürzeste Weg: ein
+   * Tipp auf Instagram bzw. WhatsApp im Teilen-Menü.
+   *
+   * Auch der Mac kann Dateien teilen, sein Teilen-Menü kennt aber weder
+   * Stories noch Status. Am Desktop kommt deshalb der QR-Code fürs Handy.
    *
    * Bewusst ohne `text`: WhatsApp macht daraus eine Bildunterschrift, die unten
    * über der Karte liegt — genau dort, wo Name, Distanz und Zeit stehen.
    */
-  async function shareCardFile(fallbackInfo: string) {
-    const blob = await fetchCard();
-    const file = shareFile(blob);
-    // Auch der Mac kann Dateien teilen, sein Teilen-Menü kennt aber weder
-    // Instagram Stories noch WhatsApp Status. Dorthin führt nur das Handy.
-    if (
-      isPhone() &&
-      typeof navigator.canShare === "function" &&
-      navigator.canShare({ files: [file] })
-    ) {
-      await navigator.share({ files: [file], title: "Flux" });
+  function shareCardFile(target: "stories" | "status") {
+    if (!isPhone()) {
+      setError(null);
+      setInfo(null);
+      setPhoneQr(target);
       return;
     }
-    downloadBlob(blob);
-    setInfo(fallbackInfo);
+    run(target === "stories" ? "Stories" : "Status", async () => {
+      const blob = await fetchCard();
+      const file = shareFile(blob);
+      if (
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({ files: [file], title: "Flux" });
+        return;
+      }
+      downloadBlob(blob);
+      setInfo(
+        target === "stories"
+          ? "Gespeichert — in Instagram → Story → aus Galerie auswählen."
+          : "Gespeichert — in WhatsApp → Status hochladen."
+      );
+    });
   }
 
   function handleCameraStories() {
-    run("Stories", () =>
-      shareCardFile(
-        mode === "video"
-          ? "Video gespeichert — Stories gehen nur in der Instagram-App: diese Seite auf dem Handy öffnen oder das Video aufs Handy schicken."
-          : "Bild gespeichert — Stories gehen nur in der Instagram-App: diese Seite auf dem Handy öffnen oder das Bild aufs Handy schicken."
-      )
-    );
+    shareCardFile("stories");
   }
 
   function handleWhatsappStatus() {
-    run("Status", () =>
-      shareCardFile(
-        mode === "video"
-          ? "Video gespeichert — den Status am einfachsten auf dem Handy setzen: diese Seite dort öffnen oder das Video aufs Handy schicken."
-          : "Bild gespeichert — den Status am einfachsten auf dem Handy setzen: diese Seite dort öffnen oder das Bild aufs Handy schicken."
-      )
-    );
+    shareCardFile("status");
+  }
+
+  // Diese Seite mit dem gewählten Design, für den QR-Code am Desktop.
+  function phoneUrl(): string {
+    return `${window.location.origin}${window.location.pathname}?design=${mode}`;
   }
 
   function handleNativeShare() {
@@ -954,6 +976,17 @@ export function ShareActivityClient({
               />
             )}
           </div>
+          {phoneQr && (
+            <PhoneQrPanel
+              url={phoneUrl()}
+              target={phoneQr}
+              onSave={() => {
+                setPhoneQr(null);
+                handleDownload();
+              }}
+              onClose={() => setPhoneQr(null)}
+            />
+          )}
           {info && <p className="mt-3 text-xs text-[#a3a3a3]">{info}</p>}
           {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
         </div>
@@ -983,7 +1016,7 @@ export function ShareActivityClient({
           Auswahl bestimmt, was geteilt wird · WhatsApp/E-Mail/Link senden den
           öffentlichen Link · Stories und Status öffnen auf dem Handy die
           Teilen-Auswahl mit dem Bild (Instagram → Story, WhatsApp → Status),
-          am Computer speichern sie es · Kopieren legt das
+          am Computer einen QR-Code fürs Handy · Kopieren legt das
           Bild in die Zwischenablage · Speichern lädt das PNG
         </p>
       </main>
@@ -998,6 +1031,52 @@ function isPhone(): boolean {
     .userAgentData;
   if (uaData) return uaData.mobile;
   return /Android/i.test(navigator.userAgent);
+}
+
+function PhoneQrPanel({
+  url,
+  target,
+  onSave,
+  onClose,
+}: {
+  url: string;
+  target: "stories" | "status";
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const where = target === "stories" ? "Instagram Stories" : "WhatsApp Status";
+  const button = target === "stories" ? "Stories" : "Status";
+  return (
+    <div className="relative mt-4 flex gap-4 rounded-lg border border-[#2a2a2a] bg-[#0a0a0a] p-4">
+      <div className="shrink-0 rounded-md bg-white p-2">
+        <QRCodeSVG value={url} size={128} marginSize={0} />
+      </div>
+      <div className="min-w-0 pr-6">
+        <p className="text-sm font-semibold text-white">Auf dem Handy weiter</p>
+        <p className="mt-1 text-xs leading-relaxed text-[#a3a3a3]">
+          {where} gehen nur in der App auf dem Handy. Code scannen, dort
+          öffnet sich diese Seite mit derselben Auswahl — dann «{button}»
+          antippen.
+        </p>
+        <button
+          type="button"
+          onClick={onSave}
+          className="[font-family:var(--bento-mono)] mt-3 inline-flex items-center gap-1.5 rounded-md border border-[#2a2a2a] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white hover:border-white cursor-pointer"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Stattdessen speichern
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Schliessen"
+        className="absolute right-2 top-2 rounded-md p-1 text-[#a3a3a3] hover:text-white cursor-pointer"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
 }
 
 function ActionButton({
