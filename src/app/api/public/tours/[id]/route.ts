@@ -3,15 +3,17 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activities, activityPhotos, activityTours } from "@/lib/db/schema";
 import { getTourStages } from "@/app/tours/data";
+import { schluesselOk, tourFreigegeben } from "@/lib/public-tour-access";
 
-// Öffentliche, schreibgeschützte Sicht auf eine geteilte Tour für externe
-// Websites (z. B. Grenzgänger). Zugang nur über den Share-Token der Tour.
+// Schreibgeschützte Sicht auf eine freigegebene Tour für externe Websites
+// (z. B. Grenzgänger). Zugang nur mit PUBLIC_TOUR_API_KEY und nur für Touren
+// in PUBLIC_TOUR_IDS, siehe src/lib/public-tour-access.ts.
 // Bewusst ohne Zeitstempel im Track, ohne Puls und ohne Foto-Koordinaten.
-// Die Bilder selbst holt der Client über /api/photos/<id>?share=<token>.
+// Die Bilder holt die Website über /api/public/tours/<id>/photos/<photoId>.
 
 export const dynamic = "force-dynamic";
 
-const CACHE_HEADER = "public, s-maxage=300, stale-while-revalidate=600";
+const CACHE_HEADER = "private, no-store";
 
 type Point = { lat?: unknown; lng?: unknown };
 
@@ -43,12 +45,15 @@ function toTrack(raw: unknown): [number, number][] {
 }
 
 export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ token: string }> }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { token } = await params;
+  if (!schluesselOk(request)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const { id } = await params;
 
-  const [tour] = token
+  const [tour] = tourFreigegeben(id)
     ? await db
         .select({
           id: activityTours.id,
@@ -58,7 +63,7 @@ export async function GET(
           updatedAt: activityTours.updatedAt,
         })
         .from(activityTours)
-        .where(eq(activityTours.shareToken, token))
+        .where(eq(activityTours.id, id))
         .limit(1)
     : [];
 
