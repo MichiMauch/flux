@@ -71,9 +71,14 @@ export interface TourActivity {
    * Personen, die führende zuerst; sonst nur die eine.
    */
   participants: TourParticipant[];
+  /**
+   * IDs aller Aufzeichnungen hinter dieser Etappe: die führende zuerst, dann
+   * die zusammengeführten. Damit lassen sich deren Fotos der Etappe zuordnen.
+   */
+  recordingIds: string[];
 }
 
-type MemberRow = Omit<TourActivity, "participants"> & {
+type MemberRow = Omit<TourActivity, "participants" | "recordingIds"> & {
   userName: string | null;
   userImage: string | null;
 };
@@ -146,7 +151,11 @@ function toTourActivity(r: MemberRow, companions: MemberRow[]): TourActivity {
       participants.push(participantOf(c));
     }
   }
-  return { ...rest, participants };
+  return {
+    ...rest,
+    participants,
+    recordingIds: [r.id, ...companions.map((c) => c.id)],
+  };
 }
 
 function computeTotals(stages: TourActivity[]): TourTotals {

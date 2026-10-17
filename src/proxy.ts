@@ -21,6 +21,9 @@ const publicRoutes = [
   // Uhr statt einer Antwort die Anmeldeseite.
   "/api/device",
   "/api/cron",
+  // Schreibgeschützte JSON-Sicht auf geteilte Touren für externe Websites;
+  // die Route prüft den Share-Token selbst.
+  "/api/public",
   "/share",
   "/embed",
 ];
