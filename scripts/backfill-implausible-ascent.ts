@@ -13,6 +13,9 @@
  * auch um 1000 m übertreffen. Ein Barometer schlägt GPS-Höhe im Normalfall —
  * dieser Backfill greift ausschliesslich bei kaputten Werten ein.
  *
+ * Ebenso ersetzt wird ein Gerätewert von 0 m, wenn die Route Aufstieg zeigt —
+ * die Google-Summary meldet bei kleinen Runden 0 statt «nicht gemessen».
+ *
  * Mit --ids werden zusätzlich einzelne Aktivitäten korrigiert, die manuell als
  * falsch eingestuft wurden. Nötig, weil sich nicht jeder kaputte Wert von einer
  * echten hügeligen Ausfahrt unterscheiden lässt: 536 m auf 40 km sind im selben

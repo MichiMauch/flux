@@ -92,6 +92,10 @@ export function reconcileAscent(
   if (deviceValue == null || !Number.isFinite(deviceValue)) return routeValue ?? null;
   if (routeValue == null || !Number.isFinite(routeValue) || routeValue <= 0)
     return deviceValue;
+  // 0 m vom Gerät heisst «nicht gemessen», nicht «flach»: Die Google-Summary
+  // meldet bei kleinen Runden elevationGainMillimeters = 0, obwohl der Track
+  // Aufstieg zeigt. Dann zählt der Track.
+  if (deviceValue <= 0) return routeValue;
   // Verworfen wird nur ein zu HOHER Gerätewert. Ist die GPS-Höhe die grössere
   // der beiden, taugt sie nicht als Ersatz — sonst blaest die Terrain-Regel
   // einen plausiblen Wert auf (Kandersteg: Abstieg 1225 → 2742).
